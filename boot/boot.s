@@ -79,6 +79,30 @@ stage15:
     call  gdt_install
     call  pmode_init
 
+    ; Initialize segment registers to use the GDT
+
+    mov   ax, 0x0010
+    mov   ss, ax
+    mov   es, ax
+    mov   ds, ax
+    mov   gs, ax
+    mov   fs, ax
+
+    ; Stack is aligned on 16-byte boundary
+    ; to make various compilers happy
+
+    mov   esp, 0x7FFF0
+    mov   ebp, 0x7FFF0
+    mov   esi, 0x17E00
+    mov   edi, 0x17E00
+
+    ; Clean up all registers
+
+    xor   eax, eax
+    xor   ebx, ebx
+    xor   ecx, ecx
+    xor   edx, edx
+
     hlt
 
 s15_str   db "Entering stage 1.5",0x0D,0x0A,0
