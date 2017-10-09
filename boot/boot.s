@@ -61,8 +61,11 @@ dw        0xAA55
 %include "a20.s"
 %include "mmap.s"
 %include "pmode.s"
+%include "vga.s"
 
 stage15:
+    call  init_video
+
     push  s15_str
     call  print
     add   sp, 2
