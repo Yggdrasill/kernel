@@ -28,3 +28,5 @@ jmp   0x07E0:boot
 boot:
     cli
     hlt
+
+drive     db 0

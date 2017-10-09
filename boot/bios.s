@@ -49,4 +49,38 @@ resetcnt:
     pop   dx
     ret
 
+read:
+    push  ax
+    push  bx
+    push  cx
+    mov   bp, sp
+    mov   bx, [ss:bp + 14]
+    mov   es, bx
+    mov   bx, [ss:bp + 12]
+    mov   ax, [ss:bp + 10]
+    mov   dx, [ss:bp + 8]
+    push  si
+    push  disk_err2
+    xor   si, si
+readlp:
+    inc   si
+    cmp   si, 0x05
+    jne   readcnt
+    call  error
+readcnt:
+    mov   dh, 0x00
+    mov   ch, 0x00
+    mov   cl, 0x02
+    int   0x13
+    jc    readlp
+    add   sp, 2
+    pop   si
+    pop   cx
+    pop   bx
+    pop   ax
+    ret
+
+disk_err1 db "Error: Couldn't reset drive in less than 5 tries",0x0D,0x0A,0
+disk_err2 db "Error: Couldn't read drive in less than 5 tries",0x0D,0x0A,0
+
 %endif
