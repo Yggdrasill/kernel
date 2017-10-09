@@ -60,6 +60,7 @@ dw        0xAA55
 
 %include "a20.s"
 %include "mmap.s"
+%include "pmode.s"
 
 stage15:
     push  s15_str
@@ -70,6 +71,11 @@ stage15:
     call  mmap
 
     cli
+
+    call  idt_install
+    call  gdt_install
+    call  pmode_init
+
     hlt
 
 s15_str   db "Entering stage 1.5",0x0D,0x0A,0
