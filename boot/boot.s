@@ -58,10 +58,14 @@ part3     times 16 db 0
 
 dw        0xAA55
 
+%include "a20.s"
+
 stage15:
     push  s15_str
     call  print
     add   sp, 2
+
+    call  a20_init
 
     cli
     hlt
