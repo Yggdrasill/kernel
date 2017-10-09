@@ -25,7 +25,26 @@ sti
 
 jmp   0x07E0:boot
 
+%include "bios.s"
+
 boot:
+    mov   [drive], dl
+
+    xor   dx, dx
+    mov   dl, [drive]
+    push  dx
+    call  reset
+    mov   sp, 0xFFFF    ; flush stack
+
+    xor   dx, dx
+    mov   dl, [drive]
+    push  word 0x07E0
+    push  word 0x0200
+    push  word 0x023C   ; read a ridiculous amount of sectors
+    push  dx
+    call  read
+    mov   sp, 0xFFFF
+
     cli
     hlt
 
