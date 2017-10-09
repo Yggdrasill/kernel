@@ -49,3 +49,12 @@ boot:
     hlt
 
 drive     db 0
+
+times     446 - ($ - $$) db 0
+
+part0     times 16 db 0
+part1     times 16 db 0
+part2     times 16 db 0
+part3     times 16 db 0
+
+dw        0xAA55
