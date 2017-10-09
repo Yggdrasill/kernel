@@ -26,4 +26,27 @@ error:
     cli
     hlt
 
+reset:
+    push  dx
+    mov   bp, sp
+    mov   dx, [ss:bp + 4]
+    push  si
+    push  ax
+    push  disk_err1
+    xor   si, si
+resetlp:
+    inc   si
+    cmp   si, 0x05
+    jne   resetcnt
+    call  error
+resetcnt:
+    xor   ax, ax
+    int   0x13
+    jc    resetlp
+    add   sp, 2         ; discard error message
+    pop   ax
+    pop   si
+    pop   dx
+    ret
+
 %endif
