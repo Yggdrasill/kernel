@@ -45,8 +45,7 @@ boot:
     call  read
     mov   sp, 0xFFFF
 
-    cli
-    hlt
+    jmp   stage15
 
 drive     db 0
 
@@ -58,3 +57,13 @@ part2     times 16 db 0
 part3     times 16 db 0
 
 dw        0xAA55
+
+stage15:
+    push  s15_str
+    call  print
+    add   sp, 2
+
+    cli
+    hlt
+
+s15_str   db "Entering stage 1.5",0x0D,0x0A,0
