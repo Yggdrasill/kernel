@@ -59,6 +59,7 @@ part3     times 16 db 0
 dw        0xAA55
 
 %include "a20.s"
+%include "mmap.s"
 
 stage15:
     push  s15_str
@@ -66,8 +67,12 @@ stage15:
     add   sp, 2
 
     call  a20_init
+    call  mmap
 
     cli
     hlt
 
 s15_str   db "Entering stage 1.5",0x0D,0x0A,0
+
+mmap_seg  dw 0
+mmap_off  dw 0
