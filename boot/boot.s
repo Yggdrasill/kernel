@@ -79,6 +79,7 @@ dw        0xAA55
 %include "mmap.s"
 %include "pmode.s"
 %include "vga.s"
+%include "pic.s"
 
 stage15:
     call  init_video
@@ -89,6 +90,8 @@ stage15:
 
     call  a20_init
     call  mmap
+
+    call  mask_ints
 
     cli
 
