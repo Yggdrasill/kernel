@@ -108,12 +108,7 @@ stage15:
     xor   ecx, ecx
     xor   edx, edx
 
-    ; System V ABI calling convention
-
-    push  ebp
-    mov   ebp, esp
-
-    call  0x0008:0x8400
+    jmp   0x0008:0x8400
 
     ; If we ever come to this point,
     ; just give up
