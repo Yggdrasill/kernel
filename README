@@ -19,7 +19,8 @@ about where on disk the next stage will be. Stage 1 is limited to 512 bytes, and
 stage 1.5 is limited to 1536 bytes, which is enough to put the system in
 protected mode and jump to the actual stage two, which is only limited by the
 empty space between it and the first partition (on legacy systems ~30kiB, on
-modern systems using LBA addressing it's ~1MiB).
+modern systems using LBA addressing it's ~1MiB). The bootloader assumes that
+stage 2 can be found at 2048 bytes.
 
 Stage 2 should be put in the image offset 2048 bytes from the start of the
 image. Thus, the command is:
@@ -41,6 +42,14 @@ Debian, which is the distribution that I use.
 
 Notes
 -----
+
+The ASM for the bootloader is written on the assumption that the assembler is
+nasm, so that is a requirement to build it. You should install nasm if you don't
+have it.
+
+A README documenting various x86 things can be found in boot/, and this README
+also includes a rather long section on the A20 gate and what the current goals
+for stage 2 is.
 
 This README will be extended as the project grows in size, presently it only has
 the beginnings of a bootloader.
