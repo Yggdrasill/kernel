@@ -3,6 +3,48 @@
 
 %include "bios.s"
 
+; This is the code to enable the A20 gate. The A20 gate is a consequence of x86
+; backwards compatibility. Specifically, the original 8086 processor had two
+; 16-bit registers to address memory, and instead of just putting both linearly
+; on the address bus, Intel decided that it'd be more desireable to shift the
+; segment register 4 bits left so they could instead address 2^20 bytes. The
+; offset register is *not* shifted, and with a segment register of 0xFFFF and
+; and offset register of 0xFFFF, you can actually address 64kiB - 15B past 1MiB.
+;
+; (0xFFFF << 4) + 0xFFFF = 0x10FFEF
+;
+; The 8086 actually had a 24 bit address bus, and so when addressing memory
+; limited to 20 bits, from the memory's point of view, the address bus would
+; wrap around to 0 when passing the 1MiB address. Some programmers actually
+; used this "feature", and since Intel are backwards compatibility fanatics
+; they kept it in every following processor since then and it has become a
+; permanent part of the x86 processor architecture.
+;
+; We can test the A20 gate by abusing the wraparound behavior. By testing what
+; would be the same address after wraparound, we can compare the two words, and
+; if they are the same, it's highly likely that that the A20 gate is not
+; enabled. We are testing the terminating two bytes of the MBR header, 0xAA55.
+;
+; There are multiple ways to enable the A20 gate, and all implemented here need
+; to be tried, because all of them may not work. They are tried in this order:
+;
+; - Ask the BIOS to do it. Ignore the response and test the address bus again,
+;   because the BIOS can lie about it.
+; - Intel saw that there was a spare pin on the PS/2 keyboard controller, so
+;   they routed the A20 gate through there. Thus, this is one way to enable it.
+; - Try an access of I/O port 0xEE. This does not work in QEMU, so it is
+;   untested, but it should work on a machine that supports it.
+; - Fast A20 Enable is a feature of some motherboards, but is not guaranteed to
+;   work. Writing to this I/O port can have completely different effects or
+;   crash the machine, so this should be tried last.
+;
+; If none of the above work, we give up.
+;
+; Note that QEMU needs a SeaBIOS binary without the "enable A20" option. If you
+; do build a SeaBIOS binary with the A20 gate disabled, you need to also run
+; QEMU without the -enable-kvm switch, because as far as I can tell, -enable-kvm
+; implicitly enables the A20 gate regardless of the SeaBIOS binary.
+
 a20_error:
     push  a20_err
     call  print

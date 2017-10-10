@@ -79,7 +79,10 @@ stage15:
     call  gdt_install
     call  pmode_init
 
-    ; Initialize segment registers to use the GDT
+    ; Initialize segment registers to use the GDT.
+    ; There should be no more 16 bit or real mode
+    ; code executed after this point, except for
+    ; these simple mov instructions.
 
     mov   ax, 0x0010
     mov   ss, ax
@@ -90,6 +93,8 @@ stage15:
 
     ; Stack is aligned on 16-byte boundary
     ; to make various compilers happy
+    ; This also initializes the registers
+    ; for 32 bit execution.
 
     mov   esp, 0x7FFF0
     mov   ebp, 0x7FFF0

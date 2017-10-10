@@ -1,6 +1,25 @@
 %ifndef BIOS_S
 %define BIOS_S
 
+; This file contains a few BIOS interrupt call wrappers. The print function uses
+; the BIOS to put text on the screen, for example. The error function calls
+; print and then halts.
+;
+; Other functions may need a little bit of an explanation. The reset function uses
+; BIOS interrupt call int 0x13 ah=0x00 dl=drive to reset the disk drive, whether
+; it be a floppy or a hard drive, which forces the drive to place its head at the
+; first track, and makes the drive execute the next command as if it was in its
+; initial state. This is done before a read operation just to be sure.
+;
+; The read function uses a relatively complex BIOS function call in which quite
+; a few registers have to be set. It uses the int 0x13 ah=0x02 dl=drive BIOS
+; interrupt call. For whatever reason, instead of the typical es:di combination
+; for a memory pointer, this particular call requires es:bx to be the buffer
+; pointer. The dh register tells the BIOS what head to read with, the al
+; register is the number of sectors to read into memory. The cx register
+; specifies where to read from, where ch is the track number and cl is the
+; sector number (both counting from zero of course).
+
 print:
     mov   bp, sp
     mov   si, [ss:bp + 2]
