@@ -21,6 +21,8 @@
 
 #include "string.h"
 
+/* PLEASE read the README provided in the same directory. */
+
 int main(void)
 {
   clear();
