@@ -91,6 +91,11 @@ stage15:
     call  a20_init
     call  mmap
 
+    ; Clear EFLAGS register
+
+    push  dword 0x02
+    popfd
+
     call  mask_ints
 
     cli
