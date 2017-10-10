@@ -18,25 +18,6 @@
 %ifndef PMODE_S
 %define PMODE_S
 
-; These functions take care of actually putting the processor into 32-bit
-; protected mode. A requirement for this is to provide the processor with
-; a global descriptor table and an interrupt descriptor table. We provide
-; the processor with a GDT that describes a flat memory structure, 4GB long.
-; The GDT contains an eight byte long null descriptor, a code descriptor and
-; a data descriptor. The base address is 0, and the limit is 0xFFFFF. The
-; "granularity" bit is set, and so the limit is multiplied by 4096.
-;
-; 0xFFFFF * 4096 = 4GiB
-;
-; We also provide the processor with a completely bogus IDT, and so interrupts
-; ***MUST*** be disabled before we set the interrupt descriptor table, otherwise
-; we risk triple-faulting the processor by sending it to a completely invalid
-; interrupt handler. Interrupts should not be enabled from this point onwards,
-; until we set up a proper IDT.
-;
-; The pmode_init function set's the protected mode bit in the CR0 register.
-; After this point, we are officially in protected mode.
-
 gdt_install:
     lgdt  [es:gdt_info]
     ret

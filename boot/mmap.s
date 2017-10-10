@@ -20,15 +20,6 @@
 
 %include "bios.s"
 
-; The (rather long) function found here calls the BIOS to provide us with a
-; map of usable, reserved and unknown memory. The specific BIOS function called
-; is interrupt 0x15 eax=0xE820, and specific documentation for the behavior of
-; this BIOS call is easy to find just about everywhere.
-;
-; Short description: The BIOS provides us with a memory map in es:di, and the di
-; register is not incremented. The BIOS keeps a "continuation value" in the ebx
-; register, and the way we determine the end of the memory map is when ebx == 0.
-
 mmap:
     push  eax
     push  ebx
