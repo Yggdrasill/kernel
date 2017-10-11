@@ -20,14 +20,20 @@
  */
 
 #include "string.h"
+#include "idt.h"
 
 /* PLEASE read the README provided in the same directory. */
 
 int main(void)
 {
+  struct idt_ptr *idtr;
+
   clear();
 
   puts("Hello world!");
+
+  idtr = idt_init();
+  idt_install(idtr);
 
   __asm__ volatile(
     "cli;"
