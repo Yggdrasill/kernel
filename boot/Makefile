@@ -9,7 +9,8 @@ boot.bin:
 stage2.bin:
 	$(CC) $(CFLAGS) -c -o stage2.o stage2.c
 	$(CC) $(CFLAGS) -c -o string.o string.c
-	$(LD) $(LDFLAGS) -o stage2.bin stage2.o string.o
+	$(CC) $(CFLAGS) -c -o idt.o idt.c
+	$(LD) $(LDFLAGS) -o stage2.bin stage2.o string.o idt.o
 
 clean:
 	rm boot.bin stage2.bin
