@@ -25,7 +25,7 @@ stage 2 can be found at 2048 bytes.
 Stage 2 should be put in the image offset 2048 bytes from the start of the
 image. Thus, the command is:
 
-dd if=boot/stage2.bin of=image bs=512 seek=3 conv=notrunc
+dd if=boot/stage2.bin of=image.img bs=512 seek=3 conv=notrunc
 
 It can then be used in a virtual machine, although you may have to convert the
 image using qemu-img or some other program. Personally, I use qemu, and I don't
