@@ -28,7 +28,7 @@ mmap:
     push  es
     push  di
 
-    mov   ax, 0x6000
+    mov   ax, 0x27E0
     mov   es, ax
     mov   di, 0x0000
 
