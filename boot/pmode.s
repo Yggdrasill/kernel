@@ -23,7 +23,7 @@ gdt_install:
     ret
 
 idt_install:
-    lidt  [idt_info]
+    lidt  [es:idt_info]
     ret
 
 pmode_init:
