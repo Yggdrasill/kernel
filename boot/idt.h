@@ -58,7 +58,6 @@ struct idt_entry {
 
 struct idt_ptr *idt_init(void);
 void idt_set_entry(struct idt_entry *,
-                   void *,
                    void (*)(void),
                    uint16_t,
                    unsigned char);
