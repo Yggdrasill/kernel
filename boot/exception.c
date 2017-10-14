@@ -56,24 +56,12 @@ void exceptions_init(struct idt_entry *entries)
   idt_set_entry(entries++, &exception_0x0B, 0x08, 0x8E);
   idt_set_entry(entries++, &exception_0x0C, 0x08, 0x8E);
   idt_set_entry(entries++, &exception_0x0D, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+
+  /* while(entries < 0x20) */
+
+  while(entries != (void *)(IDT_BASE_OFFSET + 0x100) ) {
+    idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  }
 
   return;
 }
