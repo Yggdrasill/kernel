@@ -52,7 +52,6 @@ struct idt_ptr *idt_init(void)
 }
 
 void idt_set_entry(struct idt_entry *entry,
-                   void *target_offset,
                    void (*idt_handler)(void),
                    uint16_t select,
                    unsigned char flags)
