@@ -82,11 +82,8 @@ void exception_handler(struct exception_info *info)
 {
   if(info->intno > 0x1F) return;
 
-  if(info->intno == 0x1F) {
-    puts("Unhandled exception!");
-  }
-
-  puts(exceptions[info->intno]);
+  if(info->intno == 0x1F) puts("Unhandled exception!");
+  else puts(exceptions[info->intno]);
 
   __asm__ volatile(
     "hlt;"
