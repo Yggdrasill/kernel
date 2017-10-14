@@ -30,7 +30,7 @@ int main(void)
   struct idt_ptr *idtr;
   struct idt_entry *entries;
 
-  entries = (void *)0x37E08;
+  entries = (void *)IDT_BASE_OFFSET;
 
   clear();
 
