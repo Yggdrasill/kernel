@@ -19,7 +19,7 @@
  *
  */
 
-#include "stdint.h"
+#include "string.h"
 #include "exception.h"
 
 char *exceptions[] = {
@@ -37,3 +37,58 @@ char *exceptions[] = {
   "Stack-segment fault",
   "General protection fault"
 };
+
+/* This is disgusting, I know, but also necessary */
+
+void exceptions_init(struct idt_entry *entries)
+{
+  idt_set_entry(entries++, &exception_0x00, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x01, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x02, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x03, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x04, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x05, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x06, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x07, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x08, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x0A, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x0B, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x0C, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_0x0D, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+  idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+
+  return;
+}
+
+void exception_handler(struct exception_info *info)
+{
+  if(info->intno > 0x1F) return;
+
+  if(info->intno == 0x1F) {
+    puts("Unhandled exception!");
+  }
+
+  puts(exceptions[info->intno]);
+
+  __asm__ volatile(
+    "hlt;"
+  );
+}

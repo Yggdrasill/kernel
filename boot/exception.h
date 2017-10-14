@@ -22,6 +22,7 @@
 #ifndef EXCEPTION_H
 #define EXCEPTION_H
 
+#include "idt.h"
 #include "stdint.h"
 
 struct exception_info {
@@ -46,5 +47,8 @@ extern void exception_0x0A(void);
 extern void exception_0x0B(void);
 extern void exception_0x0C(void);
 extern void exception_0x0D(void);
+
+void exceptions_init(struct idt_entry *);
+void exception_handler(struct exception_info *);
 
 #endif
