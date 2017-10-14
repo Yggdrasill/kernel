@@ -21,12 +21,16 @@
 
 #include "string.h"
 #include "idt.h"
+#include "exception.h"
 
 /* PLEASE read the README provided in the same directory. */
 
 int main(void)
 {
   struct idt_ptr *idtr;
+  struct idt_entry *entries;
+
+  entries = (void *)0x37E08;
 
   clear();
 
@@ -34,6 +38,7 @@ int main(void)
 
   idtr = idt_init();
   idt_install(idtr);
+  exceptions_init(entries);
 
   __asm__ volatile(
     "cli;"
