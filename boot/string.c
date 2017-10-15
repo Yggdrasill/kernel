@@ -60,7 +60,10 @@ void putchar(char ch)
     y++;
   }
   if(y >= 25) y = 0;
-  if(ch == '\n') return;
+  if(ch == '\n') {
+    memsetw( (void *)(0xB8000 + (y * 160) ), 0x0720, 0x50);
+    return;
+  }
 
   vga = (short *)(0xB8000 + (y * 160) + x);
   *vga = 0x0700 | ch;
