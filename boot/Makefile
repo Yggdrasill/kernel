@@ -11,8 +11,8 @@ stage2.bin:
 	$(CC) $(CFLAGS) -c -o stage2.o stage2.c
 	$(CC) $(CFLAGS) -c -o string.o string.c
 	$(CC) $(CFLAGS) -c -o idt.o idt.c
-	$(CC) $(CFLAGS) -c -o c_exception.o exception.c
-	$(LD) $(LDFLAGS) -o stage2.bin stage2.o string.o idt.o asm_exception.o c_exception.o
+	$(CC) $(CFLAGS) -c -o interrupt.o interrupt.c
+	$(LD) $(LDFLAGS) -o stage2.bin stage2.o string.o idt.o asm_exception.o interrupt.o
 
 clean:
 	rm boot.bin stage2.bin

@@ -20,7 +20,7 @@
  */
 
 #include "string.h"
-#include "exception.h"
+#include "interrupt.h"
 
 char *exceptions[] = {
   "Division by zero",
@@ -40,7 +40,7 @@ char *exceptions[] = {
 
 /* This is disgusting, I know, but also necessary */
 
-void exceptions_init(struct idt_entry *entries)
+void exception_idt_init(struct idt_entry *entries)
 {
   idt_set_entry(entries++, &exception_0x00, 0x08, 0x8E);
   idt_set_entry(entries++, &exception_0x01, 0x08, 0x8E);
@@ -66,7 +66,7 @@ void exceptions_init(struct idt_entry *entries)
   return;
 }
 
-void exception_handler(struct exception_info *info)
+void exception_handler(struct interrupt_info *info)
 {
   if(info->intno > 0x1F) return;
 
