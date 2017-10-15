@@ -19,13 +19,13 @@
  *
  */
 
-#ifndef EXCEPTION_H
-#define EXCEPTION_H
+#ifndef INTERRUPT_H
+#define INTERRUPT_H
 
 #include "idt.h"
 #include "stdint.h"
 
-struct exception_info {
+struct interrupt_info {
   uint32_t fs, gs, es, ds;
   uint32_t edi, esi, ebp, esp;
   uint32_t ebx, edx, ecx, eax;
@@ -48,7 +48,7 @@ extern void exception_0x0B(void);
 extern void exception_0x0C(void);
 extern void exception_0x0D(void);
 
-void exceptions_init(struct idt_entry *);
-void exception_handler(struct exception_info *);
+void exception_idt_init(struct idt_entry *entries);
+void exception_handler(struct interrupt_info *info);
 
 #endif

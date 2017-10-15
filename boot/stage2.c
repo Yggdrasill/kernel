@@ -21,7 +21,7 @@
 
 #include "string.h"
 #include "idt.h"
-#include "exception.h"
+#include "interrupt.h"
 
 /* PLEASE read the README provided in the same directory. */
 
@@ -38,7 +38,8 @@ int main(void)
 
   idtr = idt_init();
   idt_install(idtr);
-  exceptions_init(entries);
+
+  exception_idt_init(entries);
 
   __asm__ volatile(
     "cli;"
