@@ -8,7 +8,8 @@ SECTIONS
     stage2.o (.text*);
     *(.text);
   }
+  . = 0xE000;
+  .data : AT(0xE000){ *(.data) }
   . = 0x17E00;
-  .data : AT(0x17E00){ *(.data) }
   .bss : AT(0x17E00){ *(.bss) }
 }
