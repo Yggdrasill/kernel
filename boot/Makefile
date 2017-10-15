@@ -1,4 +1,4 @@
-CFLAGS=-m32 -ffreestanding -fno-pic -nodefaultlibs -masm=intel
+CFLAGS=-m32 -ffreestanding -fno-pic -nodefaultlibs -masm=intel -Os -Wall -Wextra -pedantic
 LDFLAGS=-T linker.ld -m elf_i386
 
 all: boot.bin stage2.bin
