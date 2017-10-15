@@ -25,6 +25,8 @@
 #include "idt.h"
 #include "stdint.h"
 
+#define IRQ_KEYBOARD    0x01
+
 struct interrupt_info {
   uint32_t fs, gs, es, ds;
   uint32_t edi, esi, ebp, esp;
@@ -48,7 +50,28 @@ extern void exception_0x0B(void);
 extern void exception_0x0C(void);
 extern void exception_0x0D(void);
 
+extern void irq_0x00(void);
+extern void irq_0x01(void);
+extern void irq_0x02(void);
+extern void irq_0x03(void);
+extern void irq_0x04(void);
+extern void irq_0x05(void);
+extern void irq_0x06(void);
+extern void irq_0x07(void);
+extern void irq_0x08(void);
+extern void irq_0x09(void);
+extern void irq_0x0A(void);
+extern void irq_0x0B(void);
+extern void irq_0x0C(void);
+extern void irq_0x0D(void);
+extern void irq_0x0E(void);
+extern void irq_0x0F(void);
+extern void irq_wrapper(void);
+
 void exception_idt_init(struct idt_entry *entries);
+void irq_idt_init(struct idt_entry *entries);
+
 void exception_handler(struct interrupt_info *info);
+void irq_handler(struct interrupt_info *info);
 
 #endif
