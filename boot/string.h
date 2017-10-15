@@ -22,7 +22,9 @@
 #ifndef STRING_H
 #define STRING_H
 
-void clear(void);
+#include "stdint.h"
+
+void memsetw(void *, int16_t, size_t);
 unsigned long long strlen(char *);
 void putchar(char);
 void puts(char *);

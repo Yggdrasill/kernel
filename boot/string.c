@@ -21,15 +21,17 @@
 
 #include "string.h"
 
-void clear(void)
+void memsetw(void *s, int16_t c, size_t n)
 {
     __asm__ volatile(
       "push   edi;"
-      "mov    eax, 0x0720;"
-      "mov    ecx, 0xFA0;"
-      "mov    edi, 0xB8000;"
+      "mov    eax, %1;"
+      "mov    ecx, %2;"
+      "mov    edi, %0;"
       "rep    stosw;"
       "pop    edi;"
+      :
+      : "m"(s), "m"(c), "m"(n)
     );
 
     return;
