@@ -37,6 +37,7 @@ global exception_0x0D
 
 exception_wrapper:
     cli
+
     pusha
     push  ds
     push  es
@@ -61,6 +62,8 @@ exception_wrapper:
     popa
 
     add   esp, 0x08
+
+    sti
 
     iret
 
