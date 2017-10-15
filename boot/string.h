@@ -25,7 +25,7 @@
 #include "stdint.h"
 
 void memsetw(void *, int16_t, size_t);
-unsigned long long strlen(char *);
+size_t strlen(char *);
 void putchar(char);
 void puts(char *);
 

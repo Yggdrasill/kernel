@@ -37,7 +37,7 @@ void memsetw(void *s, int16_t c, size_t n)
     return;
 }
 
-unsigned long long strlen(char *str)
+size_t strlen(char *str)
 {
   unsigned long long retval;
 
