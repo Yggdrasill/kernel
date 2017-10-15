@@ -21,6 +21,7 @@
 
 #include "string.h"
 #include "idt.h"
+#include "irq.h"
 #include "interrupt.h"
 
 /* PLEASE read the README provided in the same directory. */
@@ -40,6 +41,21 @@ int main(void)
   idt_install(idtr);
 
   exception_idt_init(entries);
+
+  irq_init();
+  irq_idt_init(entries + 0x20);
+  irq_mask_all();
+  irq_unmask(IRQ_KEYBOARD);
+
+  __asm__ volatile(
+    "sti;"
+  );
+
+  for(;;) {
+    __asm__ volatile(
+      "hlt;"
+    );
+  }
 
   __asm__ volatile(
     "cli;"
