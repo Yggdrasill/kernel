@@ -19,6 +19,7 @@
  *
  */
 
+#include "io.h"
 #include "string.h"
 #include "interrupt.h"
 
@@ -36,6 +37,25 @@ char *exceptions[] = {
   "Segment not present",
   "Stack-segment fault",
   "General protection fault"
+};
+
+char *irq_interrupts[] = {
+  "Timer",
+  "Keyboard",
+  "Cascade",
+  "Serial port 2",
+  "Serial port 1",
+  "Parallel port 2",
+  "Diskette",
+  "Parallel port 1",
+  "CMOS RTC",
+  "CGA retrace",
+  "IRQ 10",
+  "IRQ 11",
+  "Auxiliary",
+  "FPU",
+  "Hard disk",
+  "IRQ 15"
 };
 
 /* This is disgusting, I know, but also necessary */
@@ -66,6 +86,28 @@ void exception_idt_init(struct idt_entry *entries)
   return;
 }
 
+void irq_idt_init(struct idt_entry *entries)
+{
+  idt_set_entry(entries++, &irq_0x00, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x01, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x02, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x03, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x04, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x05, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x06, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x07, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x08, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x09, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x0A, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x0B, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x0C, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x0D, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x0E, 0x08, 0x8E);
+  idt_set_entry(entries++, &irq_0x0F, 0x08, 0x8E);
+
+  return;
+}
+
 void exception_handler(struct interrupt_info *info)
 {
   if(info->intno > 0x1F) return;
@@ -76,4 +118,23 @@ void exception_handler(struct interrupt_info *info)
   __asm__ volatile(
     "hlt;"
   );
+}
+
+void irq_handler(struct interrupt_info *info)
+{
+  char ch;
+
+  switch(info->intno) {
+    case IRQ_KEYBOARD:
+      ch = inb(0x60);
+  }
+
+  outb(0x20, 0x20);
+  if(info->intno > 0x08) {
+    outb(0xA0, 0x20);
+  }
+
+  puts(irq_interrupts[info->intno]);
+
+  return;
 }
