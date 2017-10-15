@@ -25,7 +25,7 @@ void memsetw(void *s, int16_t c, size_t n)
 {
     __asm__ volatile(
       "push   edi;"
-      "mov    eax, %1;"
+      "mov    ax, %1;"
       "mov    ecx, %2;"
       "mov    edi, %0;"
       "rep    stosw;"
