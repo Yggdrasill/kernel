@@ -33,7 +33,7 @@ int main(void)
 
   entries = (void *)IDT_BASE_OFFSET;
 
-  memsetw( (void *)0xB8000, 0x0720, 0xFA0);
+  memsetw( (void *)0xB8000, 0x0720, 0x7D0);
 
   puts("Hello world!");
 
