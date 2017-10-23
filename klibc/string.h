@@ -27,6 +27,7 @@
 void memsetw(void *, int16_t, size_t);
 size_t strlen(char *);
 void putchar(char);
+void puthex(size_t);
 void puts(char *);
 
 #endif

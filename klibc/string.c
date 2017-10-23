@@ -72,6 +72,32 @@ void putchar(char ch)
   return;
 }
 
+void puthex(size_t hex)
+{
+  char *hex_array;
+  char chars[2];
+  size_t i, j;
+
+  hex_array = (char *)&hex;
+
+  putchar('0');
+  putchar('x');
+
+  for(i = sizeof(hex), j = i - 1; i > 0; i--, j--) {
+    chars[0] = (hex_array[j] & 0xF0) >> 4;
+    chars[1] = hex_array[j] & 0x0F;
+    chars[0] += chars[0] >= 0x0A ? 'A' - 0x0A : '0';
+    chars[1] += chars[1] >= 0x0A ? 'A' - 0x0A : '0';
+
+    putchar(chars[0]);
+    putchar(chars[1]);
+  }
+
+  putchar('\n');
+
+  return;
+}
+
 void puts(char *str)
 {
   while(*str) {
