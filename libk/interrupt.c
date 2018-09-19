@@ -22,6 +22,7 @@
 #include "io.h"
 #include "string.h"
 #include "interrupt.h"
+#include "drivers/boot/kbd.h"
 
 char *exceptions[] = {
   "Division by zero",
@@ -122,17 +123,12 @@ void exception_handler(struct interrupt_info *info)
 
 void irq_handler(struct interrupt_info *info)
 {
-  unsigned char ch;
-
   outb(0x20, 0x20);
-  if(info->intno > 0x08) {
-    outb(0xA0, 0x20);
-  }
+  if(info->intno > 0x08) outb(0xA0, 0x20);
 
   switch(info->intno) {
     case IRQ_KEYBOARD:
-      ch = inb(0x60);
-      puthex(ch);
+      kbd_input();
       break;
     default:
       puts(irq_interrupts[info->intno]);

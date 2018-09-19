@@ -23,6 +23,8 @@
 #include "idt.h"
 #include "irq.h"
 #include "interrupt.h"
+#include "io.h"
+#include "drivers/boot/kbd.h"
 
 /* PLEASE read the README provided in the same directory. */
 
@@ -30,12 +32,15 @@ int main(void)
 {
   struct idt_ptr *idtr;
   struct idt_entry *entries;
+  unsigned char kbd;
 
   entries = (void *)IDT_BASE_OFFSET;
 
   memsetw( (void *)0xB8000, 0x0720, 0x7D0);
 
   puts("Hello world!");
+
+  kbd_write_wait();
 
   idtr = idt_init();
   idt_install(idtr);
@@ -46,6 +51,16 @@ int main(void)
   irq_idt_init(entries + 0x20);
   irq_mask_all();
   irq_unmask(IRQ_KEYBOARD);
+
+  kbd_disable();
+  kbd_write_wait();
+  outb(0x64, 0x20);
+  kbd_read_wait();
+  kbd = inb(0x60) ^ (1 << 6);
+  kbd_write_wait();
+  outb(0x64, 0x60);
+  outb(0x60, kbd);
+  kbd_enable();
 
   __asm__ volatile(
     "sti;"
