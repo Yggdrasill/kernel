@@ -60,6 +60,7 @@ int main(void)
   kbd_write_wait();
   outb(0x64, 0x60);
   outb(0x60, kbd);
+
   kbd_enable();
 
   __asm__ volatile(
