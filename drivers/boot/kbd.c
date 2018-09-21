@@ -178,11 +178,10 @@ void kbd_ext_input(void)
 
 void kbd_input(void)
 {
-  unsigned char kbd;
   unsigned char ch;
 
-  kbd = inb(0x64);
-  if(kbd & 0x01 && !ext && !brk) {
+  kbd_read_wait();
+  if(!ext && !brk) {
     ch = inb(0x60);
     switch(ch) {
       case 0xE0:
