@@ -153,6 +153,9 @@ void kbd_write_wait(void);
 void kbd_read_wait(void);
 void kbd_disable(void);
 void kbd_enable(void);
+void kbd_init(void);
+void kbd_break(void);
+void kbd_ext_input(void);
 void kbd_input(void);
 
 #endif

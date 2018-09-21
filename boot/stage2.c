@@ -32,7 +32,6 @@ int main(void)
 {
   struct idt_ptr *idtr;
   struct idt_entry *entries;
-  unsigned char kbd;
 
   entries = (void *)IDT_BASE_OFFSET;
 
@@ -52,16 +51,7 @@ int main(void)
   irq_mask_all();
   irq_unmask(IRQ_KEYBOARD);
 
-  kbd_disable();
-  kbd_write_wait();
-  outb(0x64, 0x20);
-  kbd_read_wait();
-  kbd = inb(0x60) ^ (1 << 6);
-  kbd_write_wait();
-  outb(0x64, 0x60);
-  outb(0x60, kbd);
-
-  kbd_enable();
+  kbd_init();
 
   __asm__ volatile(
     "sti;"

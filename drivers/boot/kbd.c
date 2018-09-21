@@ -129,6 +129,23 @@ void kbd_enable(void)
   outb(0x64, 0xA8);
 }
 
+void kbd_init(void)
+{
+  unsigned char kbd;
+
+  kbd_disable();
+  kbd_write_wait();
+  outb(0x64, 0x20);
+  kbd_read_wait();
+  kbd = inb(0x60) ^ (1 << 6);
+  kbd_write_wait();
+  outb(0x64, 0x60);
+  outb(0x60, kbd);
+  kbd_enable();
+
+  return;
+}
+
 void kbd_break(void)
 {
   inb(0x60);
