@@ -23,8 +23,7 @@
 #include "string.h"
 #include "kbd.h"
 
-static int ext;
-static int brk;
+static int state;
 
 const unsigned char kbd_scan_table[] = {
   0x00,         KCODE_F9,     0x00,         KCODE_F5,     /* 0x00 - 0x03 */
@@ -151,52 +150,85 @@ void kbd_break(void)
   inb(0x60);
   puts("Release");
 
-  brk = 0;
   return;
 }
 
 void kbd_ext_input(void)
 {
-  unsigned char ch;
+  unsigned char sc;
 
-  if(!brk) {
-    ch = inb(0x60);
-    switch(ch) {
-      case 0xF0:
-        brk = 1;
-        break;
-      default:
-        puthex(kbd_ext_scan_table[ch]);
-    }
+  sc = inb(0x60);
+  if(sc == KBD_BRK) {
+    state = KBSTATE_EXTBRK;
+    return;
+  } else if(state == KBSTATE_EXTBRK) {
+    puthex(kbd_ext_scan_table[sc]);
   } else {
-    kbd_break();
+    puthex(kbd_ext_scan_table[sc]);
   }
 
-  ext = 0;
+  state = KBSTATE_NONE;
+
+  return;
+}
+
+void kbd_std_input(void)
+{
+  unsigned char sc;
+
+  sc = inb(0x60);
+  switch(state) {
+    case KBSTATE_STDMK:
+      puthex(kbd_scan_table[sc]);
+      break;
+    case KBSTATE_STDBRK:
+      puthex(kbd_scan_table[sc]);
+      break;
+  }
+
+  state = KBSTATE_NONE;
+  return;
+}
+
+void kbd_state(void)
+{
+  unsigned char sc;
+
+  sc = inb(0x60);
+  switch(sc) {
+    case KBD_EXT:
+      state = KBSTATE_EXT;
+      break;
+    case KBD_PAUSE:
+      state = KBSTATE_PAUSE;
+      break;
+    case KBD_BRK:
+      state = KBSTATE_STDBRK;
+      break;
+    default:
+      state = KBSTATE_STDMK;
+      kbd_std_input();
+  }
+
   return;
 }
 
 void kbd_input(void)
 {
-  unsigned char ch;
-
   kbd_read_wait();
-  if(!ext && !brk) {
-    ch = inb(0x60);
-    switch(ch) {
-      case 0xE0:
-        ext = 1;
-        break;
-      case 0xF0:
-        brk = 1;
-        break;
-      default:
-        puthex(kbd_scan_table[ch]);
-    }
-  } else if(ext) {
-    kbd_ext_input();
-  } else if(brk) {
-    kbd_break();
+  switch(state & 0x70) {
+    case KBSTATE_NONE:
+      kbd_state();
+      break;
+    case KBSTATE_STD:
+      kbd_std_input();
+      break;
+    case KBSTATE_EXT:
+      kbd_ext_input();
+      break;
+    default:
+      puts("Unknown state");
+      state = KBSTATE_NONE;
   }
 
   return;

@@ -25,6 +25,24 @@
 #define KCODE_MULTI 0xFE /* multimedia keys placeholder */
 #define KCODE_ACPI  0xFF /* acpi keys placeholder */
 
+#define KBD_EXT     0xE0
+#define KBD_PAUSE   0xE1
+#define KBD_BRK     0xF0
+
+enum KBSTATE {
+  KBSTATE_NONE      = 0x00,
+  KBSTATE_STD       = 0x10,
+  KBSTATE_STDMK     = 0x11,
+  KBSTATE_STDBRK    = 0x12,
+  KBSTATE_EXT       = 0x20,
+  KBSTATE_EXTMK     = 0x21,
+  KBSTATE_EXTBRK    = 0x22,
+  KBSTATE_EXTMB     = 0x40,
+  KBSTATE_PRTSCMK   = 0x41,
+  KBSTATE_PRTSCBRK  = 0x42,
+  KBSTATE_PAUSE     = 0xC0
+};
+
 /* keycodes ordered by rows, 32 max keys for each row */
 
 enum KCODE_ROW0 {
@@ -156,6 +174,7 @@ void kbd_enable(void);
 void kbd_init(void);
 void kbd_break(void);
 void kbd_ext_input(void);
+void kbd_state(void);
 void kbd_input(void);
 
 #endif
