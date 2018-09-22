@@ -23,6 +23,19 @@
 #include "string.h"
 #include "kbd.h"
 
+/*
+ * KNOWN BUGS:
+ *
+ * - If an extended scan code and a regular scan code are sent at the same time,
+ *   the driver may end up handling the key presses incorrectly.
+ * - A malformed input can be sent to make the machine hang.
+ * - A malformed input can be sent to make memory accesses that shouldn't be
+ *   allowed.
+ *
+ * All of these bugs will be fixed in time.
+ *
+ */
+
 static int state;
 
 const unsigned char kbd_scan_table[] = {
@@ -148,6 +161,27 @@ void kbd_init(void)
 
 void kbd_ext_mb_prtsc(void)
 {
+  static int rx_bytes;
+  unsigned char sc;
+
+  sc = inb(0x60);
+  if(sc != 0xE0 && sc != 0x12 && sc != 0x7C && sc != 0xF0) {
+    rx_bytes = 0;
+    state = KBSTATE_NONE;
+  } else {
+    rx_bytes++;
+  }
+
+  if(state == KBSTATE_PRTSCMK && rx_bytes == 2) {
+    puthex(KCODE_PRTSC);
+    state = KBSTATE_NONE;
+    rx_bytes = 0;
+  } else if(state == KBSTATE_PRTSCBRK && rx_bytes == 3) {
+    puthex(KCODE_PRTSC);
+    state = KBSTATE_NONE;
+    rx_bytes = 0;
+  }
+
   return;
 }
 
@@ -195,14 +229,17 @@ void kbd_ext_input(void)
   sc = inb(0x60);
   if(sc == KBD_BRK) {
     state = KBSTATE_EXTBRK;
-    return;
-  } else if(state == KBSTATE_EXTBRK) {
+  } else if(state == KBSTATE_EXTBRK && sc == 0x7C) {
+    state = KBSTATE_PRTSCBRK;
+  } else if(state == KBSTATE_EXTBRK && sc != 0x7C) {
     puthex(kbd_ext_scan_table[sc]);
+    state = KBSTATE_NONE;
+  } else if(sc == 0x12) {
+    state = KBSTATE_PRTSCMK;
   } else {
     puthex(kbd_ext_scan_table[sc]);
+    state = KBSTATE_NONE;
   }
-
-  state = KBSTATE_NONE;
 
   return;
 }
