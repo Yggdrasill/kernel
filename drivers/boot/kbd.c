@@ -145,10 +145,45 @@ void kbd_init(void)
   return;
 }
 
-void kbd_break(void)
+
+void kbd_ext_mb_prtsc(void)
 {
-  inb(0x60);
-  puts("Release");
+  return;
+}
+
+void kbd_ext_mb_pause(void)
+{
+  static int rx_bytes;
+  unsigned char sc;
+
+  sc = inb(0x60);
+  if(sc != 0xE1 && sc != 0x14 && sc != 0x77 && sc != 0xF0) {
+    rx_bytes = 0;
+    state = KBSTATE_NONE;
+  } else {
+    rx_bytes++;
+  }
+
+  if(rx_bytes == 7) {
+    puthex(KCODE_PAUSE);
+    state = KBSTATE_NONE;
+    rx_bytes = 0;
+  }
+
+  return;
+}
+
+void kbd_ext_mb_input(void)
+{
+  switch(state) {
+    case KBSTATE_PRTSCMK:
+    case KBSTATE_PRTSCBRK:
+      kbd_ext_mb_prtsc();
+      break;
+    case KBSTATE_PAUSE:
+      kbd_ext_mb_pause();
+      break;
+  }
 
   return;
 }
@@ -225,6 +260,9 @@ void kbd_input(void)
       break;
     case KBSTATE_EXT:
       kbd_ext_input();
+      break;
+    case KBSTATE_EXTMB:
+      kbd_ext_mb_input();
       break;
     default:
       puts("Unknown state");
