@@ -1,7 +1,7 @@
 LD_STAGE2=-T boot/linker.ld
 
 $(BINDIR)/boot.bin: boot/boot.s
-	$(AS) -f bin -i boot/ -o $@ $^
+	$(AS) -f bin -I boot/ -o $@ $^
 
 $(OBJDIR)/stage2.o: boot/stage2.c
 	$(CC) $(CF_ALL) $(INCLUDE_PATH) $(CFLAGS) -c -o $@ $^

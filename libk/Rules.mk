@@ -2,7 +2,7 @@ SRCDIR_LIBK=libk
 SRC_LIBK=$(wildcard $(SRCDIR_LIBK)/*.c)
 OBJ_LIBK=$(patsubst %.c,%.o,$(patsubst $(SRCDIR_LIBK)%,$(OBJDIR)%,$(SRC_LIBK) ) )
 
-AF_LIBK=-f elf32 -i libk/
+AF_LIBK=-f elf32 -I libk/
 LD_LIBK=--oformat elf32-i386 -r
 
 $(OBJDIR)/libk.o: $(OBJ_LIBK) $(OBJDIR)/asm_irq.o $(OBJDIR)/asm_exception.o
