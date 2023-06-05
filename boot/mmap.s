@@ -81,6 +81,7 @@ mmap_done:
     pop   ecx
     pop   ebx
     pop   eax
+    pop   bp
 
     ret
 

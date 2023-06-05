@@ -15,6 +15,7 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+extern __start
 section .boot
 
 bits   16
@@ -133,12 +134,12 @@ stage15:
     xor   ecx, ecx
     xor   edx, edx
 
-    jmp   0x0008:0x8400
+    ; push memory map
 
-    ; If we ever come to this point,
-    ; just give up
+    push word [mmap_seg]
+    push word [mmap_off]
 
-    hlt
+    jmp 0x0008:__start
 
 s15_str   db "Entering stage 1.5",0x0D,0x0A,0
 

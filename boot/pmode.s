@@ -19,14 +19,34 @@
 %define PMODE_S
 
 gdt_install:
-    lgdt  [es:gdt_info]
+    push  bp
+    mov   bp, sp
+    push  ax
+    push  di
+    mov   ax, es
+    shl   ax, 4
+    add   ax, [gdt_ptr]
+    mov   [gdt_ptr], ax
+    mov   di, gdt_info
+    lgdt  [es:di]
+    pop   ax
+    pop   di
+    pop   bp
     ret
 
 idt_install:
-    lidt  [es:idt_info]
+    push  bp
+    mov   bp, sp
+    push  di
+    mov   di, idt_info
+    lidt  [es:di]
+    pop   di
+    pop   bp
     ret
 
 pmode_init:
+    push  bp
+    mov   bp, sp
     push  eax
 
     mov   eax, cr0
@@ -34,11 +54,12 @@ pmode_init:
     mov   cr0, eax
 
     pop   eax
+    pop   bp
     ret
 
 gdt_info:
 gdt_size  dw  0x18 - 1
-gdt_ptr   dd  0x7E00 + gdt
+gdt_ptr   dd  gdt
 
 gdt:
 null_gdt  times 8 db 0
