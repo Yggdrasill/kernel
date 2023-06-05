@@ -53,6 +53,11 @@ a20_enabled:
     cmp   ax, bx
     je    a20_ne
 
+    mov   byte [es:di], 0xFF
+    mov   byte [ds:si], 0x00
+    cmp   byte [ds:si], 0xFF
+    je    a20_ne
+
     mov   [has_a20], byte 0x01
     push  a20_yes
     call  print
