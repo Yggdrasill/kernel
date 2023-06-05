@@ -40,7 +40,7 @@ xor   di, di
 
 sti
 
-jmp   0x07E0:boot
+jmp   0x0000:boot
 
 %include "bios.s"
 
