@@ -21,6 +21,8 @@
 %include "bios.s"
 
 mmap:
+    push  bp
+    mov   bp, sp 
     push  eax
     push  ebx
     push  ecx

@@ -16,6 +16,8 @@
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 mask_ints:
+    push  bp
+    mov   bp, sp
     push  ax
 
     mov   ax, 0xFF
@@ -23,4 +25,5 @@ mask_ints:
     out   0x1A, ax
 
     pop   ax
+    pop   bp
     ret

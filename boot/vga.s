@@ -19,6 +19,8 @@
 %define VGA_S
 
 init_video:
+    push  bp
+    mov   bp, sp
     push  ax
     push  cx
 
@@ -34,6 +36,7 @@ init_video:
 
     pop   cx
     pop   ax
+    pop   bp
 
     ret
 

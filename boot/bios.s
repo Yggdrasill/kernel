@@ -19,23 +19,25 @@
 %define BIOS_S
 
 print:
+    push  bp
     mov   bp, sp
-    mov   si, [ss:bp + 2]
+    mov   si, [ss:bp + 4]
     push  ax
-
     xor   ax, ax
 printlp:
     lodsb
-    or    al, al
-    jz    printret
-    mov   ah, 0x0E
-    int   0x10
-    jmp   printlp
+    or   al, al
+    jz   printret
+    mov  ah, 0x0E
+    int  0x10
+    jmp  printlp
 printret:
-    pop   ax
+    pop  ax
+    pop  bp 
     ret
 
 error:
+    push  bp
     mov   bp, sp
     mov   si, [ss:bp + 2]  ; push error message again
     push  si
@@ -44,8 +46,9 @@ error:
     hlt
 
 reset:
-    push  dx
+    push  bp
     mov   bp, sp
+    push  dx
     mov   dx, [ss:bp + 4]
     push  si
     push  ax
@@ -57,28 +60,28 @@ resetlp:
     jne   resetcnt
     call  error
 resetcnt:
-    xor   ax, ax
+    xor   word ax, ax
     int   0x13
     jc    resetlp
     add   sp, 2         ; discard error message
-    pop   ax
-    pop   si
+    pop   word ax
+    pop   word si
     pop   dx
+    pop   bp
     ret
 
 read:
-    push  ax
-    push  bx
-    push  cx
-    mov   bp, sp
-    mov   bx, [ss:bp + 14]
-    mov   es, bx
-    mov   bx, [ss:bp + 12]
-    mov   ax, [ss:bp + 10]
-    mov   dx, [ss:bp + 8]
-    push  si
-    push  disk_err2
-    xor   si, si
+    push  bp
+    mov   word bp, sp
+    push  word ax
+    push  word bx
+    push  word cx
+    mov   word bx, [ss:bp + 8]
+    mov   word ax, [ss:bp + 6]
+    mov   word dx, [ss:bp + 4]
+    push  word si
+    push  word disk_err2
+    xor   word si, si
 readlp:
     inc   si
     cmp   si, 0x05
@@ -91,10 +94,11 @@ readcnt:
     int   0x13
     jc    readlp
     add   sp, 2
-    pop   si
-    pop   cx
-    pop   bx
-    pop   ax
+    pop   word si
+    pop   word cx
+    pop   word bx
+    pop   word ax
+    pop   bp
     ret
 
 disk_err1 db "Error: Couldn't reset drive in less than 5 tries",0x0D,0x0A,0

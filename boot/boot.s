@@ -22,23 +22,20 @@ bits   16
 cli
 mov   ax, 0x7000
 mov   ss, ax
-mov   sp, 0xFFFF
+mov   bp, 0xFFFF
+mov   sp, bp
 
-mov   ax, 0x07E0
-mov   es, ax
-mov   ax, 0x07C0
+xor   ax, ax
 mov   ds, ax
-xor   si, si
-xor   di, di
+mov   es, ax
+mov   si, 0x7C00
+mov   di, 0x7E00
 
 mov   cx, 0x0200
 rep   movsb
 
-mov   ax, 0x07E0
-mov   ds, ax
-mov   es, ax
-xor   di, di
 xor   si, si
+xor   di, di
 
 sti
 
@@ -53,23 +50,21 @@ boot:
     mov   dl, [drive]
     push  dx
     call  reset
-    mov   sp, 0xFFFF    ; flush stack
+    mov   word sp, 0xFFFF    ; flush stack
 
-    xor   dx, dx
-    mov   dl, [drive]
-    push  word 0x07E0
-    push  word 0x0200
-    push  word 0x023C   ; read a ridiculous amount of sectors
-    push  dx
+    xor   word dx, dx
+    mov   byte dl, [drive]
+    push  word 0x8000
+    push  word 0x0280   ; read 64K from disk
+    push  word dx
     call  read
     mov   sp, 0xFFFF
 
-    jmp   stage15
+    jmp   0x0000:stage15
 
 drive     db 0
 
 times     446 - ($ - $$) db 0
-
 part0     times 16 db 0
 part1     times 16 db 0
 part2     times 16 db 0
@@ -103,6 +98,8 @@ stage15:
     call  mask_ints
 
     cli
+
+    xor ax, ax
 
     call  idt_install
     call  gdt_install

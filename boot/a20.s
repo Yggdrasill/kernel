@@ -27,6 +27,8 @@ a20_error:
     hlt
 
 a20_enabled:
+    push  bp
+    mov   bp, sp
     push  ax
     push  bx
     push  di
@@ -65,6 +67,7 @@ a20_ne:
 a20_end:
     pop   bx
     pop   ax
+    pop   bp
     ret
 
 bios_a20:
@@ -134,6 +137,8 @@ a20_fast:
     ret
 
 a20_init:
+    push  bp
+    mov   bp, sp
     call  a20_enabled
     cmp   [has_a20], byte 0x01
     je    done_a20
@@ -156,6 +161,7 @@ a20_init:
     cmp   [has_a20], byte 0x01
     jne   a20_error
 done_a20:
+    pop   bp
     ret
 
 a20_yes   db "A20 enabled",0x0D,0x0A,0
