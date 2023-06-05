@@ -44,11 +44,10 @@ jmp   0x07E0:boot
 %include "bios.s"
 
 boot:
-    mov   [drive], dl
-
-    xor   dx, dx
-    mov   dl, [drive]
-    push  dx
+    mov   byte [drive], dl
+    xor   word dx, dx
+    mov   byte dl, [drive]
+    push  word dx
     call  reset
     mov   word sp, 0xFFFF    ; flush stack
 
