@@ -23,18 +23,16 @@
 
 void memsetw(void *s, int16_t c, size_t n)
 {
-    __asm__ volatile(
-      "push   edi;"
-      "mov    ax, %1;"
-      "mov    ecx, %2;"
-      "mov    edi, %0;"
-      "rep    stosw;"
-      "pop    edi;"
-      :
-      : "m"(s), "m"(c), "m"(n)
-    );
+  char *p;
+  size_t i;
 
-    return;
+  p = (char *)s;
+
+  for(i = 0; i < n; i += 2) {
+    *(p + i) = c;
+  }
+
+  return;
 }
 
 size_t strlen(char *str)
