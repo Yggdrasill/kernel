@@ -15,6 +15,8 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+section .boot
+
 bits   16
 
 cli
@@ -74,6 +76,8 @@ part2     times 16 db 0
 part3     times 16 db 0
 
 dw        0xAA55
+
+section .stage15
 
 %include "a20.s"
 %include "mmap.s"
