@@ -33,7 +33,7 @@ int main(uint32_t mmap_start, uint32_t mmap_end)
 
   entries = (void *)IDT_BASE_OFFSET;
 
-  memsetw( (void *)0xB8000, 0x0720, 0x7D0);
+  memsetw((int16_t *)&FB_ADDR, 0x0720, 0x7D0);
 
   puts("Hello world!");
   puthex(mmap_start);
