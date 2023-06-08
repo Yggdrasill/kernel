@@ -7,14 +7,15 @@ section .init
 __start:
     push  ebp
     mov   ebp, esp
-    xor   bx, bx
-    xor   ax, ax
+    xor   ebx, ebx
+    xor   eax, eax
     mov   word bx, [ebp + 4]
     mov   word ax, [ebp + 6]
     shl   eax, 4
+    add   ebx, eax
 
-    push  eax
     push  ebx
+    push  eax
     xor   eax, eax
     xor   ebx, ebx
 

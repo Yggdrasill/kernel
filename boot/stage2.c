@@ -26,7 +26,7 @@
 
 /* PLEASE read the README provided in the same directory. */
 
-int main(void)
+int main(uint32_t mmap_start, uint32_t mmap_end)
 {
   struct idt_ptr *idtr;
   struct idt_entry *entries;
@@ -36,6 +36,8 @@ int main(void)
   memsetw( (void *)0xB8000, 0x0720, 0x7D0);
 
   puts("Hello world!");
+  puthex(mmap_start);
+  puthex(mmap_end);
 
   idtr = idt_init();
   idt_install(idtr);
