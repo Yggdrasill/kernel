@@ -15,11 +15,33 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-extern __start
 section .boot
-
 bits   16
+extern __start
 
+jmp   short $+__entry - $
+times 3-($-$$) db 0x90
+name                  db    "fake.bpb"
+bytes_per_secto       dw    512
+sectors_per_cluster   db    1
+reserved_sectors      dw    1
+fat                   db    2
+root_dirs             dw    224
+sectors               dw    2880
+media_type            db    0xf8
+fat_sectors           dw    9
+sectors_per_track     dw    18
+heads                 dw    2
+hidden_sectors        dd    0
+huge_sectors          dd    0
+drive                 db    0
+reserved              db    0
+signature             db    0x29
+volume                dd    0x2d7e5a1a
+label                 db    "FAKEBPB    "
+filesystem            db    "FAT12   "
+
+__entry:
 cli
 mov   ax, 0x7000
 mov   ss, ax
@@ -40,7 +62,7 @@ xor   di, di
 
 sti
 
-jmp   0x0000:boot
+jmp   boot
 
 %include "bios.s"
 
