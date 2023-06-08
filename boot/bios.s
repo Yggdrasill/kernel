@@ -21,25 +21,34 @@
 print:
     push  bp
     mov   bp, sp
-    mov   si, [ss:bp + 4]
     push  ax
-    xor   ax, ax
-printlp:
-    lodsb
-    or   al, al
-    jz   printret
-    mov  ah, 0x0E
-    int  0x10
-    jmp  printlp
-printret:
-    pop  ax
-    pop  bp 
+    push  bx
+    push  cx
+    push  dx
+    mov   ax, 0x0300
+    xor   bx, bx
+    int   0x10
+    mov   cx, [ss:bp + 4]
+    mov   ax, [ss:bp + 6]
+    mov   bx, 0x0007
+    push  bp
+    mov   bp, ax
+    mov   ax, 0x1301
+    int   0x10
+    pop   bp
+    pop   dx
+    pop   cx
+    pop   bx
+    pop   ax
+    pop   bp 
     ret
 
 error:
     push  bp
     mov   bp, sp
-    mov   si, [ss:bp + 2]  ; push error message again
+    mov   si, [ss:bp + 6]  ; push error message again
+    push  si
+    mov   si, [ss:bp + 4] 
     push  si
     call  print
     cli
@@ -53,6 +62,7 @@ reset:
     push  si
     push  ax
     push  disk_err1
+    push  de1_len
     xor   si, si
 resetlp:
     inc   si
@@ -63,7 +73,7 @@ resetcnt:
     xor   word ax, ax
     int   0x13
     jc    resetlp
-    add   sp, 2         ; discard error message
+    add   sp, 4         ; discard error message
     pop   word ax
     pop   word si
     pop   dx
@@ -81,6 +91,7 @@ read:
     mov   word dx, [ss:bp + 4]
     push  word si
     push  word disk_err2
+    push  word de2_len
     xor   word si, si
 readlp:
     inc   si
@@ -93,7 +104,7 @@ readcnt:
     mov   cl, 0x02
     int   0x13
     jc    readlp
-    add   sp, 2
+    add   sp, 4
     pop   word si
     pop   word cx
     pop   word bx
@@ -101,7 +112,9 @@ readcnt:
     pop   bp
     ret
 
-disk_err1 db "Error: Couldn't reset drive in less than 5 tries",0x0D,0x0A,0
-disk_err2 db "Error: Couldn't read drive in less than 5 tries",0x0D,0x0A,0
+disk_err1 db "Error: Couldn't reset drive in less than 5 tries",0x0D,0x0A
+de1_len   equ $ - disk_err1
+disk_err2 db "Error: Couldn't read drive in less than 5 tries",0x0D,0x0A
+de2_len   equ $ - disk_err2
 
 %endif

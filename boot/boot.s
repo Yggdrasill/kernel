@@ -84,8 +84,9 @@ stage15:
     call  init_video
 
     push  s15_str
+    push  s15s_len
     call  print
-    add   sp, 2
+    add   sp, 4
 
     call  a20_init
     call  mmap
@@ -141,7 +142,8 @@ stage15:
 
     jmp 0x0008:__start
 
-s15_str   db "Entering stage 1.5",0x0D,0x0A,0
+s15_str   db "Entering stage 1.5",0x0D,0x0A
+s15s_len  equ $ - s15_str
 
 mmap_seg  dw 0
 mmap_off  dw 0
