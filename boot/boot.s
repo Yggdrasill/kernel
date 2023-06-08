@@ -57,7 +57,7 @@ boot:
     xor   word dx, dx
     mov   byte dl, [drive]
     push  word 0x8000
-    push  word 0x0280   ; read 64K from disk
+    push  word 0x0240 ; read 32K from disk
     push  word dx
     call  read
     mov   sp, 0xFFFF
