@@ -39,9 +39,9 @@ unsigned char inb(uint16_t port)
 void outb(uint16_t port, unsigned char data)
 {
   __asm__ volatile(
-    "out  %0, %1;"
+    "outb %0, %1;"
     :
-    : "Nd"(port), "r"(data)
+    : "dx"(port), "eax"(data)
   );
 
   return;
