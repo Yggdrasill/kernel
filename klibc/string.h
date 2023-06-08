@@ -24,7 +24,10 @@
 
 #include "stdint.h"
 
-void memsetw(void *, int16_t, size_t);
+extern int16_t *__FB_ADDR __attribute__((section("fbr")));
+#define FB_ADDR __FB_ADDR
+
+void memsetw(int16_t *, int16_t, size_t);
 size_t strlen(char *);
 void putchar(char);
 void puthex(size_t);

@@ -21,15 +21,15 @@
 
 #include "string.h"
 
-void memsetw(void *s, int16_t c, size_t n)
+void memsetw(int16_t *s, int16_t c, size_t n)
 {
-  char *p;
+  int16_t *ptr;
   size_t i;
 
-  p = (char *)s;
+  ptr = (int16_t *)s;
 
-  for(i = 0; i < n; i += 2) {
-    *(p + i) = c;
+  for(i = 0; i < n; i++) {
+    *(ptr + i) = c;
   }
 
   return;
@@ -48,24 +48,26 @@ size_t strlen(char *str)
 
 void putchar(char ch)
 {
-  short *vga;
+  int16_t *vga;
 
   static int y;
   static int x;
 
-  if(x >= 160 || ch == '\n') {
+  if(x >= 80 || ch == '\n') {
     x = 0;
     y++;
   }
   if(y >= 25) y = 0;
+
+  vga = (int16_t *)&FB_ADDR + (y * 80) + x;
+
   if(ch == '\n') {
-    memsetw( (void *)(0xB8000 + (y * 160) ), 0x0720, 0x50);
+    memsetw(vga, 0x0720, 80 - x);
     return;
   }
 
-  vga = (short *)(0xB8000 + (y * 160) + x);
   *vga = 0x0700 | ch;
-  x += 2;
+  x++;
 
   return;
 }
