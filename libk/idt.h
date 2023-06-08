@@ -24,8 +24,10 @@
 
 #include "stdint.h"
 
-#define IDT_PTR_LOCATION  0x37E00
-#define IDT_BASE_OFFSET   (IDT_PTR_LOCATION + 0x08)
+extern const char *__IDT_PTR_LOCATION;
+
+#define IDT_PTR_LOCATION  __IDT_PTR_LOCATION
+#define IDT_BASE_OFFSET   ((char *)&IDT_PTR_LOCATION + 0x08)
 #define IDT_ENTRY_NUM     256
 
 /*
