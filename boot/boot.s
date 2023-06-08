@@ -45,6 +45,8 @@ jmp   0x0000:boot
 %include "bios.s"
 
 boot:
+    call  vga_page_rst
+    call  cursor_rst
     mov   byte [drive], dl
     xor   word dx, dx
     mov   byte dl, [drive]

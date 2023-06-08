@@ -18,6 +18,32 @@
 %ifndef BIOS_S
 %define BIOS_S
 
+cursor_rst:
+    push  bp
+    mov   bp, sp
+    push  ax
+    push  bx
+    push  dx
+    mov   ax, 0x0002
+    xor   bx, bx
+    xor   dx, dx
+    int   0x10
+    pop   dx
+    pop   bx
+    pop   ax
+    pop   bp
+    ret
+
+vga_page_rst:
+    push  bp
+    mov   bp, sp
+    push  ax
+    mov   ax, 0x0500
+    int   0x10
+    pop   ax
+    pop   bp
+    ret
+
 print:
     push  bp
     mov   bp, sp
