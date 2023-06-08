@@ -21,16 +21,16 @@
 %include "bios.s"
 
 mmap:
-    push  bp
-    mov   bp, sp 
-    push  eax
-    push  ebx
-    push  ecx
-    push  edx
-    push  es
-    push  di
+    push  dword ebp
+    mov   ebp, esp 
+    push  dword eax
+    push  dword ebx
+    push  dword ecx
+    push  dword edx
+    push  word es
+    push  word di
 
-    mov   ax, 0x27E0
+    mov   eax, 0x000027E0
     mov   es, ax
     mov   di, 0x0000
 
@@ -74,14 +74,14 @@ mmap_done:
     mov   [mmap_seg], es
     mov   [mmap_off], di
 
-    pop   eax
-    pop   di
-    pop   es
-    pop   edx
-    pop   ecx
-    pop   ebx
-    pop   eax
-    pop   bp
+    pop   dword eax
+    pop   word di
+    pop   word es
+    pop   dword edx
+    pop   dword ecx
+    pop   dword ebx
+    pop   dword eax
+    pop   dword ebp
 
     ret
 
