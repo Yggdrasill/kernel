@@ -1,16 +1,67 @@
 OUTPUT_FORMAT(binary);
 ENTRY(main);
 
-SECTIONS
-{
-  . = 0x7E00;
-  .boot : { *(.boot) }
-  . = 0x8000;
-  .stage15 : { *(.stage15) }
-  .init : { *(.init) }
+BIOS_ADDR = 0x0;
+BIOS_SIZE = 0x500;
+MEM0_ADDR = 0x500;
+MEM0_SIZE = 0x7700;
+ENTR_ADDR = 0x7C00;
+ENTR_SIZE = 0x200;
+BOOT_ADDR = 0x7E00;
+BOOT_SIZE = 0x200;
+MEM1_ADDR = 0x8000;
+MEM1_SIZE = 0x1FE00;
+MMAP_ADDR = 0x27E00;
+MMAP_SIZE = 64K;
+IDT_ADDR  = 0x37E00;
+IDT_SIZE  = 64K;
+MEM2_ADDR = 0x47E00;
+MEM2_SIZE = 0x38200;
+EBDA_ADDR = 0x80000;
+EBDA_SIZE = 128K;
+VGA_ADDR  = 0xA0000;
+VGA_SIZE  = 96K;
+FBR_ADDR  = 0xB8000;
+FBR_SIZE  = 32K;
+UPPR_ADDR = 0xC0000;
+UPPR_SIZE = 256K;
+
+MEMORY {
+  bios(rx)  :   org = BIOS_ADDR,  len = BIOS_SIZE
+  mem0(rwx) :   org = MEM0_ADDR,  len = MEM0_SIZE
+  entry(rx) :   org = ENTR_ADDR,  len = ENTR_SIZE
+  boot(rwx) :   org = BOOT_ADDR,  len = BOOT_SIZE
+  mem1(rwx) :   org = MEM1_ADDR,  len = MEM1_SIZE
+  mmap(rw)  :   org = MMAP_ADDR,  len = MMAP_SIZE
+  idt(rw)   :   org = IDT_ADDR,   len = IDT_SIZE
+  mem2(rwx) :   org = MEM2_ADDR,  len = MEM2_SIZE
+  ebda(rx)  :   org = EBDA_ADDR,  len = EBDA_SIZE
+  vga(rw)   :   org = VGA_ADDR,   len = VGA_SIZE
+  fbr(rw)   :   org = FBR_ADDR,   len = FBR_SIZE
+  upper(rx) :   org = UPPR_ADDR,  len = UPPR_SIZE
+}
+
+SECTIONS {
+  . = BOOT_ADDR;
+  .boot : { *(.boot) } > boot
+  . = MEM1_ADDR;
+  .stage15 : { *(.stage15) } > mem1
+  .init : { *(.init) } > mem1
   stage2.o = .;
-  .text : { *(.text) }
+  .text : { *(.text) } > mem1
   .data = .;
   .rodata = .;
   .bss = .;
+  . = IDT_ADDR;
+  .idt (NOLOAD) : { 
+    __IDT_PTR_LOCATION = .;
+    idtr = .;
+    *(.idt) 
+    KEEP(*(.idt) )
+  } > idt
+  . = FBR_ADDR;
+  .fbr (NOLOAD) : {
+    __FB_ADDR = .;
+    KEEP(*(.fbr) )
+  } > fbr
 }
