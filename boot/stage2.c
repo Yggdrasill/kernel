@@ -28,7 +28,7 @@
 
 int main(uint32_t mmap_start, uint32_t mmap_end)
 {
-  struct idt_ptr *idtr;
+  struct idt_ptr *idtp;
   struct idt_entry *entries;
 
   entries = (void *)IDT_BASE_OFFSET;
@@ -39,8 +39,9 @@ int main(uint32_t mmap_start, uint32_t mmap_end)
   puthex(mmap_start);
   puthex(mmap_end);
 
-  idtr = idt_init();
-  idt_install(idtr);
+
+  idtp = idt_init();
+  idt_install(idtp);
 
   exception_idt_init(entries);
 

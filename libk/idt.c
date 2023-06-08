@@ -20,35 +20,39 @@
  */
 
 #include "idt.h"
+#include "string.h"
 #include "stdint.h"
+
+extern struct idt_ptr idtr __attribute__((section("idt")));
 
 struct idt_ptr *idt_init(void)
 {
+  struct idt_ptr *idtp;
   unsigned char *arr_limit;
   unsigned char *arr_base;
 
   uint32_t base;
   uint16_t limit;
 
-  struct idt_ptr *idtr;
-
-  idtr = (struct idt_ptr *)IDT_PTR_LOCATION;
+  idtp = &idtr;
 
   limit = sizeof(struct idt_entry) * IDT_ENTRY_NUM - 1;
+  puthex(limit);
+  puthex((size_t)idtp);
   base = (uint32_t)IDT_BASE_OFFSET;
 
   arr_limit = (unsigned char *)&limit;
   arr_base = (unsigned char *)&base;
 
-  idtr->limit_0 = arr_limit[0];
-  idtr->limit_8 = arr_limit[1];
+  idtp->limit_0 = arr_limit[0];
+  idtp->limit_8 = arr_limit[1];
 
-  idtr->base_0 = arr_base[0];
-  idtr->base_8 = arr_base[1];
-  idtr->base_16 = arr_base[2];
-  idtr->base_24 = arr_base[3];
+  idtp->base_0 = arr_base[0];
+  idtp->base_8 = arr_base[1];
+  idtp->base_16 = arr_base[2];
+  idtp->base_24 = arr_base[3];
 
-  return idtr;
+  return idtp;
 }
 
 void idt_set_entry(struct idt_entry *entry,
