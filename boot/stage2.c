@@ -23,10 +23,11 @@
 #include "idt.h"
 #include "irq.h"
 #include "interrupt.h"
+#include "mmap.h"
 
 /* PLEASE read the README provided in the same directory. */
 
-int main(uint32_t mmap_start, uint32_t mmap_end)
+int main(struct e820_map *start, struct e820_map *end)
 {
   struct idt_ptr *idtp;
   struct idt_entry *entries;
@@ -36,9 +37,12 @@ int main(uint32_t mmap_start, uint32_t mmap_end)
   memsetw((int16_t *)&FB_ADDR, 0x0720, 0x7D0);
 
   puts("Hello world!");
-  puthex(mmap_start);
-  puthex(mmap_end);
-
+  
+  for(struct e820_map *p = start; p <= end; p++) {
+      puthex(p->base);
+      puthex(p->size);
+      puthex(p->type);
+  }
 
   idtp = idt_init();
   idt_install(idtp);

@@ -24,7 +24,7 @@
 
 #include "stdint.h"
 
-extern const char *__IDT_PTR_LOCATION;
+extern const void *__IDT_PTR_LOCATION;
 
 #define IDT_PTR_LOCATION  __IDT_PTR_LOCATION
 #define IDT_BASE_OFFSET   ((char *)&IDT_PTR_LOCATION + 0x08)
