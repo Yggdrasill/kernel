@@ -27,12 +27,12 @@ mmap:
     push  dword ebx
     push  dword ecx
     push  dword edx
+    push  dword edi
     push  word es
-    push  word di
 
     mov   eax, 0x000027E0
     mov   es, ax
-    mov   di, 0x0000
+    mov   edi, 0x00000000
 
     xor   eax, eax
     push  eax
@@ -40,7 +40,7 @@ mmap:
     xor   ebx, ebx
 loop:
     mov   eax, 0x0000E820
-    mov   ecx, 0x00000014
+    mov   ecx, 0x00000018
     mov   edx, 0x534D4150
 
     int   0x15
@@ -60,11 +60,14 @@ mmapcnt2:
 
     cmp   ecx, 0x14
     je    mmapcnt3
+    cmp   ecx, 0x18
+    je    mmapcnt3
+
     push  mmap_err2
     call  error
 
 mmapcnt3:
-    add   di, 0x14
+    add   di, 0x18
     pop   eax
     inc   eax
     push  eax
@@ -75,8 +78,8 @@ mmap_done:
     mov   [mmap_off], di
 
     pop   dword eax
-    pop   word di
     pop   word es
+    pop   dword edi
     pop   dword edx
     pop   dword ecx
     pop   dword ebx
