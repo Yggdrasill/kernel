@@ -39,6 +39,8 @@ mmap:
 
     xor   ebx, ebx
 loop:
+    ; clear ACPI 3.0 attribute field if BIOS doesn't fill in
+    mov   dword [es:edi+0x14], 0x00 
     mov   eax, 0x0000E820
     mov   ecx, 0x00000018
     mov   edx, 0x534D4150

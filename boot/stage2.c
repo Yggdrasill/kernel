@@ -42,6 +42,7 @@ int main(struct e820_map *start, struct e820_map *end)
       puthex(p->base);
       puthex(p->size);
       puthex(p->type);
+      puthex(p->attrib);
   }
 
   idtp = idt_init();
