@@ -58,6 +58,10 @@ SECTIONS {
         __IDT_BASE_LOCATION = . + 8; 
         KEEP(*(.idt) )
       } > idt
+      .mmap (NOLOAD) : {
+          __MMAP_HEAP_LOCATION = .;
+          KEEP(*(.mmap) )
+    } > mem2 
     . = FBR_ADDR;
     .fbr (NOLOAD) : {
         __FB_ADDR = .;
