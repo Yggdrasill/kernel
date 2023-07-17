@@ -22,6 +22,8 @@
 #ifndef STDINT_H
 #define STDINT_H
 
+#define NULL (void *)0
+
 # ifdef __i386__
 
     typedef char                int8_t;
