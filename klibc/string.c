@@ -35,6 +35,18 @@ void memsetw(int16_t *s, int16_t c, size_t n)
   return;
 }
 
+void memcpy(void *dst, void *src, size_t n)
+{
+    void *end;
+
+    end = (char *)dst + n;
+    while( (char *)dst < (char *)end) {
+        *(char *)dst = *(char *)src;
+        dst = (char *)dst + 1;
+        src = (char *)src + 1;
+    }
+}
+
 size_t strlen(char *str)
 {
   unsigned long long retval;
