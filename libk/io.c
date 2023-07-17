@@ -23,26 +23,26 @@
 
 unsigned char inb(uint16_t port)
 {
-  unsigned char data;
+    unsigned char data;
 
-  data = 0;
+    data = 0;
 
-  __asm__ volatile(
-    "inb  %0, %1;"
-    : "=r"(data)
-    : "Nd"(port)
-  );
+    __asm__ volatile(
+            "inb  %0, %1;"
+            : "=r"(data)
+            : "Nd"(port)
+            );
 
-  return data;
+    return data;
 }
 
 void outb(uint16_t port, unsigned char data)
 {
-  __asm__ volatile(
-    "outb %0, %1;"
-    :
-    : "dx"(port), "eax"(data)
-  );
+    __asm__ volatile(
+            "outb %0, %1;"
+            :
+            : "dx"(port), "eax"(data)
+            );
 
-  return;
+    return;
 }

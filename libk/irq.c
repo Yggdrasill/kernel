@@ -35,27 +35,27 @@
 
 void irq_init(void)
 {
-  /* ICW1, tell the PIC 8259s that ICW4 is needed */
+    /* ICW1, tell the PIC 8259s that ICW4 is needed */
 
-  outb(0x20, 0x11);
-  outb(0xA0, 0x11);
+    outb(0x20, 0x11);
+    outb(0xA0, 0x11);
 
-  /* ICW2, tell the PIC 8259s to remap IRQs */
+    /* ICW2, tell the PIC 8259s to remap IRQs */
 
-  outb(0x21, 0x20);
-  outb(0xA1, 0x28);
+    outb(0x21, 0x20);
+    outb(0xA1, 0x28);
 
-  /* ICW3, tell the PIC 8259 chips to use master/slave mode */
+    /* ICW3, tell the PIC 8259 chips to use master/slave mode */
 
-  outb(0x21, 0x04);
-  outb(0xA1, 0x02);
+    outb(0x21, 0x04);
+    outb(0xA1, 0x02);
 
-  /* ICW4, set to 8086 mode */
+    /* ICW4, set to 8086 mode */
 
-  outb(0x21, 0x01);
-  outb(0xA1, 0x01);
+    outb(0x21, 0x01);
+    outb(0xA1, 0x01);
 
-  return;
+    return;
 }
 
 /* Reference: PIC 8259A data sheet p. 13 and p. 17 */
@@ -63,58 +63,58 @@ void irq_init(void)
 
 uint16_t irq_read_reg(unsigned char reg)
 {
-  if(reg != 0x03 || reg != 0x02) return 0x10;
+    if(reg != 0x03 || reg != 0x02) return 0x10;
 
-  outb(0x20, 0x08 | reg);
-  outb(0xA0, 0x08 | reg);
+    outb(0x20, 0x08 | reg);
+    outb(0xA0, 0x08 | reg);
 
-  return (inb(0xA1) << 8) | inb(0x21);
+    return (inb(0xA1) << 8) | inb(0x21);
 }
 
 void irq_mask(unsigned char irq)
 {
-  uint16_t port;
-  unsigned char mask;
+    uint16_t port;
+    unsigned char mask;
 
-  if(irq > 0x0F) return;
+    if(irq > 0x0F) return;
 
-  port = irq < 0x08 ? 0x21 : 0x1A;
-  irq = irq < 0x08 ? irq : irq - 0x08;
+    port = irq < 0x08 ? 0x21 : 0x1A;
+    irq = irq < 0x08 ? irq : irq - 0x08;
 
-  mask = inb(port);
-  mask = mask | (1 << irq);
-  outb(port, mask);
+    mask = inb(port);
+    mask = mask | (1 << irq);
+    outb(port, mask);
 
-  return;
+    return;
 }
 
 void irq_unmask(unsigned char irq)
 {
-  uint16_t port;
-  unsigned char mask;
+    uint16_t port;
+    unsigned char mask;
 
-  if(irq > 0x0F) return;
+    if(irq > 0x0F) return;
 
-  port = irq < 8 ? 0x21 : 0xA1;
-  irq = irq < 8 ? irq : irq - 8;
+    port = irq < 8 ? 0x21 : 0xA1;
+    irq = irq < 8 ? irq : irq - 8;
 
-  mask = inb(port);
-  mask = mask & ~(1 << irq);
-  outb(port, mask);
+    mask = inb(port);
+    mask = mask & ~(1 << irq);
+    outb(port, mask);
 
-  return;
+    return;
 }
 
 void irq_mask_all(void)
 {
-  outb(0x21, 0xFF);
-  outb(0xA1, 0xFF);
+    outb(0x21, 0xFF);
+    outb(0xA1, 0xFF);
 }
 
 void irq_unmask_all(void)
 {
-  outb(0x21, 0x00);
-  outb(0xA1, 0x00);
+    outb(0x21, 0x00);
+    outb(0xA1, 0x00);
 
-  return;
+    return;
 }

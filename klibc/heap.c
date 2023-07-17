@@ -84,12 +84,12 @@ ssize_t heap_sift_down(Heap *heap, ssize_t i)
 }
 
 Heap *heap_create(Heap *heap, 
-    int (*compare)(void *, void *), 
-    int (*equals)(void *, void *),
-    void *array, 
-    size_t size,
-    ssize_t cap, 
-    ssize_t nmemb)
+        int (*compare)(void *, void *), 
+        int (*equals)(void *, void *),
+        void *array, 
+        size_t size,
+        ssize_t cap, 
+        ssize_t nmemb)
 {
     ssize_t i;
 

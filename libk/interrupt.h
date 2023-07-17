@@ -28,11 +28,11 @@
 #define IRQ_KEYBOARD    0x01
 
 struct interrupt_info {
-  uint32_t fs, gs, es, ds;
-  uint32_t edi, esi, ebp, esp;
-  uint32_t ebx, edx, ecx, eax;
-  uint32_t intno, errno;
-  uint32_t eip, cs, eflags, prev_esp, ss;
+    uint32_t fs, gs, es, ds;
+    uint32_t edi, esi, ebp, esp;
+    uint32_t ebx, edx, ecx, eax;
+    uint32_t intno, errno;
+    uint32_t eip, cs, eflags, prev_esp, ss;
 };
 
 extern void exception_unknown(void);

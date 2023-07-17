@@ -25,65 +25,65 @@
 
 struct idt_ptr *idt_init(void)
 {
-  struct idt_ptr *idtp;
-  struct idt_entry *base;
-  unsigned char *arr_limit;
-  unsigned char *arr_base;
+    struct idt_ptr *idtp;
+    struct idt_entry *base;
+    unsigned char *arr_limit;
+    unsigned char *arr_base;
 
-  uint16_t limit;
+    uint16_t limit;
 
-  idtp = &__IDT_PTR_LOCATION;
+    idtp = &__IDT_PTR_LOCATION;
 
-  limit = sizeof(struct idt_entry) * IDT_ENTRY_NUM - 1;
-  base = &__IDT_BASE_LOCATION;
-  
-  arr_limit = (unsigned char *)&limit;
-  arr_base = (unsigned char *)&base;
+    limit = sizeof(struct idt_entry) * IDT_ENTRY_NUM - 1;
+    base = &__IDT_BASE_LOCATION;
 
-  idtp->limit_0 = arr_limit[0];
-  idtp->limit_8 = arr_limit[1];
+    arr_limit = (unsigned char *)&limit;
+    arr_base = (unsigned char *)&base;
 
-  idtp->base_0 = arr_base[0];
-  idtp->base_8 = arr_base[1];
-  idtp->base_16 = arr_base[2];
-  idtp->base_24 = arr_base[3];
+    idtp->limit_0 = arr_limit[0];
+    idtp->limit_8 = arr_limit[1];
 
-  return idtp;
+    idtp->base_0 = arr_base[0];
+    idtp->base_8 = arr_base[1];
+    idtp->base_16 = arr_base[2];
+    idtp->base_24 = arr_base[3];
+
+    return idtp;
 }
 
 void idt_set_entry(struct idt_entry *entry,
-                   void (*idt_handler)(void),
-                   uint16_t select,
-                   unsigned char flags)
+        void (*idt_handler)(void),
+        uint16_t select,
+        unsigned char flags)
 {
-  intptr_t raw_ptr;
-  unsigned char *offset;
-  unsigned char *selector;
+    intptr_t raw_ptr;
+    unsigned char *offset;
+    unsigned char *selector;
 
-  raw_ptr = (intptr_t)idt_handler;
-  offset = (unsigned char *)&raw_ptr;
-  selector = (unsigned char *)&select;
+    raw_ptr = (intptr_t)idt_handler;
+    offset = (unsigned char *)&raw_ptr;
+    selector = (unsigned char *)&select;
 
-  entry->offset_0 = offset[0];
-  entry->offset_8 = offset[1];
-  entry->offset_16 = offset[2];
-  entry->offset_24 = offset[3];
+    entry->offset_0 = offset[0];
+    entry->offset_8 = offset[1];
+    entry->offset_16 = offset[2];
+    entry->offset_24 = offset[3];
 
-  entry->selector_0 = selector[0];
-  entry->selector_8 = selector[1];
+    entry->selector_0 = selector[0];
+    entry->selector_8 = selector[1];
 
-  entry->zero = 0;
-  entry->flags = flags;
+    entry->zero = 0;
+    entry->flags = flags;
 
-  return;
+    return;
 }
 
 void idt_install(struct idt_ptr *idtr)
 {
-  __asm__ volatile(
-    "mov  eax, %0;"
-    "lidt [eax];" : : "m"(idtr)
-  );
+    __asm__ volatile(
+            "mov  eax, %0;"
+            "lidt [eax];" : : "m"(idtr)
+            );
 
-  return;
+    return;
 }
