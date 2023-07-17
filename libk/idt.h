@@ -24,10 +24,6 @@
 
 #include "stdint.h"
 
-extern const void *__IDT_PTR_LOCATION;
-
-#define IDT_PTR_LOCATION  __IDT_PTR_LOCATION
-#define IDT_BASE_OFFSET   ((char *)&IDT_PTR_LOCATION + 0x08)
 #define IDT_ENTRY_NUM     256
 
 /*
@@ -57,6 +53,9 @@ struct idt_entry {
   unsigned char offset_16;
   unsigned char offset_24;
 };
+
+extern struct idt_ptr __IDT_PTR_LOCATION;
+extern struct idt_entry __IDT_BASE_LOCATION;
 
 struct idt_ptr *idt_init(void);
 void idt_set_entry(struct idt_entry *,

@@ -55,8 +55,7 @@ SECTIONS {
   . = IDT_ADDR;
   .idt (NOLOAD) : { 
     __IDT_PTR_LOCATION = .;
-    idtr = .;
-    *(.idt) 
+    __IDT_BASE_LOCATION = . + 8; 
     KEEP(*(.idt) )
   } > idt
   . = FBR_ADDR;

@@ -23,24 +23,20 @@
 #include "string.h"
 #include "stdint.h"
 
-extern struct idt_ptr idtr __attribute__((section("idt")));
-
 struct idt_ptr *idt_init(void)
 {
   struct idt_ptr *idtp;
+  struct idt_entry *base;
   unsigned char *arr_limit;
   unsigned char *arr_base;
 
-  uint32_t base;
   uint16_t limit;
 
-  idtp = &idtr;
+  idtp = &__IDT_PTR_LOCATION;
 
   limit = sizeof(struct idt_entry) * IDT_ENTRY_NUM - 1;
-  puthex(limit);
-  puthex((size_t)idtp);
-  base = (uint32_t)IDT_BASE_OFFSET;
-
+  base = &__IDT_BASE_LOCATION;
+  
   arr_limit = (unsigned char *)&limit;
   arr_base = (unsigned char *)&base;
 

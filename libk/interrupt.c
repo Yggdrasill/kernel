@@ -79,7 +79,7 @@ void exception_idt_init(struct idt_entry *entries)
 
   /* while(entries < 0x20) */
 
-  while(entries != (void *)(IDT_BASE_OFFSET + 0x100) ) {
+  while(entries != (&__IDT_BASE_LOCATION) + IDT_ENTRY_NUM) {
     idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
   }
 

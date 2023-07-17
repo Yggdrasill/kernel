@@ -32,12 +32,12 @@ int main(struct e820_map *start, struct e820_map *end)
   struct idt_ptr *idtp;
   struct idt_entry *entries;
 
-  entries = (void *)IDT_BASE_OFFSET;
+  entries = (void *)&__IDT_BASE_LOCATION;
 
   memsetw((int16_t *)&FB_ADDR, 0x0720, 0x7D0);
 
   puts("Hello world!");
-  
+
   for(struct e820_map *p = start; p <= end; p++) {
       puthex(p->base);
       puthex(p->size);
