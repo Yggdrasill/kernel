@@ -27,40 +27,40 @@ UPPR_ADDR = 0xC0000;
 UPPR_SIZE = 256K;
 
 MEMORY {
-  bios(rx)  :   org = BIOS_ADDR,  len = BIOS_SIZE
-  mem0(rwx) :   org = MEM0_ADDR,  len = MEM0_SIZE
-  entry(rx) :   org = ENTR_ADDR,  len = ENTR_SIZE
-  boot(rwx) :   org = BOOT_ADDR,  len = BOOT_SIZE
-  mem1(rwx) :   org = MEM1_ADDR,  len = MEM1_SIZE
-  mmap(rw)  :   org = MMAP_ADDR,  len = MMAP_SIZE
-  idt(rw)   :   org = IDT_ADDR,   len = IDT_SIZE
-  mem2(rwx) :   org = MEM2_ADDR,  len = MEM2_SIZE
-  ebda(rx)  :   org = EBDA_ADDR,  len = EBDA_SIZE
-  vga(rw)   :   org = VGA_ADDR,   len = VGA_SIZE
-  fbr(rw)   :   org = FBR_ADDR,   len = FBR_SIZE
-  upper(rx) :   org = UPPR_ADDR,  len = UPPR_SIZE
+    bios(rx)  :   org = BIOS_ADDR,  len = BIOS_SIZE
+    mem0(rwx) :   org = MEM0_ADDR,  len = MEM0_SIZE
+    entry(rx) :   org = ENTR_ADDR,  len = ENTR_SIZE
+    boot(rwx) :   org = BOOT_ADDR,  len = BOOT_SIZE
+    mem1(rwx) :   org = MEM1_ADDR,  len = MEM1_SIZE
+    mmap(rw)  :   org = MMAP_ADDR,  len = MMAP_SIZE
+    idt(rw)   :   org = IDT_ADDR,   len = IDT_SIZE
+    mem2(rwx) :   org = MEM2_ADDR,  len = MEM2_SIZE
+    ebda(rx)  :   org = EBDA_ADDR,  len = EBDA_SIZE
+    vga(rw)   :   org = VGA_ADDR,   len = VGA_SIZE
+    fbr(rw)   :   org = FBR_ADDR,   len = FBR_SIZE
+    upper(rx) :   org = UPPR_ADDR,  len = UPPR_SIZE
 }
 
 SECTIONS {
-  . = BOOT_ADDR;
-  .boot : { *(.boot) } > boot
-  . = MEM1_ADDR;
-  .stage15 : { *(.stage15) } > mem1
-  .init : { *(.init) } > mem1
-  stage2.o = .;
-  .text : { *(.text) } > mem1
-  .data = .;
-  .rodata = .;
-  .bss = .;
-  . = IDT_ADDR;
-  .idt (NOLOAD) : { 
-    __IDT_PTR_LOCATION = .;
-    __IDT_BASE_LOCATION = . + 8; 
-    KEEP(*(.idt) )
-  } > idt
-  . = FBR_ADDR;
-  .fbr (NOLOAD) : {
-    __FB_ADDR = .;
-    KEEP(*(.fbr) )
-  } > fbr
+    . = BOOT_ADDR;
+    .boot : { *(.boot) } > boot
+    . = MEM1_ADDR;
+    .stage15 : { *(.stage15) } > mem1
+    .init : { *(.init) } > mem1
+    stage2.o = .;
+    .text : { *(.text) } > mem1
+    .data = .;
+    .rodata = .;
+    .bss = .;
+    . = IDT_ADDR;
+    .idt (NOLOAD) : { 
+        __IDT_PTR_LOCATION = .;
+        __IDT_BASE_LOCATION = . + 8; 
+        KEEP(*(.idt) )
+      } > idt
+    . = FBR_ADDR;
+    .fbr (NOLOAD) : {
+        __FB_ADDR = .;
+        KEEP(*(.fbr) )
+    } > fbr
 }
