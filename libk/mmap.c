@@ -60,18 +60,26 @@ void mmap_split(struct e820_map *dst,
     struct e820_map *good;
     struct e820_map *bad;
     size_t size;
+    if(MMAP_END_ADDR(p1) - 1 < p2->base || !mmap_match_type(p1, p2) ) return;
 
     bad = mmap_compare_type(p1, p2);
     good = p1 != bad ? p1 : p2;
-    memcpy(dst, good, sizeof(*dst) );
-
-    dst->size = bad->base - good->base;
-    good->base = bad->base + bad->size;
-    size = good->size - dst->size - bad->size;
-    good->size = size <= good->size ? size : 0;
-    dst++;
-
-    memcpy(dst, bad, sizeof(*dst) );
+    if(bad->base <= good->base) {
+        memcpy(dst, bad, sizeof(*dst) );
+        size = MMAP_END_ADDR(good) - MMAP_END_ADDR(bad);
+        size = size <= good->size ? size : 0;
+        good->base = MMAP_END_ADDR(bad);
+        good->size = size;
+    } else {
+        memcpy(dst, good, sizeof(*dst) );
+        dst->size = bad->base - good->base;
+        good->base = MMAP_END_ADDR(bad);
+        size = good->size - dst->size - bad->size;
+        good->size = size <= good->size ? size : 0;
+        dst++;
+        memcpy(dst, bad, sizeof(*dst) );
+    }
+    
     bad->size = 0;
 
     return;
