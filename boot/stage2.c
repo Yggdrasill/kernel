@@ -25,7 +25,17 @@
 #include "interrupt.h"
 #include "mmap.h"
 
-/* PLEASE read the README provided in the same directory. */
+#ifdef TEST_MMAP
+struct e820_map test_map[MMAP_MAX_ENTRIES] = {
+    {0, 0x7F00, 1, 0},
+    {0, 0x200, 2, 0},
+    {0x600, 0x200, 5, 0},
+    {0x1000, 0x200, 2, 0},
+    {0x7E00, 0x8000, 1, 0},
+    {0x50000, 0x8000, 1, 0},
+    {0x57000, 0x2500, 2, 0}
+};
+#endif
 
 int main(struct e820_map *start, struct e820_map *end)
 {
@@ -38,12 +48,16 @@ int main(struct e820_map *start, struct e820_map *end)
 
     puts("Hello world!");
 
-    for(struct e820_map *p = start; p <= end; p++) {
-        puthex(p->base);
-        puthex(p->size);
-        puthex(p->type);
-        puthex(p->attrib);
+#ifdef TEST_MMAP
+    struct e820_map dummy = {0};
+    int i;
+    for(i = 0; i < MMAP_MAX_ENTRIES; i++) {
+        if(!memcmp(&test_map[i], &dummy, sizeof(*test_map) ) ) break;
     }
+    mmap_init(test_map, i);
+#else
+    mmap_init(start, end - start);
+#endif
 
     idtp = idt_init();
     idt_install(idtp);
