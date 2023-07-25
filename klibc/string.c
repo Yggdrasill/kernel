@@ -121,8 +121,6 @@ void puthex(size_t hex)
         putchar(chars[1]);
     }
 
-    putchar('\n');
-
     return;
 }
 
