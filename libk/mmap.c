@@ -29,12 +29,7 @@ int mmap_addr_overlap(struct e820_map *p1, struct e820_map *p2)
 
 int mmap_match_entry(struct e820_map *p1, struct e820_map *p2)
 {
-    int rv;
-
-    rv = p1->base != p2->base || 
-        p1->size != p2->size;
-
-    return rv; 
+    return p1->base != p2->base || p1->size != p2->size;
 }
 
 int mmap_merge(struct e820_map *p1, struct e820_map *p2)
