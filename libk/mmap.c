@@ -114,7 +114,7 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
         if(!(mmap + j)->size) continue;
         for(i = j - 1; i >= 0; i--) {
             if(!(mmap + i)->size) continue;
-            if(!mmap_addr_overlap(mmap + i, mmap + j) ) {
+            if(MMAP_END_ADDR(mmap + i) >= (mmap + j)->base) {
                 overlap_map[overlaps++] = mmap + i;
                 overlap_map[overlaps++] = mmap + j;
             }
