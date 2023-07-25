@@ -76,7 +76,7 @@ void mmap_split(struct e820_map *dst,
     struct e820_map *good;
     struct e820_map *bad;
     size_t size;
-    if(MMAP_END_ADDR(p1) - 1 < p2->base || !mmap_match_type(p1, p2) ) return;
+    if(MMAP_END_ADDR(p1) - 1 < p2->base) return;
 
     bad = mmap_compare_type(p1, p2);
     good = p1 != bad ? p1 : p2;
