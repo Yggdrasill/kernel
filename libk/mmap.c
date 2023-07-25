@@ -122,7 +122,12 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
     }
 
     for(i = 0; i < overlaps; i += 2) {
-        mmap_merge(overlap_map[i], overlap_map[i + 1]);
+        if(mmap_merge(overlap_map[i], overlap_map[i + 1]) ) {
+            for(j = i - 1; j >= 0; j--) {
+                if(overlap_map[j] != overlap_map[i + 1]) continue;
+                overlap_map[j] = overlap_map[i];
+            }
+        }
     }
 
     clean = 0;
