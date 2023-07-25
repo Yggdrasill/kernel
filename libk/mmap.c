@@ -90,6 +90,7 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
     struct e820_map *overlap_map[2 * MMAP_MAX_ENTRIES];
     struct e820_map clean_map[MMAP_MAX_ENTRIES];
     struct e820_map new_map[MMAP_MAX_ENTRIES];
+
     int overlaps;
     int clean;
     int i;
@@ -104,6 +105,7 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
      * the map will follow these steps:
      * -    create an overlap map
      * -    merge all overlapping entries of the same type
+     * -    on successful merge, update overlap map with new merge
      * -    resolve overlaps of different type by splitting
      * -    merge overlap_map and mmap into new_map
      * -    copy new_map to mmap
