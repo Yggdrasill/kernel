@@ -47,6 +47,22 @@ void memcpy(void *dst, void *src, size_t n)
     }
 }
 
+int memcmp(const void *s1, const void *s2, size_t n)
+{
+    void *end;
+    int rv;
+
+    rv = 0;
+    end = (char *)s1 + n;
+    while( (char *)s1 < (char *)end) {
+        rv += *(char *)s1 - *(char *)s2;
+        s1 = (char *)s1 + 1;
+        s2 = (char *)s2 + 1;
+    }
+
+    return rv;
+}
+
 size_t strlen(char *str)
 {
     unsigned long long retval;
