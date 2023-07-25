@@ -22,11 +22,6 @@ int mmap_match_type(struct e820_map *p1, struct e820_map *p2)
     return p1->type != p2->type;
 }
 
-int mmap_addr_overlap(struct e820_map *p1, struct e820_map *p2)
-{
-    return MMAP_END_ADDR(p1) - 1 < p2->base;
-}
-
 int mmap_match_entry(struct e820_map *p1, struct e820_map *p2)
 {
     return p1->base != p2->base || p1->size != p2->size;
