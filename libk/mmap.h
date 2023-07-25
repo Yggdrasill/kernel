@@ -24,11 +24,18 @@
 
 #include "stdint.h"
 
+/*
+ * Seems good enough for Linux, so it's good enough for me.
+ */
+#define MMAP_MAX_ENTRIES    128
+
 struct e820_map {
     uint64_t    base;
     uint64_t    size;
     uint32_t    type;
     uint32_t    attrib;
 };
+
+int mmap_init(struct e820_map *, int);
 
 #endif
