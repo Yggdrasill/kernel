@@ -143,9 +143,11 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
 
     /*
      * Now that an overlap map has been created, entries of the same type that
-     * overlap are merged into single entries. Additionally, entries that
-     * completely overlap (base and end address are the same) are rewritten in
-     * favour of the highest type.
+     * overlap are merged into single entries. The merge always happens into the
+     * entry with the lower base address. The higher base address entry is
+     * marked to prevent further processing, by setting its size field to zero.
+     * Additionally, entries that completely overlap (base and end address are
+     * the same) are rewritten in favour of the highest type.
      */
 
     for(i = 0; i < overlaps; i += 2) {
