@@ -47,6 +47,25 @@ void memcpy(void *dst, void *src, size_t n)
     }
 }
 
+void memmove(void *dst, void *src, size_t n)
+{
+    void *dst_end;
+    void *src_end;
+    char buffer[n];
+
+    dst_end = (char *)dst + n;
+    src_end= (char *)src + n;
+    if( (dst_end >= src && dst_end <= src_end) ||
+            (src_end >= dst && src_end <= dst_end) ) {
+        memcpy(buffer, src, n);
+        memcpy(dst, buffer, n);
+    } else {
+        memcpy(dst, src, n);
+    }
+
+    return;
+}
+
 int memcmp(const void *s1, const void *s2, size_t n)
 {
     void *end;
