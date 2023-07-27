@@ -141,6 +141,13 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
         }
     }
 
+    /*
+     * Now that an overlap map has been created, entries of the same type that
+     * overlap are merged into single entries. Additionally, entries that
+     * completely overlap (base and end address are the same) are rewritten in
+     * favour of the highest type.
+     */
+
     for(i = 0; i < overlaps; i += 2) {
         if(mmap_merge(overlap_map[i], overlap_map[i + 1]) ) {
             for(j = i - 1; j >= 0; j--) {
@@ -149,6 +156,12 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
             }
         }
     }
+    /*
+     * And since there are no longer overlapping entries of the same type, the
+     * splitting can begin. The following loop constructs a map of split off
+     * entries called clean_map, leaving the remainder after splitting in mmap
+     * for further processing.
+     */
 
     clean = 0;
     for(i = overlaps - 1; i > 0; i -= 2) {
@@ -158,6 +171,10 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
                 overlap_map[i]);
     }
 
+    /*
+     * Because the remainder was left in mmap, clean_map and mmap needs to be
+     * merged into a single map. 
+     */
     i = 0;
     j = 0;
     k = 0;
