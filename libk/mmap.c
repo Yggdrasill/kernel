@@ -153,8 +153,9 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
     clean = 0;
     for(i = overlaps - 1; i > 0; i -= 2) {
         if(!overlap_map[i - 1]->size || !overlap_map[i]->size) continue;
-        mmap_split(&clean_map[clean], overlap_map[i - 1], overlap_map[i]);
-        clean += 2;
+        clean += mmap_split(&clean_map[clean], 
+                overlap_map[i - 1], 
+                overlap_map[i]);
     }
 
     i = 0;
