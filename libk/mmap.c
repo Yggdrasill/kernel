@@ -28,7 +28,7 @@
 
 int mmap_cmp(const void *p1, const void *p2)
 {
-    return ( (struct e820_map *)p1) ->base > ( (struct e820_map *)p2)->base;
+    return ( (struct e820_map *)p1)->base > ( (struct e820_map *)p2)->base;
 }
 
 struct e820_map *mmap_compare_type(struct e820_map *p1, struct e820_map *p2)
@@ -156,8 +156,9 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
             }
         }
     }
+
     /*
-     * And since there are no longer overlapping entries of the same type, the
+     * Since there are no longer overlapping entries of the same type, the
      * splitting can begin. The following loop constructs a map of split off
      * entries called clean_map, leaving the remainder after splitting in mmap
      * for further processing.
@@ -175,6 +176,7 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
      * Because the remainder was left in mmap, clean_map and mmap needs to be
      * merged into a single map. 
      */
+
     i = 0;
     j = 0;
     k = 0;
