@@ -69,36 +69,38 @@ struct e820_map *mmap_merge(struct e820_map *p1, struct e820_map *p2)
     return rv;
 }
 
-void mmap_split(struct e820_map *dst, 
+int mmap_split(struct e820_map *dst, 
         struct e820_map *p1, 
         struct e820_map *p2)
 {
     struct e820_map *good;
     struct e820_map *bad;
+    struct e820_map *tmp;
     size_t size;
-    if(MMAP_END_ADDR(p1) - 1 < p2->base) return;
+    if(MMAP_END_ADDR(p1) - 1 < p2->base) return 0;
 
+    tmp = dst;
     bad = mmap_compare_type(p1, p2);
     good = p1 != bad ? p1 : p2;
     if(bad->base <= good->base) {
-        memcpy(dst, bad, sizeof(*dst) );
+        memcpy(tmp++, bad, sizeof(*tmp) );
         size = MMAP_END_ADDR(good) - MMAP_END_ADDR(bad);
         size = size <= good->size ? size : 0;
         good->base = MMAP_END_ADDR(bad);
         good->size = size;
     } else {
-        memcpy(dst, good, sizeof(*dst) );
-        dst->size = bad->base - good->base;
+        memcpy(tmp, good, sizeof(*tmp) );
+        tmp->size = bad->base - good->base;
         good->base = MMAP_END_ADDR(bad);
-        size = good->size - dst->size - bad->size;
+        size = good->size - tmp->size - bad->size;
         good->size = size <= good->size ? size : 0;
-        dst++;
-        memcpy(dst, bad, sizeof(*dst) );
+        tmp++;
+        memcpy(tmp++, bad, sizeof(*tmp) );
     }
     
     bad->size = 0;
 
-    return;
+    return tmp - dst;
 }
 
 size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
