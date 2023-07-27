@@ -83,19 +83,21 @@ int mmap_split(struct e820_map *dst,
     bad = mmap_compare_type(p1, p2);
     good = p1 != bad ? p1 : p2;
     if(bad->base <= good->base) {
-        memcpy(tmp++, bad, sizeof(*tmp) );
+        *tmp++ = *bad;
         size = MMAP_END_ADDR(good) - MMAP_END_ADDR(bad);
         size = size <= good->size ? size : 0;
         good->base = MMAP_END_ADDR(bad);
         good->size = size;
     } else {
-        memcpy(tmp, good, sizeof(*tmp) );
-        tmp->size = bad->base - good->base;
+        *tmp++ = (struct e820_map){ 
+            good->base, 
+            bad->base - good->base, 
+            good->type, 
+            good->attrib };
+        size = good->size - (bad->base - good->base) - bad->size;
         good->base = MMAP_END_ADDR(bad);
-        size = good->size - tmp->size - bad->size;
         good->size = size <= good->size ? size : 0;
-        tmp++;
-        memcpy(tmp++, bad, sizeof(*tmp) );
+        *tmp++ = *bad;
     }
     
     bad->size = 0;
@@ -186,14 +188,10 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
         while(i < nmemb && !mmap[i].size) i++;
         while(j < clean && !clean_map[j].size) j++;
         if(i < nmemb && (j >= clean || mmap[i].base < clean_map[j].base) ) {
-            memcpy(&new_map[k], &mmap[i], sizeof(new_map[i]) );
-            i++;
-            k++;
+            new_map[k++] = mmap[i++];
         } else if(j < clean && 
                 (i >= nmemb || clean_map[j].base < mmap[i].base) ) {
-            memcpy(&new_map[k], &clean_map[j], sizeof(new_map[j]) );
-            j++;
-            k++;
+            new_map[k++] = clean_map[j++];
         }
     }
 
