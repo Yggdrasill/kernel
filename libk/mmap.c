@@ -87,11 +87,13 @@ int mmap_split(struct e820_map *dst,
     ptr = dst;
     bad = mmap_compare_type(p1, p2);
     good = p1 != bad ? p1 : p2;
+
     if(MMAP_END_ADDR(good) > MMAP_END_ADDR(bad) ) {
         size = MMAP_END_ADDR(good) - MMAP_END_ADDR(bad); 
     } else {
         size = bad->base;
     }
+
     size = size <= good->size ? size : 0;
     if(size > 0) {
         *ptr++ = (struct e820_map){
@@ -101,6 +103,12 @@ int mmap_split(struct e820_map *dst,
                 good->attrib
         };
     }
+
+    /*
+     * The entries are processed in descending order, and so if bad->base is
+     * less than good->base, the entry must have been fully processed.
+     * Therefore, it should be marked as zero size and skipped.
+     */
     good->size = bad->base <= good->base ? 0 : bad->base - good->base;
 
     return ptr - dst;
@@ -149,9 +157,8 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
      * overlap are merged into single entries. The merge always happens into the
      * entry with the lower base address. The higher base address entry is
      * marked to prevent further processing, by setting its size field to zero.
-     * Additionally, entries that completely overlap (base and end address are
-     * the same) are marked in favour of the worst type. On a successful merge,
-     * all other overlaps are updated to point to the new merge.
+     * On a successful merge, all other overlaps are updated to point to the new
+     * merge.
      */
 
     for(i = 0; i < overlaps; i += 2) {
