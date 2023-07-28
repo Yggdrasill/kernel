@@ -64,23 +64,14 @@ int mmap_match_entry(struct e820_map *p1, struct e820_map *p2)
 
 struct e820_map *mmap_merge(struct e820_map *p1, struct e820_map *p2)
 {
-    struct e820_map *rv;
-
     if(!p1 || !p2) return NULL;
     if(MMAP_END_ADDR(p1) < p2->base) return NULL;
-    if(mmap_match_type(p1, p2) && mmap_match_entry(p1, p2) ) return NULL;
+    if(mmap_match_type(p1, p2) ) return NULL;
 
-    rv = p1;
-    if(!mmap_match_type(p1, p2) ) {
-        p1->size = p1->size + p2->size - (MMAP_END_ADDR(p1) - p2->base);
-        p2->size = 0;
-    } else {
-        rv = mmap_compare_type(p1, p2);
-        p1 = p1 != rv ? p1 : p2;
-        p1->size = 0;
-    }
+    p1->size = p1->size + p2->size - (MMAP_END_ADDR(p1) - p2->base);
+    p2->size = 0;
 
-    return rv;
+    return p1;
 }
 
 int mmap_split(struct e820_map *dst, 
