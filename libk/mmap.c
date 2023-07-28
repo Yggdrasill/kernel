@@ -31,10 +31,24 @@ int mmap_cmp(const void *p1, const void *p2)
     return ( (struct e820_map *)p1)->base > ( (struct e820_map *)p2)->base;
 }
 
+int mmap_bad_type(size_t type)
+{
+    switch(type) {
+        case 1:
+        case 3:
+            return 0;
+        default:
+            return 1;
+    }
+}
+
 struct e820_map *mmap_compare_type(struct e820_map *p1, struct e820_map *p2)
 {
-    if(!p1 || !p2) return NULL;
-
+    if(!mmap_bad_type(p1->type) && mmap_bad_type(p2->type) ) {
+        return p2;
+    } else if(mmap_bad_type(p1->type) && !mmap_bad_type(p2->type)) {
+        return p1;
+    }
     return p1->type > p2->type ? p1 : p2;
 }
 
