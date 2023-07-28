@@ -89,34 +89,30 @@ int mmap_split(struct e820_map *dst,
 {
     struct e820_map *good;
     struct e820_map *bad;
-    struct e820_map *tmp;
+    struct e820_map *ptr;
     size_t size;
     if(MMAP_END_ADDR(p1) - 1 < p2->base) return 0;
 
-    tmp = dst;
+    ptr = dst;
     bad = mmap_compare_type(p1, p2);
     good = p1 != bad ? p1 : p2;
-    if(bad->base <= good->base) {
-        *tmp++ = *bad;
-        size = MMAP_END_ADDR(good) - MMAP_END_ADDR(bad);
-        size = size <= good->size ? size : 0;
-        good->base = MMAP_END_ADDR(bad);
-        good->size = size;
+    if(MMAP_END_ADDR(good) > MMAP_END_ADDR(bad) ) {
+        size = MMAP_END_ADDR(good) - MMAP_END_ADDR(bad); 
     } else {
-        *tmp++ = (struct e820_map){ 
-            good->base, 
-            bad->base - good->base, 
-            good->type, 
-            good->attrib };
-        size = good->size - (bad->base - good->base) - bad->size;
-        good->base = MMAP_END_ADDR(bad);
-        good->size = size <= good->size ? size : 0;
-        *tmp++ = *bad;
+        size = bad->base;
     }
-    
-    bad->size = 0;
+    size = size <= good->size ? size : 0;
+    if(size > 0) {
+        *ptr++ = (struct e820_map){
+                MMAP_END_ADDR(bad),
+                size,
+                good->type,
+                good->attrib
+        };
+    }
+    good->size = bad->base <= good->base ? 0 : bad->base - good->base;
 
-    return tmp - dst;
+    return ptr - dst;
 }
 
 size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
@@ -183,11 +179,11 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
      */
 
     clean = 0;
-    for(i = overlaps - 1; i > 0; i -= 2) {
-        if(!overlap_map[i - 1]->size || !overlap_map[i]->size) continue;
+    for(i = 0; i < overlaps; i += 2) {
+        if(!overlap_map[i]->size || !overlap_map[i + 1]->size) continue;
         clean += mmap_split(&clean_map[clean], 
-                overlap_map[i - 1], 
-                overlap_map[i]);
+                overlap_map[i], 
+                overlap_map[i + 1]);
     }
 
     /*
@@ -196,16 +192,16 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
      */
 
     i = 0;
-    j = 0;
+    j = clean - 1;
     k = 0;
-    while(i < nmemb || j < clean) {
+    while(i < nmemb || j >= 0) {
         while(i < nmemb && !mmap[i].size) i++;
-        while(j < clean && !clean_map[j].size) j++;
-        if(i < nmemb && (j >= clean || mmap[i].base < clean_map[j].base) ) {
+        while(j >= 0 && !clean_map[j].size) j--;
+        if(i < nmemb && (j < 0 || mmap[i].base < clean_map[j].base) ) {
             new_map[k++] = mmap[i++];
-        } else if(j < clean && 
+        } else if(j >= 0 && 
                 (i >= nmemb || clean_map[j].base < mmap[i].base) ) {
-            new_map[k++] = clean_map[j++];
+            new_map[k++] = clean_map[j--];
         }
     }
 
