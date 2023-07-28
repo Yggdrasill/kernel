@@ -159,7 +159,8 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
      * entry with the lower base address. The higher base address entry is
      * marked to prevent further processing, by setting its size field to zero.
      * Additionally, entries that completely overlap (base and end address are
-     * the same) are rewritten in favour of the highest type.
+     * the same) are marked in favour of the worst type. On a successful merge,
+     * all other overlaps are updated to point to the new merge.
      */
 
     for(i = 0; i < overlaps; i += 2) {
@@ -173,9 +174,9 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
 
     /*
      * Since there are no longer overlapping entries of the same type, the
-     * splitting can begin. The following loop constructs a map of split off
-     * entries called clean_map, leaving the remainder after splitting in mmap
-     * for further processing.
+     * splitting can begin. The following loop fills out clean_map with entries
+     * that have been split off, leaving the final update of the entry in the
+     * mmap array. 
      */
 
     clean = 0;
@@ -187,8 +188,8 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
     }
 
     /*
-     * Because the remainder was left in mmap, clean_map and mmap needs to be
-     * merged into a single map. 
+     * Because the final update was left in mmap, clean_map and mmap need to be
+     * merged into a single array. 
      */
 
     i = 0;
