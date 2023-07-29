@@ -210,6 +210,20 @@ size_t mmap_sanitize(struct e820_map **mmap, int nmemb)
     return k;
 }
 
+void mmap_print(struct e820_map *mmap, int nmemb)
+{
+    for(int i = 0; i < nmemb; i++) {
+        puthex(mmap[i].base);
+        putchar(' ');
+        puthex(mmap[i].size);
+        putchar(' ');
+        puthex(mmap[i].type);
+        putchar('\n');
+    }
+
+    return;
+}
+
 int mmap_init(struct e820_map *mmap, int nmemb)
 {
     old_map = mmap;
