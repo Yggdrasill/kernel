@@ -99,11 +99,16 @@ int mmap_split(struct e820_map *dst,
     return ptr - dst;
 }
 
-size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
+struct e820_map *old_map;
+struct e820_map new_map[MMAP_MAX_ENTRIES];
+int old_nmemb;
+int new_nmemb;
+
+size_t mmap_sanitize(struct e820_map **mmap, int nmemb)
 {
     struct e820_map *overlap_map[2 * MMAP_MAX_ENTRIES];
+    struct e820_map dirty_map[MMAP_MAX_ENTRIES];
     struct e820_map clean_map[MMAP_MAX_ENTRIES];
-    struct e820_map new_map[MMAP_MAX_ENTRIES];
 
     int overlaps;
     int clean;
@@ -112,6 +117,17 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
     int k;
 
     if(!mmap || !nmemb) return nmemb;
+
+    /*
+     * Preserve the old memory map and sort the dirty map. The E820 memory map
+     * may be unordered, and our algorithm assumes that it is. Insertion sort is
+     * chosen because in all likelihood the map is already ordered, meaning the
+     * scenario is most likely the best case of O(n). In any case, the map
+     * should be small enough that insertion sort still has reasonably good
+     * performance. 
+     */
+    memcpy(dirty_map, *mmap, sizeof(*dirty_map) * nmemb); 
+    isort(dirty_map, nmemb, sizeof(*dirty_map), mmap_cmp);
 
     /*
      * Construct an overlap map in order to know which conflicts to resolve.
@@ -127,12 +143,12 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
 
     overlaps = 0;
     for(j = nmemb - 1; j >= 0; j--) {
-        if(!(mmap + j)->size) continue;
+        if(!(dirty_map + j)->size) continue;
         for(i = j - 1; i >= 0; i--) {
-            if(!(mmap + i)->size) continue;
-            if(MMAP_END_ADDR(mmap + i) >= (mmap + j)->base) {
-                overlap_map[overlaps++] = mmap + i;
-                overlap_map[overlaps++] = mmap + j;
+            if(!(dirty_map + i)->size) continue;
+            if(MMAP_END_ADDR(dirty_map + i) >= (dirty_map + j)->base) {
+                overlap_map[overlaps++] = dirty_map + i;
+                overlap_map[overlaps++] = dirty_map + j;
             }
         }
     }
@@ -179,26 +195,32 @@ size_t mmap_sanitize(struct e820_map *mmap, int nmemb)
     j = clean - 1;
     k = 0;
     while(i < nmemb || j >= 0) {
-        while(i < nmemb && !mmap[i].size) i++;
+        while(i < nmemb && !dirty_map[i].size) i++;
         while(j >= 0 && !clean_map[j].size) j--;
-        if(i < nmemb && (j < 0 || mmap[i].base < clean_map[j].base) ) {
-            new_map[k++] = mmap[i++];
+        if(i < nmemb && (j < 0 || dirty_map[i].base < clean_map[j].base) ) {
+            new_map[k++] = dirty_map[i++];
         } else if(j >= 0 && 
-                (i >= nmemb || clean_map[j].base < mmap[i].base) ) {
+                (i >= nmemb || clean_map[j].base < dirty_map[i].base) ) {
             new_map[k++] = clean_map[j--];
         }
     }
 
-    memcpy(mmap, new_map, sizeof(*mmap) * k); 
+    *mmap = new_map;
 
     return k;
 }
 
 int mmap_init(struct e820_map *mmap, int nmemb)
 {
-    /* E820 map may be unordered */
-    isort(mmap, nmemb, sizeof(*mmap), mmap_cmp);
-    nmemb = mmap_sanitize(mmap, nmemb);
+    old_map = mmap;
+    old_nmemb = nmemb;
+
+    /* Preserve the original memory map */
+    memcpy(new_map, old_map, sizeof(*new_map) * nmemb);
+    mmap = new_map;
+
+    new_nmemb = mmap_sanitize(&mmap, nmemb);
+    nmemb = new_nmemb;
 
     return 0;
 }
