@@ -34,8 +34,9 @@ int mmap_cmp(const void *p1, const void *p2)
 int mmap_bad_type(size_t type)
 {
     switch(type) {
-        case 1:
-        case 3:
+        case MMAP_USABLE:
+        case MMAP_ACPI_RECLAIMABLE:
+        case MMAP_BOOTLOADER_RECLAIMABLE:
             return 0;
         default:
             return 1;

@@ -29,6 +29,15 @@
  */
 #define MMAP_MAX_ENTRIES    128
 
+enum MMAP_TYPES {
+    MMAP_USABLE = 1,
+    MMAP_RESERVED,
+    MMAP_ACPI_RECLAIMABLE,
+    MMAP_ACPI_NVS,
+    MMAP_BAD_MEMORY,
+    MMAP_BOOTLOADER_RECLAIMABLE
+};
+
 struct e820_map {
     uint64_t    base;
     uint64_t    size;
