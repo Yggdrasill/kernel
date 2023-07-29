@@ -24,6 +24,7 @@
 #include <sort.h>
 #include <mmap.h>
 
+#define MMAP_TABLE_SIZE sizeof(struct e820_map) * MMAP_MAX_ENTRIES
 #define MMAP_END_ADDR(x) ( (x)->base + (x)->size)
 
 int mmap_cmp(const void *p1, const void *p2)
@@ -100,8 +101,10 @@ int mmap_split(struct e820_map *dst,
     return ptr - dst;
 }
 
+extern struct e820_map __mmap_old_map[MMAP_MAX_ENTRIES];
+extern struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
 struct e820_map *old_map;
-struct e820_map new_map[MMAP_MAX_ENTRIES];
+struct e820_map *new_map;
 int old_nmemb;
 int new_nmemb;
 
@@ -229,6 +232,7 @@ int mmap_init(struct e820_map *mmap, int nmemb)
 {
     old_map = mmap;
     old_nmemb = nmemb;
+    new_map = __mmap_new_map;
 
     /* Preserve the original memory map */
     memcpy(new_map, old_map, sizeof(*new_map) * nmemb);
