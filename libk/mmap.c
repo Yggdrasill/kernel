@@ -52,21 +52,11 @@ struct e820_map *mmap_compare_type(struct e820_map *p1, struct e820_map *p2)
     return p1->type > p2->type ? p1 : p2;
 }
 
-int mmap_match_type(struct e820_map *p1, struct e820_map *p2)
-{
-    return p1->type != p2->type;
-}
-
-int mmap_match_entry(struct e820_map *p1, struct e820_map *p2)
-{
-    return p1->base != p2->base || p1->size != p2->size;
-}
-
 struct e820_map *mmap_merge(struct e820_map *p1, struct e820_map *p2)
 {
     if(!p1 || !p2) return NULL;
     if(MMAP_END_ADDR(p1) < p2->base) return NULL;
-    if(mmap_match_type(p1, p2) ) return NULL;
+    if(p1->type != p2->type) return NULL;
 
     p1->size = p1->size + p2->size - (MMAP_END_ADDR(p1) - p2->base);
     p2->size = 0;
