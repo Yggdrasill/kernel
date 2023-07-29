@@ -251,8 +251,6 @@ int mmap_init(struct e820_map *mmap, int nmemb)
 
     new_nmemb = mmap_sanitize(&mmap, nmemb);
     nmemb = new_nmemb;
-
-    new_nmemb = mmap_sanitize(&mmap, nmemb);
     mmap_print(mmap, nmemb);
 
     return 0;
