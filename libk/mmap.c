@@ -78,12 +78,7 @@ int mmap_split(struct e820_map *dst,
     bad = mmap_compare_type(p1, p2);
     good = p1 != bad ? p1 : p2;
 
-    if(MMAP_END_ADDR(good) > MMAP_END_ADDR(bad) ) {
-        size = MMAP_END_ADDR(good) - MMAP_END_ADDR(bad); 
-    } else {
-        size = bad->base;
-    }
-
+    size = MMAP_END_ADDR(good) - MMAP_END_ADDR(bad); 
     size = size <= good->size ? size : 0;
     if(size > 0) {
         *ptr++ = (struct e820_map){
