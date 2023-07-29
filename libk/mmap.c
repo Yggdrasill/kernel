@@ -101,8 +101,6 @@ int mmap_split(struct e820_map *dst,
     return ptr - dst;
 }
 
-extern struct e820_map __mmap_old_map[MMAP_MAX_ENTRIES];
-extern struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
 struct e820_map *old_map;
 struct e820_map *new_map;
 int old_nmemb;
@@ -236,7 +234,7 @@ int mmap_init(struct e820_map *mmap, int nmemb)
 
     old_map = mmap;
     old_nmemb = nmemb;
-    new_map = __mmap_new_map;
+    new_map = &__mmap_new_map;
 
     /* 
      * Preserve the original memory map.

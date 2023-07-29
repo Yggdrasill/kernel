@@ -24,10 +24,13 @@
 
 #include "stdint.h"
 
+extern struct e820_map __mmap_old_map;
+extern struct e820_map __mmap_new_map;
+
 /*
  * Seems good enough for Linux, so it's good enough for me.
  */
-#define MMAP_MAX_ENTRIES    128
+#define MMAP_MAX_ENTRIES    (&__mmap_new_map - &__mmap_old_map)
 
 enum MMAP_TYPES {
     MMAP_USABLE = 1,
