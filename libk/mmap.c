@@ -230,16 +230,32 @@ void mmap_print(struct e820_map *mmap, int nmemb)
 
 int mmap_init(struct e820_map *mmap, int nmemb)
 {
+    uint64_t base;
+    uint64_t size;
+    enum MMAP_TYPES type;
+
     old_map = mmap;
     old_nmemb = nmemb;
     new_map = __mmap_new_map;
 
-    /* Preserve the original memory map */
+    /* 
+     * Preserve the original memory map.
+     */
     memcpy(new_map, old_map, sizeof(*new_map) * nmemb);
     mmap = new_map;
 
+    base = (size_t)old_map;
+    size = MMAP_TABLE_SIZE;
+    type = MMAP_BOOTLOADER_RECLAIMABLE;
+    mmap[nmemb++] = (struct e820_map) { base, size, type, 0 };
+    base = (size_t)new_map;
+    mmap[nmemb++] = (struct e820_map) { base, size, type, 0 };
+
     new_nmemb = mmap_sanitize(&mmap, nmemb);
     nmemb = new_nmemb;
+
+    new_nmemb = mmap_sanitize(&mmap, nmemb);
+    mmap_print(mmap, nmemb);
 
     return 0;
 }
