@@ -54,16 +54,14 @@ struct e820_map *mmap_compare_type(struct e820_map *p1, struct e820_map *p2)
     return p1->type > p2->type ? p1 : p2;
 }
 
-struct e820_map *mmap_merge(struct e820_map *p1, struct e820_map *p2)
+int mmap_merge(struct e820_map *p1, struct e820_map *p2)
 {
-    if(!p1 || !p2) return NULL;
-    if(MMAP_END_ADDR(p1) < p2->base) return NULL;
-    if(p1->type != p2->type) return NULL;
+    if(!p1 || !p2 || p1->type != p2->type) return 0;
 
     p1->size = p1->size + p2->size - (MMAP_END_ADDR(p1) - p2->base);
     p2->size = 0;
 
-    return p1;
+    return 1;
 }
 
 int mmap_split(struct e820_map *dst, 
@@ -74,7 +72,7 @@ int mmap_split(struct e820_map *dst,
     struct e820_map *bad;
     struct e820_map *ptr;
     size_t size;
-    if(MMAP_END_ADDR(p1) - 1 < p2->base) return 0;
+    if(!p1 || !p2 || MMAP_END_ADDR(p1) - 1 < p2->base) return 0;
 
     ptr = dst;
     bad = mmap_compare_type(p1, p2);
@@ -163,11 +161,10 @@ size_t mmap_sanitize(struct e820_map **mmap, int nmemb)
      */
 
     for(i = 0; i < overlaps; i += 2) {
-        if(mmap_merge(overlap_map[i], overlap_map[i + 1]) ) {
-            for(j = i - 1; j >= 0; j--) {
-                if(overlap_map[j] != overlap_map[i + 1]) continue;
-                overlap_map[j] = overlap_map[i];
-            }
+        if(!mmap_merge(overlap_map[i], overlap_map[i + 1]) ) continue;
+        for(j = i - 1; j >= 0; j--) {
+            if(overlap_map[j] != overlap_map[i + 1]) continue;
+            overlap_map[j] = overlap_map[i];
         }
     }
 

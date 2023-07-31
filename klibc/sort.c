@@ -35,18 +35,18 @@ void isort(void *base,
 
     char key[size];
 
-    i = (char *) base + size;
-    end = (char *) base + size * nmemb;
+    i = (char *)base + size;
+    end = (char *)base + size * nmemb;
 
-    while (i < end) {
+    while(i < end) {
         memcpy(key, i, size);
-        j = (char *) i - size;
-        while (j >= base && compar(j, key) > 0) {
-            memcpy((char *) j + size, j, size);
-            j = (char *) j - size;
+        j = (char *)i - size;
+        while(j >= base && compar(j, key) > 0) {
+            memcpy( (char *)j + size, j, size);
+            j = (char *)j - size;
         }
-        memcpy((char *) j + size, key, size);
-        i = (char *) i + size;
+        memcpy( (char *)j + size, key, size);
+        i = (char *)i + size;
     }
 
     return;
