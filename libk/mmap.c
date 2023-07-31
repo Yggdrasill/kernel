@@ -110,10 +110,9 @@ size_t mmap_sanitize(struct e820_map **mmap, int nmemb)
 {
     struct e820_map *overlap_map[2 * MMAP_MAX_ENTRIES];
     struct e820_map dirty_map[MMAP_MAX_ENTRIES];
-    struct e820_map clean_map[MMAP_MAX_ENTRIES];
 
     int overlaps;
-    int clean;
+    int split;
     int i;
     int j;
     int k;
@@ -128,6 +127,7 @@ size_t mmap_sanitize(struct e820_map **mmap, int nmemb)
      * should be small enough that insertion sort still has reasonably good
      * performance. 
      */
+    
     memcpy(dirty_map, *mmap, sizeof(*dirty_map) * nmemb); 
     isort(dirty_map, nmemb, sizeof(*dirty_map), mmap_cmp);
 
@@ -139,8 +139,7 @@ size_t mmap_sanitize(struct e820_map **mmap, int nmemb)
      * -    merge all overlapping entries of the same type
      * -    on successful merge, update overlap map with new merge
      * -    resolve overlaps of different type by splitting
-     * -    merge overlap_map and mmap into new_map
-     * -    copy new_map to mmap
+     * -    insert valid dirty entries into new map
      */
 
     overlaps = 0;
@@ -159,9 +158,8 @@ size_t mmap_sanitize(struct e820_map **mmap, int nmemb)
      * Now that an overlap map has been created, entries of the same type that
      * overlap are merged into single entries. The merge always happens into the
      * entry with the lower base address. The higher base address entry is
-     * marked to prevent further processing, by setting its size field to zero.
-     * On a successful merge, all other overlaps are updated to point to the new
-     * merge.
+     * marked as consumed by setting its size field to zero. On a successful
+     * merge, all other overlaps are updated to point to the new merge.
      */
 
     for(i = 0; i < overlaps; i += 2) {
@@ -175,35 +173,33 @@ size_t mmap_sanitize(struct e820_map **mmap, int nmemb)
 
     /*
      * Since there are no longer overlapping entries of the same type, the
-     * splitting can begin. The following loop fills out clean_map with entries
-     * that have been split off, leaving the final update of the entry in the
-     * mmap array. 
+     * splitting can begin. The following loop fills out the dirty map with
+     * entries that have been split off.
      */
 
-    clean = 0;
+    split = nmemb;
     for(i = 0; i < overlaps; i += 2) {
         if(!overlap_map[i]->size || !overlap_map[i + 1]->size) continue;
-        clean += mmap_split(&clean_map[clean], 
-                overlap_map[i], 
+        split += mmap_split(&dirty_map[split],
+                overlap_map[i],
                 overlap_map[i + 1]);
     }
 
     /*
-     * Because the final update was left in mmap, clean_map and mmap need to be
-     * merged into a single array. 
+     * Insert dirty map into new map in ascending order.
      */
 
     i = 0;
-    j = clean - 1;
+    j = split - 1;
     k = 0;
-    while(i < nmemb || j >= 0) {
+    while(i < nmemb || j >= nmemb) {
         while(i < nmemb && !dirty_map[i].size) i++;
-        while(j >= 0 && !clean_map[j].size) j--;
-        if(i < nmemb && (j < 0 || dirty_map[i].base < clean_map[j].base) ) {
+        while(j >= nmemb && !dirty_map[j].size) j--;
+        if(i < nmemb && (j < nmemb || dirty_map[i].base < dirty_map[j].base) ) {
             new_map[k++] = dirty_map[i++];
-        } else if(j >= 0 && 
-                (i >= nmemb || clean_map[j].base < dirty_map[i].base) ) {
-            new_map[k++] = clean_map[j--];
+        } else if(j >= nmemb && 
+                (i >= nmemb || dirty_map[j].base < dirty_map[i].base) ) {
+            new_map[k++] = dirty_map[j--];
         }
     }
 
