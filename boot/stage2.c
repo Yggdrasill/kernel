@@ -24,7 +24,7 @@
 #include "irq.h"
 #include "interrupt.h"
 #include "mmap.h"
-
+#include <util.h>
 
 int main(struct e820_map *start, struct e820_map *end)
 {
