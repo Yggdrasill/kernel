@@ -42,7 +42,12 @@ MEMORY {
 }
 
 SECTIONS {
+    . = BIOS_ADDR;
+    __bios_start = .;
+    . = BIOS_SIZE;
+    __bios_end = .;
     . = BOOT_ADDR;
+    __bootloader_start = .;
     .boot : { *(.boot) } > boot
     . = MEM1_ADDR;
     .stage15 : { *(.stage15) } > mem1
@@ -52,6 +57,7 @@ SECTIONS {
     .data = .;
     .rodata = .;
     .bss = .;
+    __bootloader_end = .;
     . = IDT_ADDR;
     .idt (NOLOAD) : { 
         __IDT_PTR_LOCATION = .;
@@ -65,7 +71,6 @@ SECTIONS {
         __MMAP_HEAP_LOCATION = .;
         KEEP(*(.pmm) )
     } > mem2 
-    . = FBR_ADDR;
     .fbr (NOLOAD) : {
         __FB_ADDR = .;
         KEEP(*(.fbr) )

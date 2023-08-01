@@ -235,12 +235,20 @@ int mmap_init(struct e820_map *mmap, int nmemb)
     /* 
      * Preserve the original memory map.
      */
+
     memcpy(new_map, old_map, sizeof(*new_map) * nmemb);
     mmap = new_map;
 
+    base = (size_t)&__bios_start;
+    size = &__bios_end - &__bios_start;
+    type = MMAP_RESERVED;
+    mmap[nmemb++] = (struct e820_map) { base, size, type, 0 }; 
+    base = (size_t)&__bootloader_start; 
+    size = &__bootloader_end - &__bootloader_start;
+    type = MMAP_BOOTLOADER_RECLAIMABLE;
+    mmap[nmemb++] = (struct e820_map) { base, size, type, 0 }; 
     base = (size_t)old_map;
     size = MMAP_TABLE_SIZE;
-    type = MMAP_BOOTLOADER_RECLAIMABLE;
     mmap[nmemb++] = (struct e820_map) { base, size, type, 0 };
     base = (size_t)new_map;
     mmap[nmemb++] = (struct e820_map) { base, size, type, 0 };
