@@ -5,8 +5,8 @@ AS=nasm
 MKDIR=mkdir
 
 INCLUDE_PATH=-I libk/ -I klibc/
-CF_ALL=-m32 -ffreestanding -fno-pic -nodefaultlibs -fomit-frame-pointer \
-	   -fno-exceptions -fno-asynchronous-unwind-tables -masm=intel -Wall -O0
+CF_ALL=-m32 -ffreestanding -fno-pic -nodefaultlibs -fno-exceptions \
+	   -fno-asynchronous-unwind-tables -masm=intel -Wall -O0
 LD_ALL=-m elf_i386
 CFLAGS=-Wall -Wextra -pedantic
 
