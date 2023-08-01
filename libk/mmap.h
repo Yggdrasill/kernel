@@ -24,6 +24,8 @@
 
 #include "stdint.h"
 
+#define MMAP_MAX_ENTRIES 128
+
 enum MMAP_TYPES {
     MMAP_USABLE = 1,
     MMAP_RESERVED,
@@ -41,10 +43,6 @@ struct e820_map {
     uint32_t    attrib;
 };
 
-extern struct e820_map __mmap_old_map;
-extern struct e820_map __mmap_new_map;
-
-#define MMAP_MAX_ENTRIES (&__mmap_new_map - &__mmap_old_map)
 
 int mmap_init(struct e820_map *, int);
 

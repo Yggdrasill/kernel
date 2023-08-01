@@ -99,10 +99,15 @@ int mmap_split(struct e820_map *dst,
     return ptr - dst;
 }
 
-struct e820_map *old_map;
-struct e820_map *new_map;
-int old_nmemb;
-int new_nmemb;
+
+__attribute__((__section__(".mmap")))
+struct e820_map __mmap_old_map[MMAP_MAX_ENTRIES];
+__attribute__((__section__(".mmap")))
+struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
+static struct e820_map *const old_map = __mmap_old_map;
+static struct e820_map *const new_map = __mmap_new_map;
+static int old_nmemb;
+static int new_nmemb;
 
 size_t mmap_sanitize(struct e820_map **mmap, int nmemb)
 {
@@ -225,9 +230,7 @@ int mmap_init(struct e820_map *mmap, int nmemb)
     uint64_t size;
     enum MMAP_TYPES type;
 
-    old_map = mmap;
     old_nmemb = nmemb;
-    new_map = &__mmap_new_map;
 
     /* 
      * Preserve the original memory map.

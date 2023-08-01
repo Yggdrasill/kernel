@@ -26,9 +26,6 @@ FBR_SIZE  = 32K;
 UPPR_ADDR = 0xC0000;
 UPPR_SIZE = 256K;
 
-MMAP_ENTRY_SIZE = 0x18;
-MMAP_MAX_ENTRIES = 0x80;
-
 MEMORY {
     bios(rx)  :   org = BIOS_ADDR,  len = BIOS_SIZE
     mem0(rwx) :   org = MEM0_ADDR,  len = MEM0_SIZE
@@ -62,9 +59,6 @@ SECTIONS {
         KEEP(*(.idt) )
       } > idt
     .mmap (NOLOAD) : {
-        __mmap_old_map = .;
-        . = . + MMAP_ENTRY_SIZE * MMAP_MAX_ENTRIES;
-        __mmap_new_map = .;
         KEEP(*(.mmap) )
     } > mmap
     .pmm (NOLOAD) : {
