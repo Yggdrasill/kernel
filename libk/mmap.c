@@ -64,22 +64,22 @@ int mmap_merge(struct e820_map *p1, struct e820_map *p2)
     return 1;
 }
 
-int mmap_split(struct e820_map *dst, 
-        struct e820_map *p1, 
-        struct e820_map *p2,
+int mmap_split(struct e820_map *const dst, 
+        struct e820_map *const p1, 
+        struct e820_map *const p2,
         const int nmemb)
 {
     struct e820_map *good;
     struct e820_map *bad;
+    struct e820_map *tmp;
     size_t old_size;
     size_t split_size;
-    int split;
     if(!p1 || !p2 || MMAP_END_ADDR(p1) - 1 < p2->base) return 0;
 
     bad = mmap_compare_type(p1, p2);
     good = p1 != bad ? p1 : p2;
 
-    split = nmemb;
+    tmp = dst;
 
     /*
      * The entries are processed in descending order, and so if bad->base is
@@ -97,10 +97,10 @@ int mmap_split(struct e820_map *dst,
 
     if(nmemb >= MMAP_MAX_ENTRIES) goto fail;
 
-    split_size = MMAP_END_ADDR(good) - MMAP_END_ADDR(bad); 
+    split_size = good->base + old_size - MMAP_END_ADDR(bad); 
     split_size = split_size <= old_size ? split_size : 0;
     if(split_size > 0) {
-        *(dst + split++) = (struct e820_map){
+        *tmp++ = (struct e820_map){
                 MMAP_END_ADDR(bad),
                 split_size,
                 good->type,
@@ -108,7 +108,7 @@ int mmap_split(struct e820_map *dst,
         };
     }
 
-    return split - nmemb;
+    return tmp - dst;
 
 fail:
     /*
