@@ -14,6 +14,9 @@ __start:
     shl   eax, 4
     add   ebx, eax
 
+    mov   esp, 0x7FFF0
+    mov   ebp, 0x7FFF0
+    
     push  ebx
     push  eax
     xor   eax, eax
