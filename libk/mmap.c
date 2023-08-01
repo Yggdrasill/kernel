@@ -66,37 +66,57 @@ int mmap_merge(struct e820_map *p1, struct e820_map *p2)
 
 int mmap_split(struct e820_map *dst, 
         struct e820_map *p1, 
-        struct e820_map *p2)
+        struct e820_map *p2,
+        const int nmemb)
 {
     struct e820_map *good;
     struct e820_map *bad;
-    struct e820_map *ptr;
-    size_t size;
+    size_t old_size;
+    size_t split_size;
+    int split;
     if(!p1 || !p2 || MMAP_END_ADDR(p1) - 1 < p2->base) return 0;
 
-    ptr = dst;
     bad = mmap_compare_type(p1, p2);
     good = p1 != bad ? p1 : p2;
 
-    size = MMAP_END_ADDR(good) - MMAP_END_ADDR(bad); 
-    size = size <= good->size ? size : 0;
-    if(size > 0) {
-        *ptr++ = (struct e820_map){
-                MMAP_END_ADDR(bad),
-                size,
-                good->type,
-                good->attrib
-        };
-    }
+    split = nmemb;
 
     /*
      * The entries are processed in descending order, and so if bad->base is
      * less than good->base, the entry must have been fully processed.
      * Therefore, it should be marked as zero size and skipped.
      */
+
+    old_size = good->size;
     good->size = bad->base <= good->base ? 0 : bad->base - good->base;
 
-    return ptr - dst;
+    /* 
+     * We still need a valid map, so the good entry is always updated. If
+     * there's no space left, don't split off and simply return.
+     */
+
+    if(nmemb >= MMAP_MAX_ENTRIES) goto fail;
+
+    split_size = MMAP_END_ADDR(good) - MMAP_END_ADDR(bad); 
+    split_size = split_size <= old_size ? split_size : 0;
+    if(split_size > 0) {
+        *(dst + split++) = (struct e820_map){
+                MMAP_END_ADDR(bad),
+                split_size,
+                good->type,
+                good->attrib
+        };
+    }
+
+    return split - nmemb;
+
+fail:
+    /*
+     * TODO: Replace with some sort of actual bug/warn call.
+     */
+    puts("WARN: E820 map exhausted.");
+
+    return 0;
 }
 
 
@@ -109,7 +129,7 @@ static struct e820_map *const new_map = __mmap_new_map;
 static int old_nmemb;
 static int new_nmemb;
 
-size_t mmap_sanitize(struct e820_map **mmap, int nmemb)
+int mmap_sanitize(struct e820_map **mmap, int nmemb)
 {
     struct e820_map *overlap_map[2 * MMAP_MAX_ENTRIES];
     struct e820_map dirty_map[MMAP_MAX_ENTRIES];
@@ -184,7 +204,8 @@ size_t mmap_sanitize(struct e820_map **mmap, int nmemb)
         if(!overlap_map[i]->size || !overlap_map[i + 1]->size) continue;
         split += mmap_split(&dirty_map[split],
                 overlap_map[i],
-                overlap_map[i + 1]);
+                overlap_map[i + 1],
+                split);
     }
 
     /*
