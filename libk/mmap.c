@@ -58,7 +58,7 @@ int mmap_merge(struct e820_map *p1, struct e820_map *p2)
 {
     if(!p1 || !p2 || p1->type != p2->type) return 0;
 
-    p1->size = p1->size + p2->size - (MMAP_END_ADDR(p1) - p2->base);
+    p1->size = MMAP_END_ADDR(p2) - p1->base;
     p2->size = 0;
 
     return 1;
