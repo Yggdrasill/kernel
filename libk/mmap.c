@@ -51,11 +51,8 @@ int mmap_bad_type(uint32_t type)
 
 uint32_t mmap_compare_type(const uint32_t t1, const uint32_t t2)
 {
-    if(!mmap_bad_type(t1) && mmap_bad_type(t2) ) {
-        return t2;
-    } else if(mmap_bad_type(t1) && !mmap_bad_type(t2)) {
-        return t1;
-    }
+    if(!mmap_bad_type(t1) && mmap_bad_type(t2) ) return t2;
+    if(mmap_bad_type(t1) && !mmap_bad_type(t2) ) return t1;
     return t1 > t2 ? t1 : t2;
 }
 
@@ -102,10 +99,14 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
     j = 0;
     i = 0;
     for(i = 0; i < nr_entries; i++) {
-        e820_points[j].entry = pmap + i;
-        e820_points[j++].addr = pmap[i].base;
-        e820_points[j].entry = pmap + i;
-        e820_points[j++].addr = pmap[i].base + pmap[i].size;
+        e820_points[j++] = (struct e820_point) { 
+            pmap + i, 
+            pmap[i].base
+        };
+        e820_points[j++] = (struct e820_point) { 
+            pmap + i,
+            pmap[i].base + pmap[i].size
+        };
     }
     isort(e820_points, NR_POINTS, sizeof(*e820_points), mmap_cmp);
 
@@ -125,11 +126,12 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
         if(mmap_is_base(e820_points + i) ) {
             overlap_map[nr_overlaps++] = e820_points[i].entry;
         } else {
-            j = 0;
-            while(j < nr_overlaps && overlap_map[j] != e820_points[i].entry) {
-                j++;
+            for(j = 0; j < nr_overlaps; j++) {
+                if(overlap_map[j] == e820_points[i].entry) {
+                    overlap_map[j] = overlap_map[--nr_overlaps];
+                    break;
+                }
             }
-            if(j < nr_overlaps) overlap_map[j] = overlap_map[--nr_overlaps];
         }
 
         /*
