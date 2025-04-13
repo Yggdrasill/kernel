@@ -27,12 +27,17 @@
 #define MMAP_TABLE_SIZE sizeof(struct e820_map) * MMAP_MAX_ENTRIES
 #define MMAP_END_ADDR(x) ( (x)->base + (x)->size)
 
+struct e820_point {
+    struct e820_map *entry;
+    uint64_t addr;
+};
+
 int mmap_cmp(const void *p1, const void *p2)
 {
-    return ( (struct e820_map *)p1)->base > ( (struct e820_map *)p2)->base;
+    return ( (struct e820_point *)p1)->addr > ( (struct e820_point *)p2)->addr;
 }
 
-int mmap_bad_type(size_t type)
+int mmap_bad_type(uint32_t type)
 {
     switch(type) {
         case MMAP_USABLE:
@@ -44,81 +49,20 @@ int mmap_bad_type(size_t type)
     }
 }
 
-struct e820_map *mmap_compare_type(struct e820_map *p1, struct e820_map *p2)
+uint32_t mmap_compare_type(const uint32_t t1, const uint32_t t2)
 {
-    if(!mmap_bad_type(p1->type) && mmap_bad_type(p2->type) ) {
-        return p2;
-    } else if(mmap_bad_type(p1->type) && !mmap_bad_type(p2->type)) {
-        return p1;
+    if(!mmap_bad_type(t1) && mmap_bad_type(t2) ) {
+        return t2;
+    } else if(mmap_bad_type(t1) && !mmap_bad_type(t2)) {
+        return t1;
     }
-    return p1->type > p2->type ? p1 : p2;
+    return t1 > t2 ? t1 : t2;
 }
 
-int mmap_merge(struct e820_map *p1, struct e820_map *p2)
+int mmap_is_base(struct e820_point *p)
 {
-    if(!p1 || !p2 || p1->type != p2->type) return 0;
-
-    p1->size = MMAP_END_ADDR(p2) - p1->base;
-    p2->size = 0;
-
-    return 1;
+    return p->addr == p->entry->base;
 }
-
-int mmap_split(struct e820_map *const dst, 
-        struct e820_map *const p1, 
-        struct e820_map *const p2,
-        const int nmemb)
-{
-    struct e820_map *good;
-    struct e820_map *bad;
-    struct e820_map *tmp;
-    size_t old_size;
-    size_t split_size;
-    if(!p1 || !p2 || MMAP_END_ADDR(p1) - 1 < p2->base) return 0;
-
-    bad = mmap_compare_type(p1, p2);
-    good = p1 != bad ? p1 : p2;
-
-    tmp = dst;
-
-    /*
-     * The entries are processed in descending order, and so if bad->base is
-     * less than good->base, the entry must have been fully processed.
-     * Therefore, it should be marked as zero size and skipped.
-     */
-
-    old_size = good->size;
-    good->size = bad->base <= good->base ? 0 : bad->base - good->base;
-
-    /* 
-     * We still need a valid map, so the good entry is always updated. If
-     * there's no space left, don't split off and simply return.
-     */
-
-    if(nmemb >= MMAP_MAX_ENTRIES) goto fail;
-
-    split_size = good->base + old_size - MMAP_END_ADDR(bad); 
-    split_size = split_size <= old_size ? split_size : 0;
-    if(split_size > 0) {
-        *tmp++ = (struct e820_map){
-                MMAP_END_ADDR(bad),
-                split_size,
-                good->type,
-                good->attrib
-        };
-    }
-
-    return tmp - dst;
-
-fail:
-    /*
-     * TODO: Replace with some sort of actual bug/warn call.
-     */
-    puts("WARN: E820 map exhausted.");
-
-    return 0;
-}
-
 
 __attribute__((__section__(".mmap")))
 struct e820_map __mmap_old_map[MMAP_MAX_ENTRIES];
@@ -129,106 +73,115 @@ static struct e820_map *const new_map = __mmap_new_map;
 static int old_nmemb;
 static int new_nmemb;
 
-int mmap_sanitize(struct e820_map **mmap, int nmemb)
+int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 {
-    struct e820_map *overlap_map[2 * MMAP_MAX_ENTRIES];
-    struct e820_map dirty_map[MMAP_MAX_ENTRIES];
+    struct e820_point e820_points[2 * MMAP_MAX_ENTRIES];
 
-    int overlaps;
-    int split;
-    int i;
-    int j;
-    int k;
+    struct e820_map *overlap_map[MMAP_MAX_ENTRIES];
 
-    if(!mmap || !nmemb) return nmemb;
+    struct e820_map *pmap;
+    struct e820_point *prev_point;
+
+    uint32_t type;
+    uint32_t prev_type;
+
+    const int NR_POINTS = 2 * nr_entries;
+
+    int new_nr_entries;
+    int nr_overlaps;
+    int i, j;
+
+    pmap = *mmap;
 
     /*
-     * Preserve the old memory map and sort the dirty map. The E820 memory map
-     * may be unordered, and our algorithm assumes that it is. Insertion sort is
-     * chosen because in all likelihood the map is already ordered, meaning the
-     * scenario is most likely the best case of O(n). In any case, the map
-     * should be small enough that insertion sort still has reasonably good
-     * performance. 
+     * Break down the E820 structure into a sorted list of points that can be
+     * traversed. From these points the memory map will be rebuilt from scratch,
+     * since it can be messy when the BIOS provides it.
      */
     
-    memcpy(dirty_map, *mmap, sizeof(*dirty_map) * nmemb); 
-    isort(dirty_map, nmemb, sizeof(*dirty_map), mmap_cmp);
-
-    /*
-     * Construct an overlap map in order to know which conflicts to resolve.
-     * E820 entries can overlap in arbitrary ways, and so the method to sanitize
-     * the map will follow these steps:
-     * -    create an overlap map
-     * -    merge all overlapping entries of the same type
-     * -    on successful merge, update overlap map with new merge
-     * -    resolve overlaps of different type by splitting
-     * -    insert valid dirty entries into new map
-     */
-
-    overlaps = 0;
-    for(j = nmemb - 1; j >= 0; j--) {
-        if(!(dirty_map + j)->size) continue;
-        for(i = j - 1; i >= 0; i--) {
-            if(!(dirty_map + i)->size) continue;
-            if(MMAP_END_ADDR(dirty_map + i) >= (dirty_map + j)->base) {
-                overlap_map[overlaps++] = dirty_map + i;
-                overlap_map[overlaps++] = dirty_map + j;
-            }
-        }
-    }
-
-    /*
-     * Now that an overlap map has been created, entries of the same type that
-     * overlap are merged into single entries. The merge always happens into the
-     * entry with the lower base address. The higher base address entry is
-     * marked as consumed by setting its size field to zero. On a successful
-     * merge, all other overlaps are updated to point to the new merge.
-     */
-
-    for(i = 0; i < overlaps; i += 2) {
-        if(!mmap_merge(overlap_map[i], overlap_map[i + 1]) ) continue;
-        for(j = i - 1; j >= 0; j--) {
-            if(overlap_map[j] != overlap_map[i + 1]) continue;
-            overlap_map[j] = overlap_map[i];
-        }
-    }
-
-    /*
-     * Since there are no longer overlapping entries of the same type, the
-     * splitting can begin. The following loop fills out the dirty map with
-     * entries that have been split off.
-     */
-
-    split = nmemb;
-    for(i = 0; i < overlaps; i += 2) {
-        if(!overlap_map[i]->size || !overlap_map[i + 1]->size) continue;
-        split += mmap_split(&dirty_map[split],
-                overlap_map[i],
-                overlap_map[i + 1],
-                split);
-    }
-
-    /*
-     * Insert dirty map into new map in ascending order.
-     */
-
+    j = 0;
     i = 0;
-    j = split - 1;
-    k = 0;
-    while(i < nmemb || j >= nmemb) {
-        while(i < nmemb && !dirty_map[i].size) i++;
-        while(j >= nmemb && !dirty_map[j].size) j--;
-        if(i < nmemb && (j < nmemb || dirty_map[i].base < dirty_map[j].base) ) {
-            new_map[k++] = dirty_map[i++];
-        } else if(j >= nmemb && 
-                (i >= nmemb || dirty_map[j].base < dirty_map[i].base) ) {
-            new_map[k++] = dirty_map[j--];
+    for(i = 0; i < nr_entries; i++) {
+        e820_points[j].entry = pmap + i;
+        e820_points[j++].addr = pmap[i].base;
+        e820_points[j].entry = pmap + i;
+        e820_points[j++].addr = pmap[i].base + pmap[i].size;
+    }
+    isort(e820_points, NR_POINTS, sizeof(*e820_points), mmap_cmp);
+
+    new_nr_entries = 0;
+    nr_overlaps = 0;
+    prev_point = e820_points;
+    prev_type = prev_point->entry->type;
+    overlap_map[nr_overlaps++] = prev_point->entry;
+    
+    for(i = 1; i < NR_POINTS && new_nr_entries < MMAP_MAX_ENTRIES; i++) {
+
+        /*
+         * Build a map of possibly overlapping entries. If the point is a base
+         * address entry, add it to the overlap map. If not, remove it.
+         */
+
+        if(mmap_is_base(e820_points + i) ) {
+            overlap_map[nr_overlaps++] = e820_points[i].entry;
+        } else {
+            j = 0;
+            while(j < nr_overlaps && overlap_map[j] != e820_points[i].entry) {
+                j++;
+            }
+            if(j < nr_overlaps) overlap_map[j] = overlap_map[--nr_overlaps];
+        }
+
+        /*
+         * Compare type precedence and pick the worst type. It is roughly in the
+         * order of greatest type. the possible types are:
+         *
+         * MMAP_USABLE = 1
+         * MMAP_RESERVED = 2
+         * MMAP_ACPI_RECLAIMABLE = 3
+         * MMAP_ACPI_NVS = 4 (non-volatile storage)
+         * MMAP_BAD_MEMORY = 5
+         *
+         * There are also a few custom types:
+         *
+         * MMAP_BOOTLOADER_RECLAIMABLE = 6
+         * MMAP_FRAMEBUFFER = 7
+         *
+         * Type 2-5 inclusive, and type 7, are all considered unusable memory
+         * and should not be touched. All the usable types have precedence of
+         * the greatest type, so the type precedence is ultimately:
+         *
+         * 7 > 5 > 4 > 2 > 6 > 3 > 1
+         *
+         * It may not be desired to always reclaim usable memory, hence why they
+         * have greater precedence than type 1.
+         */
+
+        type = overlap_map[0]->type;
+        for(j = 1; j < nr_overlaps; j++) {
+            type = mmap_compare_type(overlap_map[j]->type, type);
+        }
+
+        /*
+         * Reconstruct the map from the previous entry if type changes, or if we
+         * are at the last element of the array.
+         */
+
+        if(type != prev_type || i == NR_POINTS - 1) {
+            new_map[new_nr_entries] = (struct e820_map) {
+                prev_point->addr,
+                e820_points[i].addr - prev_point->addr,
+                prev_type,
+                prev_point->entry->attrib
+            };
+            prev_point = e820_points + i;
+            prev_type = type;
+            new_nr_entries += new_map[new_nr_entries].size > 0;
         }
     }
 
     *mmap = new_map;
-
-    return k;
+    return new_nr_entries;
 }
 
 void mmap_print(struct e820_map *mmap, int nmemb)
@@ -253,13 +206,6 @@ int mmap_init(struct e820_map *mmap, int nmemb)
 
     old_nmemb = nmemb;
 
-    /* 
-     * Preserve the original memory map.
-     */
-
-    memcpy(new_map, old_map, sizeof(*new_map) * nmemb);
-    mmap = new_map;
-
     base = (size_t)&__bios_start;
     size = &__bios_end - &__bios_start;
     type = MMAP_RESERVED;
@@ -273,7 +219,6 @@ int mmap_init(struct e820_map *mmap, int nmemb)
     mmap[nmemb++] = (struct e820_map) { base, size, type, 0 };
     base = (size_t)new_map;
     mmap[nmemb++] = (struct e820_map) { base, size, type, 0 };
-
     new_nmemb = mmap_sanitize(&mmap, nmemb);
     nmemb = new_nmemb;
     mmap_print(mmap, nmemb);
