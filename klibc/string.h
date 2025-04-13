@@ -25,7 +25,9 @@
 #include "stdint.h"
 
 extern int16_t *__FB_ADDR __attribute__((section("fbr")));
+extern int16_t *__FB_END __attribute__((section("fbr")));
 #define FB_ADDR __FB_ADDR
+#define FB_END __FB_END
 
 void memsetw(int16_t *, int16_t, size_t);
 void memcpy(void *, void *, size_t);

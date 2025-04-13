@@ -75,4 +75,12 @@ SECTIONS {
         __FB_ADDR = .;
         KEEP(*(.fbr) )
     } > fbr
+    . = FBR_ADDR + FBR_SIZE;
+    __FB_END = .;
+    .upper (NOLOAD) : {
+        __upper_start = .;
+        KEEP(*(.fbr) )
+    } > upper
+    . = UPPR_ADDR + UPPR_SIZE;
+    __upper_end = .;
 }

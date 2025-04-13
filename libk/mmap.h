@@ -47,6 +47,8 @@ extern char __bios_start;
 extern char __bios_end;
 extern char __bootloader_start;
 extern char __bootloader_end;
+extern char __upper_start;
+extern char __upper_end;
 
 int mmap_init(struct e820_map *, int);
 
