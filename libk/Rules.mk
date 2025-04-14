@@ -8,7 +8,7 @@ LD_LIBK=--oformat elf32-i386 -r
 $(OBJDIR)/libk.o: $(OBJ_LIBK) $(OBJDIR)/asm_irq.o $(OBJDIR)/asm_exception.o
 	$(LD) $(LD_ALL) $(LD_LIBK) -o $@ $^
 
-$(OBJDIR)/%.o: libk/%.c
+$(OBJDIR)/%.o: ${SRCDIR_LIBK}/%.c ${SRCDIR_LIBK}/%.h
 	$(CC) $(CF_ALL) $(INCLUDE_PATH) $(CFLAGS) -c -o $@ $<
 
 $(OBJDIR)/asm_irq.o: libk/irq.s

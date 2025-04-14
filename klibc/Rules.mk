@@ -7,5 +7,5 @@ LD_KLIBC=--oformat elf32-i386 -r
 $(OBJDIR)/klibc.o: $(OBJ_KLIBC)
 	$(LD) $(LD_ALL) $(LD_KLIBC) -o $@ $^
 
-$(OBJDIR)/%.o: $(SRCDIR_KLIBC)/%.c
+$(OBJDIR)/%.o: $(SRCDIR_KLIBC)/%.c $(SRCDIR_KLIBC)/%.h 
 	$(CC) $(CF_ALL) $(INCLUDE_PATH) $(CFLAGS) -c -o $@ $^
