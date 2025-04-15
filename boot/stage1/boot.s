@@ -121,92 +121,6 @@ stage15:
     call  error
 
 s15_continue:
-    ; Read ELF file and find e_shstrndx section.
-
-    xor   eax, eax
-    mov   ax, [es:e_shentsize]
-    mul   word [es:e_shstrndx]
-    add   eax, [es:e_shoff]
-    mov   ebx, ei_mag + 0x10
-    add   ebx, eax
-    mov   eax, [es:ebx]
-    add   eax, ei_mag
-
-    ; Now find the ._init section by text match
-
-    mov   ebx, [es:e_shoff]
-    add   ebx, ei_mag
-    xor   edx, edx
-init_loop:
-    add   bx, [es:e_shentsize] ; skip SHN_UNDEF
-    inc   dx
-    cmp   dword [es:ebx + 4], 1
-    je    test_init
-    cmp   dx, [es:e_shnum]
-    jl    init_loop
-    cli
-    hlt ; TODO: hang for now, will implement later
-test_init:
-    mov   esi, [ebx]
-    add   si, ax
-    mov   di, init_str
-    mov   ecx, init_slen
-    rep   cmpsb
-    jne   init_loop
-
-    ; Found ._init section, save offset for now
-    mov   ax, [e_shentsize]
-    mul   dx
-    mov   bx, [e_shoff]
-    add   ebx, ei_mag + 0x10
-    add   ebx, eax
-    mov   eax, [ebx]
-    mov   [_elf_init], eax
-
-    ; We must first calculate size of the file.
-    ; Because the linker has been configured to
-    ; not align, this is easier than it woulld
-    ; otherwise be.
-
-    xor   si, si
-    mov   si, [e_phoff]
-    add   si, ei_mag + 0x10
-    xor   ecx, ecx
-    mov   bx, [e_phnum]
-phsize_loop:
-    add   cx, [es:si]
-    dec   bx
-    add   si, [e_phentsize]
-    cmp   bx, 0
-    jne   phsize_loop
-
-    mov   si, [e_shoff]
-    add   si, ei_mag + 0x14
-    mov   bx, [e_shnum]
-shsize_loop:
-    add   cx, [es:si]
-    dec   bx
-    add   si, [e_shentsize]
-    cmp   bx, 0
-    jne   shsize_loop
-
-    mov   ax, [e_phentsize]
-    mul   word [e_phnum]
-    add   cx, ax
-    mov   ax, [e_shentsize]
-    mul   word [e_shnum]
-    add   cx, ax
-
-    ; Proceed to relocate
-
-    mov   edx, [e_entry]
-    mov   si, ei_mag
-    add   si, [_elf_init]
-    mov   di, dx
-    rep movsb
-
-    ; Clear EFLAGS register
-
     push  dword 0x02
     popfd
 
@@ -237,8 +151,12 @@ shsize_loop:
 
     mov   esp, 0x7FFF0
     mov   ebp, 0x7FFF0
-    mov   esi, 0x17E00
-    mov   edi, 0x17E00
+
+    jmp   0x0008:i386
+i386:
+bits 32
+    call  read_elf
+    mov   dword edx, dword [elf_entry]
 
     ; Clean up all registers
 
@@ -251,9 +169,161 @@ shsize_loop:
     push  word [mmap_seg]
     push  word [mmap_off]
 
-    push  dword 0x0008
-    push  word dx
-    retf
+    push  edx
+    ret
+
+%define         PT_LOAD_TYPE      0x01
+
+%define         PH_TYPE_OFFSET    0x00
+%define         PH_FILE_OFFSET    0x04
+%define         PH_VIRT_ADDR      0x08
+%define         PH_FILE_SIZE      0x10
+
+%define         SH_NOBITS_TYPE    0x08
+%define         SH_PROGBITS_TYPE  0x01
+
+%define         SH_TYPE_OFFSET    0x04
+%define         SH_FILE_OFFSET    0x10
+%define         SH_FILE_SIZE      0x14
+
+
+read_elf:
+    push        ebp
+    mov         ebp, esp
+    push        eax
+    push        ebx
+    push        ecx
+    push        edx
+    push        esi
+    push        edi
+
+    ; Read ELF and find e_shstrndx section.
+
+    xor         eax, eax
+    mov         ax, [e_shentsize]
+    mul   word  [e_shstrndx]
+    add         ax, [e_shoff]
+    mov         ebx, ei_mag + SH_FILE_OFFSET
+    add         ebx, eax
+    mov         eax, [ebx]
+    add         eax, ei_mag
+
+    ; Now find the ._init section by text match
+
+    mov         bx, [e_shoff]
+    add         ebx, ei_mag
+    xor         edx, edx
+init_loop:
+    add         bx, [e_shentsize] ; skip SHN_UNDEF
+    inc         edx
+    cmp   dword [ebx + SH_TYPE_OFFSET], SH_PROGBITS_TYPE
+    je          test_init
+    cmp         edx,  [e_shnum]
+    jl          init_loop
+    cli
+    hlt ; TODO: hang for now, will implement later
+test_init:
+    mov         esi,  [ebx]
+    add         esi,  eax
+    mov         edi,  init_str
+    mov         ecx,  init_slen
+    rep         cmpsb
+    jne         init_loop
+
+    ; Before relocating PT_LOAD segments, we
+    ; must ensure that the ELF headers are all
+    ; relocated to a preserved region.
+
+    mov         esi,  ei_mag
+    mov         edi,  _elf_header 
+    mov         cx,   [e_ehsize]
+    rep         movsb
+
+    mov         esi,  ei_mag
+    mov         edi,  _elf_header
+    add         esi,  [e_phoff]
+    add         edi,  [e_phoff]
+    movzx word  ax,   [e_phentsize]
+    mul   word  [e_phnum] 
+    mov         ecx,  eax
+    rep         movsb
+
+    mov         esi,  ei_mag
+    mov         edi,  _elf_header
+    add         esi,  [e_shoff]
+    add         edi,  [e_shoff]
+    movzx word  ax,   [e_shentsize]
+    mul   word  [e_shnum] 
+    mov         ecx,  eax
+    rep         movsb
+
+    ; Now relocate all segments to preserved memory
+
+    mov         eax,  ei_mag
+    mov         ebx,  _elf_header
+    add         eax,  [e_phoff]
+    add         ebx,  [e_phoff]
+    mov         dx,   [e_phnum]
+ph_reloc:
+    mov         cx,   [eax + PH_FILE_SIZE]
+    mov         esi,  [eax + PH_FILE_OFFSET]
+    add         esi,  ei_mag
+    mov         edi,  [ebx + PH_FILE_OFFSET]
+    add         edi,  _elf_header
+    rep         movsb
+    dec         dx
+    cmp         dx,   0
+    jne         ph_reloc
+
+    mov         eax,  ei_mag
+    mov         ebx,  _elf_header
+    add         eax,  [e_shoff]
+    add         ebx,  [e_shoff]
+    mov         dx,   [e_shnum]
+sh_reloc:
+    cmp   word  [eax + SH_TYPE_OFFSET], SH_NOBITS_TYPE ; Skip SHT_NOBITS
+    je          shr_cont
+    mov         cx,   [eax + SH_FILE_SIZE]
+    mov         esi,  [eax + SH_FILE_OFFSET]
+    mov         edi,  [ebx + SH_FILE_OFFSET]
+    rep         movsb
+shr_cont:
+    dec         dx
+    cmp         dx,   0
+    jne         sh_reloc
+
+    ; Now read the program headers and relocate
+    ; to the address specified by p_vaddr.
+
+    xor         ebx,  ebx
+    mov         eax,  [elf_phoff]
+    mov         bx,   [elf_phnum]
+ph_loop:
+    cmp         ebx,  0
+    je          phlp_exit
+    mov         edi,  _elf_header
+    add         edi,  eax
+    cmp         dword [edi], dword PT_LOAD_TYPE ; Only PT_LOAD
+    jne         phlp_next
+    mov   dword ecx,  [edi + PH_FILE_SIZE]
+    mov         esi,  _elf_header
+    add         esi,  [edi + PH_FILE_OFFSET]
+    mov         edi,  [edi + PH_VIRT_ADDR]
+    rep         movsb
+phlp_next:
+    add         ax, [elf_phentsize]
+    dec         ebx
+    jmp         ph_loop
+    add         edi, eax
+phlp_exit:
+    pop         edi
+    pop         esi
+    pop         edx
+    pop         ecx
+    pop         ebx
+    pop         eax
+    pop         ebp
+    ret
 
 init_str    db "._init"
 init_slen   equ $ - init_str
@@ -271,9 +341,9 @@ mmap_off    dw 0
 _elf_init     dd 0
 _elf_shstrndx dd 0
 
-times     1024 - ($ - $$) db 0
+times     1536 - ($ - $$) db 0
 
-section .bss
+section .stage2.bss nobits
 ei_mag:       resd 1
 e_ident:      resb 12
 e_type:       resw 1
@@ -289,3 +359,22 @@ e_phnum:      resw 1
 e_shentsize:  resw 1
 e_shnum:      resw 1
 e_shstrndx:   resw 1
+
+section .elf nobits
+_elf_header:
+elf_mag:        resd 1
+elf_ident:      resb 12
+elf_type:       resw 1
+elf_machine:    resw 1
+elf_version:    resd 1
+elf_entry:      resd 1
+elf_phoff:      resd 1
+elf_shoff:      resd 1
+elf_flags:      resd 1
+elf_ehsize:     resw 1
+elf_phentsize:  resw 1
+elf_phnum:      resw 1
+elf_shentsize:  resw 1
+elf_shnum:      resw 1
+elf_shstrndx:   resw 1
+

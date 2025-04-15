@@ -1,16 +1,15 @@
 bits 32
 
-extern main
+section ._init alloc exec progbits
 global __start
-section ._init
 
 __start:
     push  ebp
     mov   ebp, esp
-    xor   ebx, ebx
-    xor   eax, eax
-    mov   word bx, [ebp + 6]
-    mov   word ax, [ebp + 8]
+    xor   ebx, eax
+    xor   eax, ebx
+    mov   word ax, [ebp + 6]
+    mov   word bx, [ebp + 4]
     shl   eax, 4
     add   ebx, eax
 
@@ -30,3 +29,6 @@ __start:
 
     cli
     hlt
+
+section .text
+extern main
