@@ -314,7 +314,6 @@ phlp_next:
     add         ax, [elf_phentsize]
     dec         ebx
     jmp         ph_loop
-    add         edi, eax
 phlp_exit:
     pop         edi
     pop         esi
