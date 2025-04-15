@@ -15,9 +15,9 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-section .boot
 bits   16
 
+section .boot
 jmp   short $+__entry - $
 times 3-($-$$) db 0x90
 name                  db    "fake.bpb"
@@ -64,10 +64,13 @@ sti
 jmp   boot
 
 %include "bios.s"
+%include "vga.s"
 
 boot:
     call  vga_page_rst
     call  cursor_rst
+    call  init_video
+
     mov   byte [drive], dl
     xor   word dx, dx
     mov   byte dl, [drive]
