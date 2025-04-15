@@ -138,9 +138,9 @@ readcnt:
     pop   bp
     ret
 
-disk_err1 db "Error: Couldn't reset drive in less than 5 tries",0x0D,0x0A
+disk_err1 db "E: Disk reset failed (5 tries)",0x0D,0x0A
 de1_len   equ $ - disk_err1
-disk_err2 db "Error: Couldn't read drive in less than 5 tries",0x0D,0x0A
+disk_err2 db "E: Disk read failure (5 tries)",0x0D,0x0A
 de2_len   equ $ - disk_err2
 
 %endif

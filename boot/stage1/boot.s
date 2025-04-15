@@ -17,7 +17,6 @@
 
 section .boot
 bits   16
-extern __start
 
 jmp   short $+__entry - $
 times 3-($-$$) db 0x90
@@ -107,13 +106,104 @@ section .stage15
 stage15:
     call  init_video
 
-    push  s15_str
-    push  s15s_len
-    call  print
-    add   sp, 4
-
     call  a20_init
     call  mmap
+
+    ; Verify that the ELF bootloader is present
+    ; by testing against magic header of the
+    ; ELF format.
+
+    mov   eax, [ei_mag]
+    cmp   eax, 0x464C457F
+    je    s15_continue
+    push  elf_err
+    push  elf_len
+    call  error
+
+s15_continue:
+    ; Read ELF file and find e_shstrndx section.
+
+    xor   eax, eax
+    mov   ax, [es:e_shentsize]
+    mul   word [es:e_shstrndx]
+    add   eax, [es:e_shoff]
+    mov   ebx, ei_mag + 0x10
+    add   ebx, eax
+    mov   eax, [es:ebx]
+    add   eax, ei_mag
+
+    ; Now find the ._init section by text match
+
+    mov   ebx, [es:e_shoff]
+    add   ebx, ei_mag
+    xor   edx, edx
+init_loop:
+    add   bx, [es:e_shentsize] ; skip SHN_UNDEF
+    inc   dx
+    cmp   dword [es:ebx + 4], 1
+    je    test_init
+    cmp   dx, [es:e_shnum]
+    jl    init_loop
+    cli
+    hlt ; TODO: hang for now, will implement later
+test_init:
+    mov   esi, [ebx]
+    add   si, ax
+    mov   di, init_str
+    mov   ecx, init_slen
+    rep   cmpsb
+    jne   init_loop
+
+    ; Found ._init section, save offset for now
+    mov   ax, [e_shentsize]
+    mul   dx
+    mov   bx, [e_shoff]
+    add   ebx, ei_mag + 0x10
+    add   ebx, eax
+    mov   eax, [ebx]
+    mov   [_elf_init], eax
+
+    ; We must first calculate size of the file.
+    ; Because the linker has been configured to
+    ; not align, this is easier than it woulld
+    ; otherwise be.
+
+    xor   si, si
+    mov   si, [e_phoff]
+    add   si, ei_mag + 0x10
+    xor   ecx, ecx
+    mov   bx, [e_phnum]
+phsize_loop:
+    add   cx, [es:si]
+    dec   bx
+    add   si, [e_phentsize]
+    cmp   bx, 0
+    jne   phsize_loop
+
+    mov   si, [e_shoff]
+    add   si, ei_mag + 0x14
+    mov   bx, [e_shnum]
+shsize_loop:
+    add   cx, [es:si]
+    dec   bx
+    add   si, [e_shentsize]
+    cmp   bx, 0
+    jne   shsize_loop
+
+    mov   ax, [e_phentsize]
+    mul   word [e_phnum]
+    add   cx, ax
+    mov   ax, [e_shentsize]
+    mul   word [e_shnum]
+    add   cx, ax
+
+    ; Proceed to relocate
+
+    mov   edx, [e_entry]
+    mov   si, ei_mag
+    add   si, [_elf_init]
+    mov   di, dx
+    rep movsb
 
     ; Clear EFLAGS register
 
@@ -123,8 +213,6 @@ stage15:
     call  mask_ints
 
     cli
-
-    xor ax, ax
 
     call  idt_install
     call  gdt_install
@@ -157,17 +245,47 @@ stage15:
     xor   eax, eax
     xor   ebx, ebx
     xor   ecx, ecx
-    xor   edx, edx
 
     ; push memory map
 
-    push word [mmap_seg]
-    push word [mmap_off]
+    push  word [mmap_seg]
+    push  word [mmap_off]
 
-    jmp 0x0008:__start
+    push  dword 0x0008
+    push  word dx
+    retf
 
-s15_str   db "Entering stage 1.5",0x0D,0x0A
-s15s_len  equ $ - s15_str
+init_str    db "._init"
+init_slen   equ $ - init_str
 
-mmap_seg  dw 0
-mmap_off  dw 0
+elf_err     db "E: ELF not found!",0x0D,0x0A
+elf_len     equ $ - elf_err
+;sht_err     db "No SHT_PROGBITS section header!",0x0D,0x0A
+;sht_len     equ $ - sht_err
+init_err    db "E: ._init missing!",0x0D,0x0A
+init_elen   equ $ - init_err
+
+mmap_seg    dw 0
+mmap_off    dw 0
+
+_elf_init     dd 0
+_elf_shstrndx dd 0
+
+times     1024 - ($ - $$) db 0
+
+section .bss
+ei_mag:       resd 1
+e_ident:      resb 12
+e_type:       resw 1
+e_machine:    resw 1
+e_version:    resd 1
+e_entry:      resd 1
+e_phoff:      resd 1
+e_shoff:      resd 1
+e_flags:      resd 1
+e_ehsize:     resw 1
+e_phentsize:  resw 1
+e_phnum:      resw 1
+e_shentsize:  resw 1
+e_shnum:      resw 1
+e_shstrndx:   resw 1

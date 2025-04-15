@@ -2,15 +2,15 @@ bits 32
 
 extern main
 global __start
-section .init
+section ._init
 
 __start:
     push  ebp
     mov   ebp, esp
     xor   ebx, ebx
     xor   eax, eax
-    mov   word bx, [ebp + 4]
-    mov   word ax, [ebp + 6]
+    mov   word bx, [ebp + 6]
+    mov   word ax, [ebp + 8]
     shl   eax, 4
     add   ebx, eax
 

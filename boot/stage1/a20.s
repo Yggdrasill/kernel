@@ -52,26 +52,14 @@ a20_enabled:
     pop   di
 
     cmp   ax, bx
-    je    a20_ne
+    je    a20_end
 
     mov   byte [es:di], 0xFF
     mov   byte [ds:si], 0x00
     cmp   byte [ds:si], 0xFF
-    je    a20_ne
+    je    a20_end
 
     mov   [has_a20], byte 0x01
-    push  a20_yes
-    push  a20y_len
-    call  print
-    add   sp, 4
-    jmp   a20_end
-
-a20_ne:
-    push  a20_no
-    push  a20n_len
-    call  print
-    add   sp, 4
-
 a20_end:
     pop   bx
     pop   ax
@@ -172,11 +160,7 @@ done_a20:
     pop   bp
     ret
 
-a20_yes   db "A20 enabled",0x0D,0x0A
-a20y_len  equ $ - a20_yes 
-a20_no    db "Trying to enable A20",0x0D,0x0A
-a20n_len  equ $ - a20_no
-a20_err   db "Couldn't enable A20, giving up",0x0D,0x0A
+a20_err   db "E: A20 disabled",0x0D,0x0A
 a20e_len  equ $ - a20_err
 
 has_a20   db 0

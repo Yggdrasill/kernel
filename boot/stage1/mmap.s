@@ -90,7 +90,7 @@ mmap_done:
 
     ret
 
-mmap_err1 db "Error: BIOS does not support int 0x15 0xE820",0x0D,0x0A,0
-mmap_err2 db "Error: mmap failed, BIOS gave malformed request",0x0D,0x0A,0
+mmap_err1 db "E: E820 not supported.",0x0D,0x0A,0
+mmap_err2 db "E: E820 malformed response",0x0D,0x0A,0
 
 %endif
