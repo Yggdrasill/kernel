@@ -103,12 +103,9 @@ section .stage15
 %include "a20.s"
 %include "mmap.s"
 %include "pmode.s"
-%include "vga.s"
 %include "pic.s"
 
 stage15:
-    call  init_video
-
     call  a20_init
     call  mmap
 
