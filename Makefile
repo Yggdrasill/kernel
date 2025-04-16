@@ -26,3 +26,6 @@ $(OBJDIR):
 clean:
 	rm -rf bin
 	rm -rf build
+
+debug: CFLAGS+=-g
+debug: all
