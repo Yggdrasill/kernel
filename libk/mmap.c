@@ -34,7 +34,9 @@ struct e820_point {
 
 int mmap_cmp(const void *p1, const void *p2)
 {
-    return ( (struct e820_point *)p1)->addr > ( (struct e820_point *)p2)->addr;
+    uint64_t p1_addr = ( (struct e820_point *)p1)->addr;
+    uint64_t p2_addr = ( (struct e820_point *)p2)->addr;
+    return (p1_addr > p2_addr) - (p1_addr < p2_addr);
 }
 
 int mmap_bad_type(uint32_t type)
