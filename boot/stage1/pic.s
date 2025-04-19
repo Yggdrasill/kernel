@@ -22,7 +22,7 @@ mask_ints:
 
     mov   ax, 0xFF
     out   0x21, ax
-    out   0x1A, ax
+    out   0xA1, ax
 
     pop   ax
     pop   bp
