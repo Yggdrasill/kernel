@@ -25,6 +25,9 @@
 
 #define INDEX(H, x) ( (char *)H->tree + x * H->size ) 
 
+/* TODO:
+ * Fix possible stack overflow situation with tmp[H->size]
+ */
 #define SWAP(H, x, y) do {                  \
     char *__x;                              \
     char *__y;                              \
