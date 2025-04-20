@@ -44,7 +44,7 @@ __entry:
 cli
 mov   ax, 0x7000
 mov   ss, ax
-mov   bp, 0xFFFF
+mov   bp, 0xFFF0
 mov   sp, bp
 
 xor   ax, ax
@@ -76,7 +76,7 @@ boot:
     mov   byte dl, [drive]
     push  word dx
     call  reset
-    mov   word sp, 0xFFFF    ; flush stack
+    mov   word sp, 0xFFF0    ; flush stack
 
     xor   word dx, dx
     mov   byte dl, [drive]
@@ -84,7 +84,7 @@ boot:
     push  word 0x0240 ; read 32K from disk
     push  word dx
     call  read
-    mov   sp, 0xFFFF
+    mov   sp, 0xFFF0
 
     jmp   0x0000:stage15
 
