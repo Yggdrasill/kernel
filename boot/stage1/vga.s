@@ -15,8 +15,10 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-%ifndef VGA_S
-%define VGA_S
+global init_video
+
+bits    16
+section .boot.util alloc exec progbits
 
 init_video:
     push  bp
@@ -39,5 +41,3 @@ init_video:
     pop   bp
 
     ret
-
-%endif

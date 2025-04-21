@@ -15,9 +15,28 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+global __mbr_start
+global __entry
+global mmap_seg
+global mmap_off
+
+extern vga_page_rst
+extern cursor_rst
+extern init_video
+extern reset
+extern read
+extern a20_init
+extern mmap
+extern error
+extern mask_ints
+extern idt_install
+extern gdt_install
+extern pmode_init
+
 bits   16
 
 section .boot alloc exec progbits
+
 jmp   short $+__entry - $
 times 3-($-$$) db 0x90
 name                  db    "fake.bpb"
@@ -63,9 +82,6 @@ sti
 
 jmp   boot
 
-%include "bios.s"
-%include "vga.s"
-
 boot:
     call  vga_page_rst
     call  cursor_rst
@@ -90,20 +106,15 @@ boot:
 
 drive     db 0
 
+section .mbr alloc progbits
 part0     times 16 db 0
 part1     times 16 db 0
 part2     times 16 db 0
 part3     times 16 db 0
 
 dw        0xAA55
-times     512 - ($ - $$) db 0
 
 section .stage15 alloc exec progbits
-
-%include "a20.s"
-%include "mmap.s"
-%include "pmode.s"
-%include "pic.s"
 
 stage15:
     call  a20_init
@@ -339,8 +350,6 @@ mmap_off    dw 0
 
 _elf_init     dd 0
 _elf_shstrndx dd 0
-
-times     1536 - ($ - $$) db 0
 
 section .stage2.bss nobits
 ei_mag:       resd 1

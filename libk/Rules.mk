@@ -1,18 +1,17 @@
-SRCDIR_LIBK=libk
 SRC_LIBK=$(wildcard $(SRCDIR_LIBK)/*.c)
-OBJ_LIBK=$(patsubst %.c,%.o,$(patsubst $(SRCDIR_LIBK)%,$(OBJDIR)%,$(SRC_LIBK) ) )
+OBJ_LIBK=$(patsubst %.c,%.o,$(patsubst $(SRCDIR_LIBK)%,$(OBJDIR_LIBK)%,$(SRC_LIBK) ) )
 
 AF_LIBK=-f elf32 -I libk/
 LD_LIBK=--oformat elf32-i386 -r
 
-$(OBJDIR)/libk.o: $(OBJ_LIBK) $(OBJDIR)/asm_irq.o $(OBJDIR)/asm_exception.o
+$(OBJDIR)/libk.o: $(OBJ_LIBK) $(OBJDIR_LIBK)/asm_irq.o $(OBJDIR_LIBK)/asm_exception.o
 	$(LD) $(LD_ALL) $(LD_LIBK) -o $@ $^
 
-$(OBJDIR)/%.o: ${SRCDIR_LIBK}/%.c ${SRCDIR_LIBK}/%.h
+$(OBJDIR_LIBK)/%.o: ${SRCDIR_LIBK}/%.c ${SRCDIR_LIBK}/%.h
 	$(CC) $(CF_ALL) $(INCLUDE_PATH) $(CFLAGS) -c -o $@ $(filter-out %.h,$^)
 
-$(OBJDIR)/asm_irq.o: libk/irq.s
+$(OBJDIR_LIBK)/asm_irq.o: libk/irq.s
 	$(AS) $(AF_LIBK) -o $@ $^
 
-$(OBJDIR)/asm_exception.o: libk/exception.s
+$(OBJDIR_LIBK)/asm_exception.o: libk/exception.s
 	$(AS) $(AF_LIBK) -o $@ $^

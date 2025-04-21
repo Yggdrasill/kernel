@@ -15,10 +15,14 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-%ifndef MMAP_S
-%define MMAP_S
+global mmap
+extern error
 
-%include "bios.s"
+extern mmap_seg
+extern mmap_off
+
+bits    16
+section .stage15 alloc exec progbits
 
 mmap:
     push  dword ebp
@@ -92,5 +96,3 @@ mmap_done:
 
 mmap_err1 db "E: E820 not supported.",0x0D,0x0A,0
 mmap_err2 db "E: E820 malformed response",0x0D,0x0A,0
-
-%endif

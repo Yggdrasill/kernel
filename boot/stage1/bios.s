@@ -15,8 +15,25 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-%ifndef BIOS_S
-%define BIOS_S
+global  vga_page_rst
+global  cursor_rst
+global  print
+global  error
+global  reset
+global  read
+
+bits    16
+section .boot.util alloc exec progbits
+
+vga_page_rst:
+    push  bp
+    mov   bp, sp
+    push  ax
+    mov   ax, 0x0500
+    int   0x10
+    pop   ax
+    pop   bp
+    ret
 
 cursor_rst:
     push  bp
@@ -30,16 +47,6 @@ cursor_rst:
     int   0x10
     pop   dx
     pop   bx
-    pop   ax
-    pop   bp
-    ret
-
-vga_page_rst:
-    push  bp
-    mov   bp, sp
-    push  ax
-    mov   ax, 0x0500
-    int   0x10
     pop   ax
     pop   bp
     ret
@@ -140,7 +147,5 @@ readcnt:
 
 disk_err1 db "E: Disk reset failed (5 tries)",0x0D,0x0A
 de1_len   equ $ - disk_err1
-disk_err2 db "E: Disk read failure (5 tries)",0x0D,0x0A
+disk_err2 db "E: Disk read failed (5 tries)",0x0D,0x0A
 de2_len   equ $ - disk_err2
-
-%endif

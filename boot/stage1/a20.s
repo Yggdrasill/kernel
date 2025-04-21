@@ -15,10 +15,11 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-%ifndef A20_S
-%define A20_S
+global a20_init
+extern print
 
-%include "bios.s"
+bits    16
+section .stage15 alloc exec progbits
 
 a20_error:
     push  a20_err
@@ -164,5 +165,3 @@ a20_err   db "E: A20 disabled",0x0D,0x0A
 a20e_len  equ $ - a20_err
 
 has_a20   db 0
-
-%endif

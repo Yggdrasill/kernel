@@ -15,8 +15,12 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-%ifndef PMODE_S
-%define PMODE_S
+global gdt_install
+global idt_install
+global pmode_init
+
+bits    16
+section .stage15 alloc exec progbits
 
 gdt_install:
     push  bp
@@ -69,5 +73,3 @@ data_gdt  db 0xFF,0xFF,0x00,0x00,0x00,0x92,0xCF,0x00
 idt_info:
 idt_size  dw 0
 idt_ptr   dd 0
-
-%endif
