@@ -17,7 +17,7 @@
 
 bits   16
 
-section .boot
+section .boot alloc exec progbits
 jmp   short $+__entry - $
 times 3-($-$$) db 0x90
 name                  db    "fake.bpb"
@@ -90,15 +90,15 @@ boot:
 
 drive     db 0
 
-times     446 - ($ - $$) db 0
 part0     times 16 db 0
 part1     times 16 db 0
 part2     times 16 db 0
 part3     times 16 db 0
 
 dw        0xAA55
+times     512 - ($ - $$) db 0
 
-section .stage15
+section .stage15 alloc exec progbits
 
 %include "a20.s"
 %include "mmap.s"
