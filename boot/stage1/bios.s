@@ -23,7 +23,7 @@ global  reset
 global  read
 
 bits    16
-section .boot.util alloc exec progbits
+section .boot.util alloc exec progbits nowrite
 
 vga_page_rst:
     push  bp
@@ -145,6 +145,7 @@ readcnt:
     pop   bp
     ret
 
+section .boot.rodata alloc noexec progbits nowrite
 disk_err1 db "E: Disk reset failed (5 tries)",0x0D,0x0A
 de1_len   equ $ - disk_err1
 disk_err2 db "E: Disk read failed (5 tries)",0x0D,0x0A

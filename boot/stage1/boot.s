@@ -33,7 +33,7 @@ extern pmode_init
 
 bits   16
 
-section .boot alloc exec progbits
+section .boot alloc exec progbits nowrite
 
 jmp   short $+__entry - $
 times 3-($-$$) db 0x90
@@ -104,7 +104,7 @@ boot:
 
 drive     db 0
 
-section .mbr alloc progbits
+section .mbr alloc noexec progbits write
 part0     times 16 db 0
 part1     times 16 db 0
 part2     times 16 db 0
@@ -112,7 +112,7 @@ part3     times 16 db 0
 
 dw        0xAA55
 
-section .stage15 alloc exec progbits
+section .stage15 alloc exec progbits nowrite
 
 stage15:
     call  a20_init
@@ -333,6 +333,7 @@ phlp_exit:
     pop         ebp
     ret
 
+section     .rodata
 init_str    db "._init"
 init_slen   equ $ - init_str
 
@@ -343,13 +344,14 @@ elf_len     equ $ - elf_err
 init_err    db "E: ._init missing!",0x0D,0x0A
 init_elen   equ $ - init_err
 
+section     .data
 mmap_seg    dw 0
 mmap_off    dw 0
 
 _elf_init     dd 0
 _elf_shstrndx dd 0
 
-section .stage2.bss nobits
+section .stage2.bss alloc noexec nobits write
 ei_mag:       resd 1
 e_ident:      resb 12
 e_type:       resw 1
@@ -366,7 +368,7 @@ e_shentsize:  resw 1
 e_shnum:      resw 1
 e_shstrndx:   resw 1
 
-section .elf nobits
+section .elf alloc noexec nobits write
 _elf_header:
 elf_mag:        resd 1
 elf_ident:      resb 12

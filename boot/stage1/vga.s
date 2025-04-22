@@ -18,7 +18,7 @@
 global init_video
 
 bits    16
-section .boot.util alloc exec progbits
+section .boot.util alloc exec progbits nowrite
 
 init_video:
     push  bp

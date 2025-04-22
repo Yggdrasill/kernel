@@ -30,11 +30,16 @@ SECTIONS {
     .boot : {
       *(.boot) 
       *(.boot.util)
+      *(.boot.rodata)
     } > boot
     . = MBR_ADDR;
     .mbr : { *(.mbr) } > mbr
     . = MEM1_ADDR;
-    .stage15 : { *(.stage15) } > mem1
+    .stage15 : { 
+      *(.stage15) 
+      *(.data)
+      *(.rodata)
+    } > mem1
     . = ST2_ADDR;
     .stage2.bss (NOLOAD) : { *(.stage2.bss) } > stage2
     .elf (NOLOAD) : { *(.elf) } > elf

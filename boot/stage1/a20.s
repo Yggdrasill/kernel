@@ -19,7 +19,7 @@ global a20_init
 extern print
 
 bits    16
-section .stage15 alloc exec progbits
+section .stage15 alloc exec progbits nowrite
 
 a20_error:
     push  a20_err
@@ -161,7 +161,10 @@ done_a20:
     pop   bp
     ret
 
+section .data
+has_a20   db 0
+
+section .rodata
 a20_err   db "E: A20 disabled",0x0D,0x0A
 a20e_len  equ $ - a20_err
 
-has_a20   db 0

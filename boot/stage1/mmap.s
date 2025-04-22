@@ -22,7 +22,7 @@ extern mmap_seg
 extern mmap_off
 
 bits    16
-section .stage15 alloc exec progbits
+section .stage15 alloc exec progbits nowrite
 
 mmap:
     push  dword ebp
@@ -94,5 +94,6 @@ mmap_done:
 
     ret
 
+section .rodata
 mmap_err1 db "E: E820 not supported.",0x0D,0x0A,0
 mmap_err2 db "E: E820 malformed response",0x0D,0x0A,0

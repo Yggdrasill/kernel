@@ -1,6 +1,6 @@
 bits 32
 
-section ._init alloc exec progbits
+section ._init alloc exec progbits nowrite
 global __start
 
 __start:

@@ -18,7 +18,7 @@
 global mask_ints
 
 bits    16
-section .stage15 alloc exec progbits
+section .stage15 alloc exec progbits nowrite
 
 mask_ints:
     push  bp

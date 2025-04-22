@@ -20,7 +20,7 @@ global idt_install
 global pmode_init
 
 bits    16
-section .stage15 alloc exec progbits
+section .stage15 alloc exec progbits nowrite
 
 gdt_install:
     push  bp
@@ -61,6 +61,7 @@ pmode_init:
     pop   bp
     ret
 
+section .data
 gdt_info:
 gdt_size  dw  0x18 - 1
 gdt_ptr   dd  gdt
