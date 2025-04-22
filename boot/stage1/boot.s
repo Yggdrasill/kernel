@@ -206,6 +206,21 @@ read_elf:
     push        esi
     push        edi
 
+    sub         esp,  0x10
+    mov         eax,  ei_mag
+    add         eax,  [e_phoff]
+    mov         ebx,  _elf_header
+    add         ebx,  [e_phoff]
+    mov         ecx,  ei_mag
+    add         ecx,  [e_shoff]
+    mov         edx,  _elf_header
+    add         edx,  [e_shoff]
+
+    mov         [ebp - 0x1C], eax
+    mov         [ebp - 0x20], ebx
+    mov         [ebp - 0x24], ecx
+    mov         [ebp - 0x28], edx
+
     ; Read ELF and find e_shstrndx section.
 
     xor         eax, eax
@@ -219,8 +234,7 @@ read_elf:
 
     ; Now find the ._init section by text match
 
-    mov         bx, [e_shoff]
-    add         ebx, ei_mag
+    mov         ebx,  [ebp - 0x24]
     xor         edx, edx
 init_loop:
     add         bx, [e_shentsize] ; skip SHN_UNDEF
@@ -248,19 +262,15 @@ test_init:
     mov         cx,   [e_ehsize]
     rep         movsb
 
-    mov         esi,  ei_mag
-    mov         edi,  _elf_header
-    add         esi,  [e_phoff]
-    add         edi,  [e_phoff]
+    mov         esi,  [ebp - 0x1C]
+    mov         edi,  [ebp - 0x20]
     movzx word  ax,   [e_phentsize]
     mul   word  [e_phnum] 
     mov         ecx,  eax
     rep         movsb
 
-    mov         esi,  ei_mag
-    mov         edi,  _elf_header
-    add         esi,  [e_shoff]
-    add         edi,  [e_shoff]
+    mov         esi,  [ebp - 0x24]
+    mov         edi,  [ebp - 0x28]
     movzx word  ax,   [e_shentsize]
     mul   word  [e_shnum] 
     mov         ecx,  eax
@@ -268,10 +278,8 @@ test_init:
 
     ; Now relocate all segments to preserved memory
 
-    mov         eax,  ei_mag
-    mov         ebx,  _elf_header
-    add         eax,  [e_phoff]
-    add         ebx,  [e_phoff]
+    mov         eax,  [ebp - 0x1C]
+    mov         ebx,  [ebp - 0x20]
     mov         dx,   [e_phnum]
 ph_reloc:
     mov         cx,   [eax + PH_FILE_SIZE]
@@ -284,10 +292,8 @@ ph_reloc:
     cmp         dx,   0
     jne         ph_reloc
 
-    mov         eax,  ei_mag
-    mov         ebx,  _elf_header
-    add         eax,  [e_shoff]
-    add         ebx,  [e_shoff]
+    mov         eax,  [ebp - 0x24]
+    mov         ebx,  [ebp - 0x28]
     mov         dx,   [e_shnum]
 sh_reloc:
     cmp   word  [eax + SH_TYPE_OFFSET], SH_NOBITS_TYPE ; Skip SHT_NOBITS
@@ -324,6 +330,7 @@ phlp_next:
     dec         ebx
     jmp         ph_loop
 phlp_exit:
+    add         esp, 0x10
     pop         edi
     pop         esi
     pop         edx
