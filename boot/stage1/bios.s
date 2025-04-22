@@ -94,19 +94,15 @@ reset:
     mov   dx, [ss:bp + 4]
     push  si
     push  ax
-    push  disk_err1
-    push  de1_len
     xor   si, si
 resetlp:
     inc   si
     cmp   si, 0x05
-    jne   resetcnt
-    call  error
-resetcnt:
+    je    reset_e
     xor   word ax, ax
     int   0x13
     jc    resetlp
-    add   sp, 4         ; discard error message
+
     pop   word ax
     pop   word si
     pop   dx
@@ -123,27 +119,33 @@ read:
     mov   word ax, [ss:bp + 6]
     mov   word dx, [ss:bp + 4]
     push  word si
-    push  word disk_err2
-    push  word de2_len
     xor   word si, si
 readlp:
     inc   si
     cmp   si, 0x05
-    jne   readcnt
-    call  error
-readcnt:
+    je    read_e
     mov   dh, 0x00
     mov   ch, 0x00
     mov   cl, 0x02
     int   0x13
     jc    readlp
-    add   sp, 4
+
     pop   word si
     pop   word cx
     pop   word bx
     pop   word ax
     pop   bp
     ret
+
+reset_e:
+    push  disk_err1
+    push  de1_len
+    call  error
+
+read_e:
+    push  disk_err2
+    push  de2_len
+    call  error
 
 section .boot.rodata alloc noexec progbits nowrite
 disk_err1 db "E: Disk reset failed (5 tries)",0x0D,0x0A

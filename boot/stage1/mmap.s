@@ -46,35 +46,19 @@ loop:
     mov   edx, 0x534D4150
 
     int   0x15
-    jnc   mmapcnt1
-    push  mmap_err1
-    push  me1_len
-    call  error
-
-mmapcnt1:
+    jc    mmap_e1
     cmp   eax, 0x534D4150
-    je    mmapcnt2
-    push  mmap_err2
-    push  me2_len
-    call  error
-
-mmapcnt2:
+    jne   mmap_e2
     cmp   ebx, 0x00
     je    mmap_done
 
     cmp   ecx, 0x14
-    je    mmapcnt3
+    je    mmap_continue
     cmp   ecx, 0x18
-    je    mmapcnt3
-
-    push  mmap_err2
-    push  me2_len
-    call  error
-
-mmapcnt3:
+    jne   mmap_e2
+mmap_continue:
     add   di, 0x18
     jmp   loop
-
 mmap_done:
     mov   [mmap_seg], es
     mov   [mmap_off], di
@@ -88,6 +72,16 @@ mmap_done:
     pop   dword ebp
 
     ret
+
+mmap_e1:
+    push  mmap_err1
+    push  me1_len
+    call  error
+
+mmap_e2:
+    push  mmap_err2
+    push  me2_len
+    call  error
 
 section .rodata
 mmap_err1 db "E: E820 not supported.",0x0D,0x0A
