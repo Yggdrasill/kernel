@@ -146,7 +146,7 @@ s15_continue:
     ; code executed after this point, except for
     ; these simple mov instructions.
 
-    mov   ax, 0x0010
+    mov   ax, 0x0020
     mov   ss, ax
     mov   es, ax
     mov   ds, ax
@@ -161,7 +161,7 @@ s15_continue:
     mov   esp, 0x7FFF0
     mov   ebp, 0x7FFF0
 
-    jmp   0x0008:i386
+    jmp   0x0018:i386
 i386:
 bits 32
     call  read_elf
