@@ -36,11 +36,7 @@ mmap:
 
     mov   eax, 0x000027E0
     mov   es, ax
-    mov   edi, 0x00000000
-
-    xor   eax, eax
-    push  eax
-
+    xor   edi, edi
     xor   ebx, ebx
 loop:
     ; clear ACPI 3.0 attribute field if BIOS doesn't fill in
@@ -52,12 +48,14 @@ loop:
     int   0x15
     jnc   mmapcnt1
     push  mmap_err1
+    push  me1_len
     call  error
 
 mmapcnt1:
     cmp   eax, 0x534D4150
     je    mmapcnt2
     push  mmap_err2
+    push  me2_len
     call  error
 
 mmapcnt2:
@@ -70,20 +68,17 @@ mmapcnt2:
     je    mmapcnt3
 
     push  mmap_err2
+    push  me2_len
     call  error
 
 mmapcnt3:
     add   di, 0x18
-    pop   eax
-    inc   eax
-    push  eax
     jmp   loop
 
 mmap_done:
     mov   [mmap_seg], es
     mov   [mmap_off], di
 
-    pop   dword eax
     pop   word es
     pop   dword edi
     pop   dword edx
@@ -95,5 +90,7 @@ mmap_done:
     ret
 
 section .rodata
-mmap_err1 db "E: E820 not supported.",0x0D,0x0A,0
-mmap_err2 db "E: E820 malformed response",0x0D,0x0A,0
+mmap_err1 db "E: E820 not supported.",0x0D,0x0A
+me1_len   equ $ - mmap_err1
+mmap_err2 db "E: E820 malformed response",0x0D,0x0A
+me2_len   equ $ - mmap_err2
