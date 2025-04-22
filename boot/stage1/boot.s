@@ -195,7 +195,6 @@ bits 32
 %define         SH_FILE_OFFSET    0x10
 %define         SH_FILE_SIZE      0x14
 
-
 read_elf:
     push        ebp
     mov         ebp, esp
@@ -207,14 +206,12 @@ read_elf:
     push        edi
 
     sub         esp,  0x10
-    mov         eax,  ei_mag
-    add         eax,  [e_phoff]
-    mov         ebx,  _elf_header
-    add         ebx,  [e_phoff]
-    mov         ecx,  ei_mag
-    add         ecx,  [e_shoff]
-    mov         edx,  _elf_header
-    add         edx,  [e_shoff]
+    mov         esi,  [e_phoff]
+    mov         edi,  [e_shoff]
+    lea         eax,  [esi + ei_mag]
+    lea         ebx,  [esi + _elf_header]
+    lea         ecx,  [edi + ei_mag]
+    lea         edx,  [edi + _elf_header]
 
     mov         [ebp - 0x1C], eax
     mov         [ebp - 0x20], ebx
@@ -223,31 +220,29 @@ read_elf:
 
     ; Read ELF and find e_shstrndx section.
 
-    xor         eax, eax
-    mov         ax, [e_shentsize]
+    movzx       eax,  word [e_shentsize]
     mul   word  [e_shstrndx]
-    add         ax, [e_shoff]
-    mov         ebx, ei_mag + SH_FILE_OFFSET
-    add         ebx, eax
-    mov         eax, [ebx]
-    add         eax, ei_mag
+    add         eax,  ecx
+    add         eax,  SH_FILE_OFFSET
+    mov         eax,  [eax]
+    add         eax,  ei_mag
 
-    ; Now find the ._init section by text match
+    ; Now find the ._init section by text match.
 
-    mov         ebx,  [ebp - 0x24]
-    xor         edx, edx
+    mov         ebx,  ecx ; [ebp - 0x24]
+    movzx       edx,  word [e_shnum]
 init_loop:
-    add         bx, [e_shentsize] ; skip SHN_UNDEF
-    inc         edx
+    add         bx,   [e_shentsize] ; skip SHN_UNDEF
+    dec         edx
     cmp   dword [ebx + SH_TYPE_OFFSET], SH_PROGBITS_TYPE
     je          test_init
-    cmp         edx,  [e_shnum]
-    jl          init_loop
+    test        edx,  edx
+    jnz         init_loop
     cli
     hlt ; TODO: hang for now, will implement later
 test_init:
-    mov         esi,  [ebx]
-    add         esi,  eax
+    lea         esi,  [eax]
+    add         esi,  [ebx]
     mov         edi,  init_str
     mov         ecx,  init_slen
     rep         cmpsb
@@ -259,60 +254,59 @@ test_init:
 
     mov         esi,  ei_mag
     mov         edi,  _elf_header 
-    mov         cx,   [e_ehsize]
+    movzx       ecx,  word [e_ehsize]
     rep         movsb
 
     mov         esi,  [ebp - 0x1C]
     mov         edi,  [ebp - 0x20]
-    movzx word  ax,   [e_phentsize]
-    mul   word  [e_phnum] 
-    mov         ecx,  eax
+    movzx       ecx,  word [e_phentsize]
+    imul        cx,   word [e_phnum] 
     rep         movsb
 
     mov         esi,  [ebp - 0x24]
     mov         edi,  [ebp - 0x28]
-    movzx word  ax,   [e_shentsize]
-    mul   word  [e_shnum] 
-    mov         ecx,  eax
+    movzx       ecx,  word [e_shentsize]
+    imul        cx,   word [e_shnum] 
     rep         movsb
 
     ; Now relocate all segments to preserved memory
 
     mov         eax,  [ebp - 0x1C]
-    mov         ebx,  [ebp - 0x20]
-    mov         dx,   [e_phnum]
+    movzx       edx,  word [e_phnum]
 ph_reloc:
-    mov         cx,   [eax + PH_FILE_SIZE]
+    mov         ecx,  [eax + PH_FILE_SIZE]
     mov         esi,  [eax + PH_FILE_OFFSET]
     add         esi,  ei_mag
-    mov         edi,  [ebx + PH_FILE_OFFSET]
+    mov         edi,  [eax + PH_FILE_OFFSET]
     add         edi,  _elf_header
     rep         movsb
-    dec         dx
-    cmp         dx,   0
-    jne         ph_reloc
+    add         ax,   [e_phentsize]
+    dec         edx
+    test        edx,  edx
+    jnz         ph_reloc
 
     mov         eax,  [ebp - 0x24]
-    mov         ebx,  [ebp - 0x28]
-    mov         dx,   [e_shnum]
+    movzx       edx,  word [e_shnum]
 sh_reloc:
     cmp   word  [eax + SH_TYPE_OFFSET], SH_NOBITS_TYPE ; Skip SHT_NOBITS
     je          shr_cont
-    mov         cx,   [eax + SH_FILE_SIZE]
+    mov         ecx,  [eax + SH_FILE_SIZE]
     mov         esi,  [eax + SH_FILE_OFFSET]
-    mov         edi,  [ebx + SH_FILE_OFFSET]
+    add         esi,  ei_mag
+    mov         edi,  [eax + SH_FILE_OFFSET]
+    add         edi,  _elf_header
     rep         movsb
 shr_cont:
-    dec         dx
-    cmp         dx,   0
-    jne         sh_reloc
+    add         ax,   [e_shentsize]
+    dec         edx
+    test        edx,  edx
+    jnz         sh_reloc
 
     ; Now read the program headers and relocate
     ; to the address specified by p_vaddr.
 
-    xor         ebx,  ebx
     mov         eax,  [elf_phoff]
-    mov         bx,   [elf_phnum]
+    movzx       ebx,  word [elf_phnum]
 ph_loop:
     cmp         ebx,  0
     je          phlp_exit
