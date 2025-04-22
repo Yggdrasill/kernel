@@ -26,11 +26,10 @@ a20_error:
     push  a20e_len
     call  error
 
-a20_enabled:
+a20_check:
     push  bp
     mov   bp, sp
     push  ax
-    push  bx
     push  di
     push  si
     push  es
@@ -40,27 +39,31 @@ a20_enabled:
     mov   es, ax
     not   ax
     mov   ds, ax
-    mov   di, 0x7DFE
-    mov   si, 0x7E0E
+    mov   di, 0x0500
+    mov   si, 0x0510
+
     mov   ax, word [es:di]
-    mov   bx, word [ds:si]
+    push  ax
+    mov   ax, word [ds:si]
+    push  ax
+
+    mov   word [es:di], 0xAA55
+    mov   word [ds:si], 0x55AA
+    cmp   word [es:di], 0x55AA
+
+    pop   ax
+    mov   word [ds:si], ax
+    pop   ax
+    mov   word [es:di], ax
 
     pop   ds
     pop   es
-    pop   si
-    pop   di
-
-    cmp   ax, bx
-    je    a20_end
-
-    mov   byte [es:di], 0xFF
-    mov   byte [ds:si], 0x00
-    cmp   byte [ds:si], 0xFF
     je    a20_end
 
     mov   [has_a20], byte 0x01
 a20_end:
-    pop   bx
+    pop   si
+    pop   di
     pop   ax
     pop   bp
     ret
@@ -134,22 +137,22 @@ a20_fast:
 a20_init:
     push  bp
     mov   bp, sp
-    call  a20_enabled
+    call  a20_check
     cmp   [has_a20], byte 0x01
     je    done_a20
 
     call  bios_a20
-    call  a20_enabled
+    call  a20_check
     cmp   [has_a20], byte 0x01
     je    done_a20
 
     call  kbd8042_a20
-    call  a20_enabled
+    call  a20_check
     cmp   [has_a20], byte 0x01
     je    done_a20
 
     call  a20_ee
-    call  a20_enabled
+    call  a20_check
     cmp   [has_a20], byte 0x01
     je    done_a20
 
