@@ -30,6 +30,7 @@ extern mask_ints
 extern idt_install
 extern gdt_install
 extern pmode_init
+extern pmode_exit
 
 bits   16
 
@@ -146,7 +147,7 @@ s15_continue:
     ; code executed after this point, except for
     ; these simple mov instructions.
 
-    mov   ax, 0x0020
+    mov   ax, 0x0010
     mov   ss, ax
     mov   es, ax
     mov   ds, ax
@@ -161,7 +162,7 @@ s15_continue:
     mov   esp, 0x7FFF0
     mov   ebp, 0x7FFF0
 
-    jmp   0x0018:i386
+    jmp   0x0008:i386
 i386:
 bits 32
     call  read_elf
@@ -238,8 +239,10 @@ init_loop:
     je          test_init
     test        edx,  edx
     jnz         init_loop
-    cli
-    hlt ; TODO: hang for now, will implement later
+    push        init_err
+    push        init_elen
+    jmp         error32
+
 test_init:
     lea         esi,  [eax]
     add         esi,  [ebx]
@@ -333,6 +336,19 @@ phlp_exit:
     pop         eax
     pop         ebp
     ret
+
+error32:
+    call        pmode_exit
+    ; Return in 16-bit mode, and pushed 4 bytes in
+    ; 32-bit mode, so add 2 to sp.
+    add         sp, 2
+bits 16
+    ; Pop as 4 bytes and push as 2 bytes
+    pop         ebx
+    pop         eax
+    push        ax
+    push        bx
+    call        error
 
 section     .rodata
 init_str    db "._init"
