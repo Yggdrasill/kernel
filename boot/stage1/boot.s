@@ -26,9 +26,6 @@ extern read
 extern a20_init
 extern mmap
 extern error
-extern mask_ints
-extern idt_install
-extern gdt_install
 extern pmode_init
 extern pmode_exit
 
@@ -274,9 +271,10 @@ shr_cont:
 
     cmp         [init_found], byte 0x1
     je          ph_loop
-    push        init_err
-    push        init_elen
-    jmp         error32
+    push        word init_err
+    push        word init_elen
+    push        error
+    call        rmode_trampoline
 
 ph_loop:
     cmp         ebx,  0
@@ -305,18 +303,36 @@ phlp_exit:
     pop         ebp
     ret
 
-error32:
+rmode_trampoline:
+    ; This may look a bit unconventional, but it
+    ; allows us to pass arguments as if calling
+    ; from real mode, by simply restoring the
+    ; return pointer. This also allows us to
+    ; preserve register values.
+
+    mov         [old_eax], eax
+    mov         eax, [esp]
+    mov         [return], eax
     call        pmode_exit
-    ; Return in 16-bit mode, and pushed 4 bytes in
-    ; 32-bit mode, so add 2 to sp.
-    add         sp, 2
 bits 16
-    ; Pop as 4 bytes and push as 2 bytes
-    pop         ebx
-    pop         eax
-    push        ax
-    push        bx
-    call        error
+    ; Realign stack due to 16-bit return.
+    ; Also pop return path. This allows the
+    ; callee function to read args as if they
+    ; were called from real-mode.
+    add         sp, 6
+    ; Pop callee and into ax, then call it.
+    pop         dword eax
+    call        ax
+    call        pmode_init
+bits 32
+    ; Return to previous stack pointer, and
+    ; clean up 32-bit return from pmode_init.
+    sub         esp, 6
+    ; Push return path
+    mov         eax, [old_eax]
+    push        dword [return]
+    ret
+
 
 section     .rodata
 init_str    db "._init"
@@ -333,7 +349,12 @@ section     .data
 mmap_seg    dw 0
 mmap_off    dw 0
 
+
 init_found  db 0
+
+section .bss
+old_eax     dd 0
+return      dd 0
 
 section .stage2.bss alloc noexec nobits write
 ei_mag:       resd 1
