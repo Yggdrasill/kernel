@@ -219,38 +219,6 @@ read_elf:
     mov         [ebp - 0x24], ecx
     mov         [ebp - 0x28], edx
 
-    ; Read ELF and find e_shstrndx section.
-
-    movzx       eax,  word [e_shentsize]
-    mul   word  [e_shstrndx]
-    add         eax,  ecx
-    add         eax,  SH_FILE_OFFSET
-    mov         eax,  [eax]
-    add         eax,  ei_mag
-
-    ; Now find the ._init section by text match.
-
-    mov         ebx,  ecx ; [ebp - 0x24]
-    movzx       edx,  word [e_shnum]
-init_loop:
-    add         bx,   [e_shentsize] ; skip SHN_UNDEF
-    dec         edx
-    cmp   dword [ebx + SH_TYPE_OFFSET], SH_PROGBITS_TYPE
-    je          test_init
-    test        edx,  edx
-    jnz         init_loop
-    push        init_err
-    push        init_elen
-    jmp         error32
-
-test_init:
-    lea         esi,  [eax]
-    add         esi,  [ebx]
-    mov         edi,  init_str
-    mov         ecx,  init_slen
-    rep         cmpsb
-    jne         init_loop
-
     ; Before relocating PT_LOAD segments, we
     ; must ensure that the ELF headers are all
     ; relocated to a preserved region.
@@ -288,6 +256,15 @@ ph_reloc:
     test        edx,  edx
     jnz         ph_reloc
 
+    ; Find e_shstrndx section
+
+    movzx       ebx,  word [e_shentsize]
+    imul        bx,   word [e_shstrndx]
+    add         ebx,  [ebp - 0x24]
+    add         ebx,  SH_FILE_OFFSET
+    mov         ebx,  [ebx]
+    add         ebx,  ei_mag
+
     mov         eax,  [ebp - 0x24]
     movzx       edx,  word [e_shnum]
 sh_reloc:
@@ -299,6 +276,21 @@ sh_reloc:
     mov         edi,  [eax + SH_FILE_OFFSET]
     add         edi,  _elf_header
     rep         movsb
+    
+    ; Skip if ._init section found.
+
+    cmp         [init_found], byte 0x1
+    je          shr_cont
+    
+    ; String match section name with ._init.
+
+    lea         esi,  [ebx]
+    add         esi,  [eax]
+    mov         edi,  init_str
+    mov         ecx,  init_slen
+    rep         cmpsb
+    jne         shr_cont
+    mov         [init_found], byte 0x1
 shr_cont:
     add         ax,   [e_shentsize]
     dec         edx
@@ -306,10 +298,22 @@ shr_cont:
     jnz         sh_reloc
 
     ; Now read the program headers and relocate
-    ; to the address specified by p_vaddr.
+    ; to the address specified by p_vaddr. Since
+    ; this most definitely clobbers the ELF structure
+    ; we have to do this after moving the ELF to a
+    ; safe location.
 
     mov         eax,  [elf_phoff]
     movzx       ebx,  word [elf_phnum]
+
+    ; Check if ._init was found, and error if it wasn't.
+
+    cmp         [init_found], byte 0x1
+    je          ph_loop
+    push        init_err
+    push        init_elen
+    jmp         error32
+
 ph_loop:
     cmp         ebx,  0
     je          phlp_exit
@@ -365,8 +369,7 @@ section     .data
 mmap_seg    dw 0
 mmap_off    dw 0
 
-_elf_init     dd 0
-_elf_shstrndx dd 0
+init_found  db 0
 
 section .stage2.bss alloc noexec nobits write
 ei_mag:       resd 1
