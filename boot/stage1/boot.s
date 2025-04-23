@@ -240,22 +240,6 @@ read_elf:
     imul        cx,   word [e_shnum] 
     rep         movsb
 
-    ; Now relocate all segments to preserved memory
-
-    mov         eax,  [ebp - 0x1C]
-    movzx       edx,  word [e_phnum]
-ph_reloc:
-    mov         ecx,  [eax + PH_FILE_SIZE]
-    mov         esi,  [eax + PH_FILE_OFFSET]
-    add         esi,  ei_mag
-    mov         edi,  [eax + PH_FILE_OFFSET]
-    add         edi,  _elf_header
-    rep         movsb
-    add         ax,   [e_phentsize]
-    dec         edx
-    test        edx,  edx
-    jnz         ph_reloc
-
     ; Find e_shstrndx section
 
     movzx       ebx,  word [e_shentsize]
