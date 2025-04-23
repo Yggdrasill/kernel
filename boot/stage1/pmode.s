@@ -92,11 +92,20 @@ pmode_init:
 bits 32
 i386:
 
+    add   sp, 8
+    ; Again, due to the realignment in the stack, it is
+    ; possible that there's garbage in our return pointer.
+    ; We clean that up here.
+    pop   eax
+    and   eax, 0xFFFF
+    push  eax
+    sub   sp, 8
     pop   eax
     ; Realign stack, do not pop bp as it is fixed
     ; manually. This also realigns the return pointer
     ; correctly.
     add   sp, 4
+
     ret
 
 pmode_exit:
@@ -104,9 +113,6 @@ pmode_exit:
     mov   ebp, esp
     push  eax
     push  edi
-
-    and   ebp, 0xFFFF
-    and   esp, 0xFFFF
 
     jmp   0x0018:prot16
 prot16:
@@ -132,16 +138,19 @@ bits 16
     mov   ds, ax
     mov   gs, ax
     mov   fs, ax
-    mov   ax, 0x7000
+    mov   eax, ebp
+    shr   eax, 4
+    and   eax, 0xF000
     mov   ss, ax
 
     lidt  [idt_rmode]
 
-    mov   edi, dword [ss:bp - 8]
-    mov   eax, dword [ss:bp - 4]
+    and   esp, 0xFFFF
+    pop   edi
+    pop   eax
+    pop   ebp
+    and   ebp, 0xFFFF
 
-    add   ebp, 4
-    mov   esp, ebp
     sti
     ret
 
