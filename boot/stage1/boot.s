@@ -304,35 +304,33 @@ phlp_exit:
     ret
 
 rmode_trampoline:
-    ; This may look a bit unconventional, but it
+    ; This may look a bit unconventional, but 
+    ; popping the return address from the stack
     ; allows us to pass arguments as if calling
-    ; from real mode, by simply restoring the
-    ; return pointer. This also allows us to
-    ; preserve register values.
-
-    mov         [old_eax], eax
-    mov         eax, [esp]
-    mov         [return], eax
+    ; from real mode. The return address will be
+    ; pushed later.
+    pop         dword [return]
     call        pmode_exit
 bits 16
-    ; Realign stack due to 16-bit return.
-    ; Also pop return path. This allows the
-    ; callee function to read args as if they
-    ; were called from real-mode.
-    add         sp, 6
-    ; Pop callee and into ax, then call it.
-    pop         dword eax
-    call        ax
+    ; Realign stack from 16-bit return.
+    add         sp, 2
+    ; Pop 32-bit callee address and push as 16-bit
+    ; address, then call it with a tail call.
+    pop         dword [callee]
+    push        rmode_return
+    push        word [callee]
+    ret
+rmode_return:
     call        pmode_init
 bits 32
-    ; Return to previous stack pointer, and
-    ; clean up 32-bit return from pmode_init.
+    ; Return to previous stack pointer. This
+    ; cleans up the 32-bit return from a 16-bit
+    ; function, and also the return from the
+    ; callee.
     sub         esp, 6
     ; Push return path
-    mov         eax, [old_eax]
     push        dword [return]
     ret
-
 
 section     .rodata
 init_str    db "._init"
@@ -353,7 +351,7 @@ mmap_off    dw 0
 init_found  db 0
 
 section .bss
-old_eax     dd 0
+callee      dd 0
 return      dd 0
 
 section .stage2.bss alloc noexec nobits write
