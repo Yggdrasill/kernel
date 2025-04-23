@@ -19,6 +19,7 @@ global gdt_install
 global idt_install
 global pmode_init
 global pmode_exit
+extern mask_ints
 
 bits    16
 section .stage15 alloc exec progbits nowrite
@@ -50,19 +51,54 @@ idt_install:
     ret
 
 pmode_init:
-    push  bp
+    push  ebp
     mov   bp, sp
     push  eax
+
+    call  mask_ints
+
+    cli
+
+    call  idt_install
+    call  gdt_install
+
+    ; Initialize segment registers to use the GDT.
+    ; There should be no more 16 bit or real mode
+    ; code executed after this point, except for
+    ; these simple mov instructions.
+
+    xor   eax, eax
+    mov   eax, ss
+    shl   eax, 4
+    add   eax, esp
+    mov   esp, eax
+    mov   eax, ss
+    shl   eax, 4
+    add   eax, [ss:bp]
+    mov   ebp, eax
 
     mov   eax, cr0
     or    eax, 1
     mov   cr0, eax
 
+    mov   ax, 0x0010
+    mov   ss, ax
+    mov   es, ax
+    mov   ds, ax
+    mov   gs, ax
+    mov   fs, ax
+
+    jmp   0x0008:i386
+bits 32
+i386:
+
     pop   eax
-    pop   bp
+    ; Realign stack, do not pop bp as it is fixed
+    ; manually. This also realigns the return pointer
+    ; correctly.
+    add   sp, 4
     ret
 
-bits 32
 pmode_exit:
     push  ebp
     mov   ebp, esp

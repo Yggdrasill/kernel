@@ -134,37 +134,17 @@ s15_continue:
     push  dword 0x02
     popfd
 
-    call  mask_ints
-
-    cli
-
-    call  idt_install
-    call  gdt_install
     call  pmode_init
+bits 32
 
-    ; Initialize segment registers to use the GDT.
-    ; There should be no more 16 bit or real mode
-    ; code executed after this point, except for
-    ; these simple mov instructions.
-
-    mov   ax, 0x0010
-    mov   ss, ax
-    mov   es, ax
-    mov   ds, ax
-    mov   gs, ax
-    mov   fs, ax
-
-    ; Stack is aligned on 16-byte boundary
-    ; to make various compilers happy
-    ; This also initializes the registers
-    ; for 32 bit execution.
+    ; Start a fresh stack frame for 32-bit
+    ; protected mode. Stack is aligned on
+    ; 16-byte boundary to make various 
+    ; compilers happy. 
 
     mov   esp, 0x7FFF0
     mov   ebp, 0x7FFF0
 
-    jmp   0x0008:i386
-i386:
-bits 32
     call  read_elf
     mov   dword edx, dword [elf_entry]
 
