@@ -128,6 +128,7 @@ pmode32:
     add   esp, 4
     push  dword [return]
 
+    sti
     ret
 
 pmode_exit:
