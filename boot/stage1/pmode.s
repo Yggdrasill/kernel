@@ -51,6 +51,9 @@ idt_install:
     ret
 
 pmode_init:
+    ; Reserve space for return pointer.
+    sub   esp, 2
+
     push  ebp
     mov   bp, sp
     push  eax
@@ -62,24 +65,26 @@ pmode_init:
     call  idt_install
     call  gdt_install
 
-    ; Initialize segment registers to use the GDT.
-    ; There should be no more 16 bit or real mode
-    ; code executed after this point, except for
-    ; these simple mov instructions.
+    ; Fix the stack pointers by converting a
+    ; linear address.
 
     xor   eax, eax
     mov   eax, ss
+    mov   [stack_seg], ax
     shl   eax, 4
     add   eax, esp
     mov   esp, eax
-    mov   eax, ss
-    shl   eax, 4
-    add   eax, [ss:bp]
-    mov   ebp, eax
+
+    ; Set the protected mode bit.
 
     mov   eax, cr0
     or    eax, 1
     mov   cr0, eax
+
+    ; Initialize segment registers to use the GDT.
+    ; There should be no more 16 bit or real mode
+    ; code executed after this point, except for
+    ; these simple mov instructions and a jump.
 
     mov   ax, 0x0010
     mov   ss, ax
@@ -88,23 +93,40 @@ pmode_init:
     mov   gs, ax
     mov   fs, ax
 
-    jmp   0x0008:i386
-bits 32
-i386:
+    ; Initialise code segment to use the GDT.
+    ; After this jmp we are in 32-bit pmode.
 
-    add   sp, 8
-    ; Again, due to the realignment in the stack, it is
-    ; possible that there's garbage in our return pointer.
-    ; We clean that up here.
+    jmp   0x0008:pmode32
+bits 32
+pmode32:
+
     pop   eax
-    and   eax, 0xFFFF
+    pop   ebp
+
+    ; ebp needs to be fixed the same way that
+    ; esp was earlier.
+
     push  eax
-    sub   sp, 8
+    movzx eax, word [stack_seg]
+    shl   eax, 4
+    add   eax, ebp
+    mov   ebp, eax
+
+    ; The return pointer was pushed as a 2-byte
+    ; value, since we were called from 16-bit
+    ; code. We have preallocated space for the
+    ; return pointer at the beginning of this
+    ; function, and now need to push it as 4 bytes.
+
+    ; Read from esp + 6 to account for extra 2 bytes
+    ; reserved, and the eax push.
+    
+    movzx eax, word [esp + 6]
+    mov   [return], eax
     pop   eax
-    ; Realign stack, do not pop bp as it is fixed
-    ; manually. This also realigns the return pointer
-    ; correctly.
-    add   sp, 4
+    ; Overwrite old value
+    add   esp, 4
+    push  dword [return]
 
     ret
 
@@ -114,8 +136,8 @@ pmode_exit:
     push  eax
     push  edi
 
-    jmp   0x0018:prot16
-prot16:
+    jmp   0x0018:pmode16
+pmode16:
 
     cli
     mov   ax, 0x20
@@ -143,11 +165,18 @@ bits 16
     and   eax, 0xF000
     mov   ss, ax
 
+
     lidt  [idt_rmode]
 
+    ; Clean up higher bits in esp, as they can mess up
+    ; the stack. This is because i386 has 32-bit
+    ; register extensions.
     and   esp, 0xFFFF
+
     pop   edi
     pop   eax
+
+    ;Clean up ebp in the same way, and for the same reason.
     pop   ebp
     and   ebp, 0xFFFF
 
@@ -178,3 +207,7 @@ idt_rptr  dd 0x0000
 idt_info:
 idt_size  dw 0
 idt_ptr   dd 0
+
+section .bss
+return    dd 0
+stack_seg dw 0
