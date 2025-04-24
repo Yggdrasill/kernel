@@ -113,27 +113,12 @@ dw        0xAA55
 section .stage15 alloc exec progbits nowrite
 
 stage15:
-    call  a20_init
-    call  mmap
-
-    ; Verify that the ELF bootloader is present
-    ; by testing against magic header of the
-    ; ELF format.
-
-    mov   eax, [ei_mag]
-    cmp   eax, 0x464C457F
-    je    s15_continue
-    push  elf_err
-    push  elf_len
-    call  error
-
-s15_continue:
     push  dword 0x02
     popfd
 
+    call  a20_init
     call  pmode_init
 bits 32
-
     ; Start a fresh stack frame for 32-bit
     ; protected mode. Stack is aligned on
     ; 16-byte boundary to make various 
@@ -141,6 +126,10 @@ bits 32
 
     mov   esp, 0x7FFF0
     mov   ebp, 0x7FFF0
+    
+    push  mmap
+    call  rmode_trampoline
+    add   esp, 4
 
     call  read_elf
     mov   dword edx, dword [elf_entry]
@@ -183,6 +172,19 @@ read_elf:
     push        esi
     push        edi
 
+    ; Verify that the ELF bootloader is present
+    ; by testing against magic header of the
+    ; ELF format.
+
+    mov   eax, [ei_mag]
+    cmp   eax, 0x464C457F
+    je    header_ok
+    push  word elf_err
+    push  word elf_len
+    push  error
+    call  rmode_trampoline
+
+header_ok:
     sub         esp,  0x10
     mov         esi,  [e_phoff]
     mov         edi,  [e_shoff]
@@ -323,11 +325,8 @@ bits 16
 rmode_return:
     call        pmode_init
 bits 32
-    ; Return to previous stack pointer. This
-    ; cleans up the 32-bit return from a 16-bit
-    ; function, and also the return from the
-    ; callee.
-    sub         esp, 6
+    ; Allocate space for 32-bit return pointer.
+    sub         esp, 4
     ; Push return path
     push        dword [return]
     ret
