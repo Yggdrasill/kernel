@@ -27,15 +27,9 @@ section .stage15 alloc exec progbits nowrite
 gdt_install:
     push  bp
     mov   bp, sp
-    push  ax
     push  di
-    mov   ax, es
-    shl   ax, 4
-    add   ax, [gdt_ptr]
-    mov   [gdt_ptr], ax
     mov   di, gdt_info
     lgdt  [es:di]
-    pop   ax
     pop   di
     pop   bp
     ret
