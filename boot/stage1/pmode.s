@@ -175,11 +175,21 @@ bits 16
     pop   ebp
     and   ebp, 0xFFFF
 
+    ; Now fix the return pointer on the stack and realign,
+    ; since this function was entered with a 4-byte return
+    ; pointer and will exit with a 2-byte one.
+    push  eax
+    mov   eax, dword [esp + 4]
+    mov   [return], eax
+    pop   eax
+    add   esp, 4
+    push  word [return]
     sti
     ret
 
 
 section .data
+
 gdt_info:
 gdt_size  dw  gdt_len - 1
 gdt_ptr   dd  gdt

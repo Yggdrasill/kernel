@@ -314,8 +314,6 @@ rmode_trampoline:
     pop         dword [return]
     call        pmode_exit
 bits 16
-    ; Realign stack from 16-bit return.
-    add         sp, 2
     ; Pop 32-bit callee address and push as 16-bit
     ; address, then call it with a tail call.
     pop         dword [callee]
