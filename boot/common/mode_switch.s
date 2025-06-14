@@ -17,14 +17,27 @@
 
 bits 16
 
+global mask_ints
 global gdt_install
 global idt_install
 global pmode_init
 global pmode_exit
 global rmode_trampoline
-extern mask_ints
 
 section .stage15 alloc exec progbits nowrite
+
+mask_ints:
+    push  bp
+    mov   bp, sp
+    push  ax
+
+    mov   ax, 0xFF
+    out   0x21, ax
+    out   0xA1, ax
+
+    pop   ax
+    pop   bp
+    ret
 
 gdt_install:
     push  bp

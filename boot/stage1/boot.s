@@ -27,7 +27,6 @@ extern a20_init
 extern mmap
 extern error
 extern pmode_init
-extern pmode_exit
 extern rmode_trampoline
 
 bits   16
