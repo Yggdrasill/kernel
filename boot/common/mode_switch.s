@@ -18,8 +18,6 @@
 bits 16
 
 global mask_ints
-global gdt_install
-global idt_install
 global pmode_init
 global pmode_exit
 global rmode_trampoline
@@ -68,8 +66,6 @@ pmode_init:
     push  eax
 
     call  mask_ints
-
-    cli
 
     call  idt_install
     call  gdt_install
@@ -137,7 +133,6 @@ pmode32:
     add   esp, 4
     push  dword [return]
 
-    sti
     ret
 
 pmode_exit:
@@ -149,7 +144,6 @@ pmode_exit:
     jmp   0x0018:pmode16
 pmode16:
 
-    cli
     mov   ax, 0x20
     mov   ss, ax
     mov   es, ax
@@ -199,7 +193,7 @@ bits 16
     pop   eax
     add   esp, 4
     push  word [return]
-    sti
+
     ret
 
 bits 32

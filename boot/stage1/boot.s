@@ -127,9 +127,11 @@ bits 32
     mov   esp, 0x7FFF0
     mov   ebp, 0x7FFF0
     
+    cli
     push  mmap
     call  rmode_trampoline
     add   esp, 4
+    sti
 
     call  read_elf
     mov   dword edx, dword [elf_entry]
@@ -179,10 +181,13 @@ read_elf:
     mov   eax, [ei_mag]
     cmp   eax, 0x464C457F
     je    header_ok
+
+    cli
     push  word elf_err
     push  word elf_len
     push  error
     call  rmode_trampoline
+    sti
 
 header_ok:
     sub         esp,  0x10
@@ -273,10 +278,13 @@ shr_cont:
 
     cmp         [init_found], byte 0x1
     je          ph_loop
+
+    cli
     push        word init_err
     push        word init_elen
     push        error
     call        rmode_trampoline
+    sti
 
 ph_loop:
     cmp         ebx,  0
