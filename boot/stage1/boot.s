@@ -28,6 +28,7 @@ extern mmap
 extern error
 extern pmode_init
 extern pmode_exit
+extern rmode_trampoline
 
 bits   16
 
@@ -305,30 +306,6 @@ phlp_exit:
     pop         ebp
     ret
 
-rmode_trampoline:
-    ; This may look a bit unconventional, but 
-    ; popping the return address from the stack
-    ; allows us to pass arguments as if calling
-    ; from real mode. The return address will be
-    ; pushed later.
-    pop         dword [return]
-    call        pmode_exit
-bits 16
-    ; Pop 32-bit callee address and push as 16-bit
-    ; address, then call it with a tail call.
-    pop         dword [callee]
-    push        rmode_return
-    push        word [callee]
-    ret
-rmode_return:
-    call        pmode_init
-bits 32
-    ; Allocate space for 32-bit return pointer.
-    sub         esp, 4
-    ; Push return path
-    push        dword [return]
-    ret
-
 section     .rodata
 init_str    db "._init"
 init_slen   equ $ - init_str
@@ -344,12 +321,7 @@ section     .data
 mmap_seg    dw 0
 mmap_off    dw 0
 
-
 init_found  db 0
-
-section .bss
-callee      dd 0
-return      dd 0
 
 section .stage2.bss alloc noexec nobits write
 ei_mag:       resd 1

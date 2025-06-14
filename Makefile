@@ -3,6 +3,7 @@ BINDIR:=bin
 
 SRCDIR_STAGE1=boot/stage1
 SRCDIR_STAGE2=boot/stage2
+SRCDIR_BOOT_COMMON=boot/common
 SRCDIR_KLIBC=klibc
 SRCDIR_LIBK=libk
 

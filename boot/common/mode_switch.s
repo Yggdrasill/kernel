@@ -15,13 +15,15 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+bits 16
+
 global gdt_install
 global idt_install
 global pmode_init
 global pmode_exit
+global rmode_trampoline
 extern mask_ints
 
-bits    16
 section .stage15 alloc exec progbits nowrite
 
 gdt_install:
@@ -187,32 +189,59 @@ bits 16
     sti
     ret
 
+bits 32
+rmode_trampoline:
+    ; This may look a bit unconventional, but 
+    ; popping the return address from the stack
+    ; allows us to pass arguments as if calling
+    ; from real mode. The return address will be
+    ; pushed later.
+    pop         dword [resume]
+    call        pmode_exit
+bits 16
+    ; Pop 32-bit callee address and push as 16-bit
+    ; address, then call it with a tail call.
+    pop         dword [callee]
+    push        rmode_return
+    push        word [callee]
+    ret
+rmode_return:
+    call        pmode_init
+bits 32
+    ; Allocate space for 32-bit return pointer.
+    sub         esp, 4
+    ; Push return path
+    push        dword [resume]
+    ret
 
 section .data
 
 gdt_info:
-gdt_size  dw  gdt_len - 1
-gdt_ptr   dd  gdt
+gdt_size    dw  gdt_len - 1
+gdt_ptr     dd  gdt
 
 gdt:
-null_gdt  times 8 db 0
-code_32   db 0xFF,0xFF,0x00,0x00,0x00,0x9B,0xFC,0x00
-data_32   db 0xFF,0xFF,0x00,0x00,0x00,0x93,0xFC,0x00
-code_16   db 0xFF,0xFF,0x00,0x00,0x00,0x9B,0x0F,0x00
-data_16   db 0xFF,0xFF,0x00,0x00,0x00,0x93,0x0F,0x00
-gdt_len   equ $ - gdt
+null_gdt    times 8 db 0
+code_32     db 0xFF,0xFF,0x00,0x00,0x00,0x9B,0xFC,0x00
+data_32     db 0xFF,0xFF,0x00,0x00,0x00,0x93,0xFC,0x00
+code_16     db 0xFF,0xFF,0x00,0x00,0x00,0x9B,0x0F,0x00
+data_16     db 0xFF,0xFF,0x00,0x00,0x00,0x93,0x0F,0x00
+gdt_len     equ $ - gdt
 
 idt_rmode:
 ; Real mode interrupt vectors are 4 bytes in size:
 ;   256 entries * 4 bytes - 1 = 0x03FF
 ; IVT exists at 0x0000
-idt_rsize dw 0x03FF
-idt_rptr  dd 0x0000
+idt_rsize   dw 0x03FF
+idt_rptr    dd 0x0000
 
 idt_info:
-idt_size  dw 0
-idt_ptr   dd 0
+idt_size    dw 0
+idt_ptr     dd 0
 
 section .bss
-return    dd 0
-stack_seg dw 0
+return      dd 0
+stack_seg   dw 0
+
+resume      dd 0
+callee      dd 0
