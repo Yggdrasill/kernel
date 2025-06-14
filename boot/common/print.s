@@ -15,57 +15,43 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-global init_video
-global vga_page_rst
-global cursor_rst
-
+global print
+global error
 bits    16
 section .boot.util alloc exec progbits nowrite
 
-init_video:
-    push  bp
-    mov   bp, sp
-    push  ax
-    push  cx
-
-    mov   ah, 0x00
-    mov   al, 0x03
-    int   0x10
-
-    xor   ax, ax
-    xor   cx, cx
-    mov   ah, 0x01
-    mov   ch, 0x3F
-    int   0x10
-
-    pop   cx
-    pop   ax
-    pop   bp
-
-    ret
-
-vga_page_rst:
-    push  bp
-    mov   bp, sp
-    push  ax
-    mov   ax, 0x0500
-    int   0x10
-    pop   ax
-    pop   bp
-    ret
-
-cursor_rst:
+print:
     push  bp
     mov   bp, sp
     push  ax
     push  bx
+    push  cx
     push  dx
-    mov   ax, 0x0002
+    mov   ax, 0x0300
     xor   bx, bx
-    xor   dx, dx
     int   0x10
+    mov   cx, [ss:bp + 4]
+    mov   ax, [ss:bp + 6]
+    mov   bx, 0x0007
+    push  bp
+    mov   bp, ax
+    mov   ax, 0x1301
+    int   0x10
+    pop   bp
     pop   dx
+    pop   cx
     pop   bx
     pop   ax
-    pop   bp
+    pop   bp 
     ret
+
+error:
+    push  bp
+    mov   bp, sp
+    mov   si, [ss:bp + 6]  ; push error message again
+    push  si
+    mov   si, [ss:bp + 4] 
+    push  si
+    call  print
+    cli
+    hlt
