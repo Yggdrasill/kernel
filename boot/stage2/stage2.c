@@ -19,12 +19,82 @@
  *
  */
 
+/*
+ * stdarg.h is always provided in freestanding environments, and allows us to
+ * use the C standard's variable argument lists.
+ */
+
+#include <stdarg.h>
+
 #include "string.h"
 #include "idt.h"
 #include "irq.h"
 #include "interrupt.h"
 #include "mmap.h"
-#include <util.h>
+#include "util.h"
+
+#define PUSH_ARG16(a)                   \
+        do {                            \
+            __asm__ volatile(           \
+                    "push word [%0]"    \
+                    : : "m"(a)          \
+            );                          \
+        } while(0)                      
+
+#define PUSH_ARG32(a)                   \
+        do {                            \
+            __asm__ volatile(           \
+                    "push dword [%0]"   \
+                    : : "m"(a)          \
+            );                          \
+        } while(0)                      
+
+union rmode_ret_t {
+    void        *ptr;
+    int32_t     i32;
+    uint32_t    u32;
+};
+
+union rmode_i16 {
+    int16_t     i16;
+    uint16_t    u16;
+};
+
+extern void bios_print(void);
+/*
+ * rmode_trampoline cannot directly return union because it invokes sret stack
+ * behaviour, which then causes rmode_trampoline to pop the wrong value off the
+ * stack. This will proceed to cause triple-faulting as a return is made to a
+ * bogus address.
+ */
+extern uint32_t rmode_trampoline(void (*)(void));
+
+union rmode_ret_t rmode_call16(
+        struct idt_ptr *idtp, 
+        void (*callee)(void), 
+        uint16_t argc, 
+        ... )
+{
+    union rmode_ret_t rv;
+    uint16_t i;
+    uint16_t arg;
+
+    va_list ap;
+
+    va_start(ap, argc);
+    for(i = 0; i < argc; i++) {
+        arg = va_arg(ap, int);
+        PUSH_ARG16(arg);
+    }
+    va_end(ap);
+
+    ints_flag_clear();
+    rv.u32 = rmode_trampoline(callee);
+    idt_install(idtp);
+    ints_flag_set();
+
+    return rv;
+}
 
 int main(struct e820_map *start, struct e820_map *end)
 {
