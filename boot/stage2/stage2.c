@@ -35,6 +35,46 @@
 
 #define RMODE_MAX_ARGS 16
 
+#define PUSH_ARG16(arg)             \
+    do {                            \
+        __asm__ volatile(           \
+                "push word ptr %0"  \
+                :                   \
+                : "m"(arg)          \
+                : "memory"          \
+        );                          \
+    } while(0);                     
+
+#define PUSH_ARG32(arg)             \
+    do {                            \
+        __asm__ volatile(           \
+                "push dword ptr %0" \
+                :                   \
+                : "m"(arg)          \
+                : "memory"          \
+        );                          \
+    } while(0);                     
+
+#define RMODE_CALL(rv)                  \
+    do {                                \
+        __asm__ volatile(               \
+                "call rmode_trampoline" \
+                : "=a"(rv)              \
+                :                       \
+                :                       \
+    );                                  \
+    } while(0);
+
+#define ARGS_CLEANUP(n_args, size)      \
+    do {                                \
+        __asm__ volatile(               \
+                "add esp, %0"           \
+                :                       \
+                : "r"(n_args * size)    \
+                : "memory"              \
+        );                              \
+    } while(0);
+
 union rmode_ret_t {
     void        *ptr;
     int32_t     i32;
@@ -72,37 +112,36 @@ uint32_t rmode_call16(
         return -1;
     }
 
+    /*
+     * Can't manipulate the stack while va_list is used.
+     */
     va_start(ap, argc);
     for(i = 0; i < argc; i++) {
         args[i] = (uint16_t)va_arg(ap, int);
     }
     va_end(ap);
 
+
     ints_flag_clear();
-    __asm__ volatile(
-            "xor    ecx, ecx                \n"
-            "push16_loop:                   \n"
-            "cmp    cx, %2                  \n"
-            "je push16_done                 \n"
-            "push word ptr [%4 + ecx * 2]   \n"
-            "inc    cx                      \n"
-            "jmp push16_loop                \n"
-            "push16_done:                   \n"
-            "push   %5                      \n"
-            "call   rmode_trampoline        \n"
-            "add    esp, %3                 \n"
-            "add    esp, %6                 \n"
-            :   "=a"(rv), 
-                "+c"(i)
-            :   "r"(argc),
-                "r"(argc * sizeof(argc)),
-                "r"(args), 
-                "r"(callee), 
-                "r"(sizeof(callee))
-            :   "memory", "cc"
-    );
+
+    /*
+     * This is a manual function call made with __asm__ inlines. We first push
+     * all the arguments in the arguments array, which were provided by va_list
+     * before. We then push the callee's function pointer, call rmode_trampline,
+     * and finally clean up all arguments manually.
+     */
+
+    for(i = 0; i < argc; i++) {
+        PUSH_ARG16(args[i]);
+    }
+    PUSH_ARG32(callee);
+    RMODE_CALL(rv); 
+    ARGS_CLEANUP(1, sizeof(callee) );
+    ARGS_CLEANUP(argc, sizeof(argc) );
+
     idt_install(idtp);
     ints_flag_set();
+
 
     return rv;
 }
@@ -131,28 +170,20 @@ uint32_t rmode_call32(
     va_end(ap);
 
     ints_flag_clear();
-    __asm__ volatile(
-            "xor    ecx, ecx                \n"
-            "push32_loop:                   \n"
-            "cmp    ecx, %2                 \n"
-            "je push32_done                 \n"
-            "push dword ptr [%4 + ecx * 4]  \n"
-            "inc    cx                      \n"
-            "jmp push32_loop                \n"
-            "push32_done:                   \n"
-            "push   %5                      \n"
-            "call   rmode_trampoline        \n"
-            "add    esp, %3                 \n"
-            "add    esp, %6                 \n"
-            :   "=a"(rv), 
-                "+c"(i)
-            :   "r"(argc),
-                "r"(argc * sizeof(argc)),
-                "r"(args), 
-                "r"(callee), 
-                "r"(sizeof(callee))
-            :   "memory", "cc"
-    );
+    /*
+     * This is a manual function call made with __asm__ inlines. We first push
+     * all the arguments in the arguments array, which were provided by va_list
+     * before. We then push the callee's function pointer, call rmode_trampline,
+     * and finally clean up all arguments manually.
+     */
+
+    for(i = 0; i < argc; i++) {
+        PUSH_ARG32(args[i]);
+    }
+    PUSH_ARG32(callee);
+    RMODE_CALL(rv); 
+    ARGS_CLEANUP(1, sizeof(callee) );
+    ARGS_CLEANUP(argc, sizeof(argc) );
     idt_install(idtp);
     ints_flag_set();
 
