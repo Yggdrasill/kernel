@@ -12,6 +12,12 @@ OBJDIR_STAGE2=$(OBJDIR)/stage2
 OBJDIR_KLIBC=$(OBJDIR)/klibc
 OBJDIR_LIBK=$(OBJDIR)/libk
 
+SRC_STAGE1=$(wildcard $(SRCDIR_STAGE1)/*.s)
+SRC_COMMON=$(wildcard $(SRCDIR_BOOT_COMMON)/*.s)
+
+OBJ_STAGE1=$(patsubst %.s,%.o,$(patsubst $(SRCDIR_STAGE1)%,$(OBJDIR_STAGE1)%,$(SRC_STAGE1) ) )
+OBJ_COMMON=$(patsubst %.s,%.o,$(patsubst $(SRCDIR_BOOT_COMMON)%,$(OBJDIR_STAGE1)%,$(SRC_COMMON) ) )
+
 AS=nasm
 MKDIR=mkdir -p
 
