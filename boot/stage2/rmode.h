@@ -19,35 +19,28 @@
  *
  */
 
-#ifndef STDINT_H
-#define STDINT_H
+#ifndef RMODE_H
+#define RMODE_H
 
-#define NULL (void *)0
+#include "stdint.h"
+#include "idt.h"
+#include "mmap.h"
 
-# ifdef __i386__
+union rmode_ret_t {
+    void        *ptr;
+    int32_t     i32;
+    uint32_t    u32;
+};
 
-    typedef char                int8_t;
-    typedef short               int16_t;
-    typedef long                int32_t;
-    typedef long long           int64_t;
+union rmode_i16 {
+    int16_t     i16;
+    uint16_t    u16;
+};
 
-    typedef unsigned char       uint8_t;
-    typedef unsigned short      uint16_t;
-    typedef unsigned long       uint32_t;
-    typedef unsigned long long  uint64_t;
 
-    typedef long                ssize_t;
-    typedef unsigned long       size_t;
+void rmode_call16(union rmode_ret_t *, struct idt_ptr *, void (*)(void), uint16_t argc, ...);
+void rmode_call32(union rmode_ret_t *, struct idt_ptr *, void (*)(void), uint32_t argc, ...);
 
-    typedef short               ptr16_t;
-    typedef unsigned short      uptr16_t;
-
-    typedef long                ptr32_t;
-    typedef unsigned long       uptr32_t;
-
-    typedef long                intptr_t;
-    typedef unsigned long       uintptr_t;
-
-# endif
+struct mmap_array *bios_mmap(struct idt_ptr *);
 
 #endif

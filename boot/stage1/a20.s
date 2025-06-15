@@ -16,7 +16,9 @@
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 global a20_init
-extern bios_error
+extern __bios_error
+
+%define bios_error __bios_error
 
 bits    16
 section .stage15 alloc exec progbits nowrite

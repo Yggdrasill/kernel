@@ -15,13 +15,15 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-global mmap
-extern bios_error
+global __bios_mmap
+extern __bios_error
+
+%define bios_error __bios_error
 
 bits    16
 section .text
 
-mmap:
+__bios_mmap:
     push  dword ebp
     mov   ebp, esp 
     push  dword ebx
@@ -67,7 +69,7 @@ mmap_done:
     div   ebx
 
     mov   [mmap_len], eax
-    mov   eax, mmap_ptr
+    mov   eax, mmap_array
 
     pop   word es
     pop   dword edi

@@ -15,12 +15,12 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-global bios_print
-global bios_error
+global __bios_print
+global __bios_error
 bits    16
 section .boot.util alloc exec progbits nowrite
 
-bios_print:
+__bios_print:
     push  bp
     mov   bp, sp
     push  ax
@@ -45,13 +45,13 @@ bios_print:
     pop   bp 
     ret
 
-bios_error:
+__bios_error:
     push  bp
     mov   bp, sp
     mov   si, [ss:bp + 6]  ; push error message again
     push  si
     mov   si, [ss:bp + 4] 
     push  si
-    call  bios_print
+    call  __bios_print
     cli
     hlt

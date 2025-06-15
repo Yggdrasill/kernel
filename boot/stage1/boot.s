@@ -22,9 +22,11 @@ extern reset
 extern read
 extern a20_init
 extern mmap
-extern bios_error
+extern __bios_error
 extern pmode_init
 extern rmode_trampoline
+
+%define bios_error __bios_error
 
 bits   16
 

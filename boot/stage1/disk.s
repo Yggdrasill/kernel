@@ -17,7 +17,9 @@
 
 global reset
 global read
-extern bios_error
+extern __bios_error
+
+%define bios_error __bios_error
 
 bits    16
 section .boot.util alloc exec progbits nowrite

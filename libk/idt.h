@@ -64,5 +64,4 @@ void idt_set_entry(struct idt_entry *,
         unsigned char);
 void idt_install(struct idt_ptr *);
 
-
 #endif
