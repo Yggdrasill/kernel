@@ -76,8 +76,8 @@ SECTIONS {
     .text : { *(.text) } > stage2
     .data : { *(.data) } > stage2
     .rodata : { *(.rodata) } > stage2
+    .bss (NOLOAD) : { *(.bss) } > stage2
     .elf (NOLOAD) : { *(.elf) } > elf
-    .bss (NOLOAD) : { *(.bss) } > seg
     __bootloader_end = .;
     . = IDT_ADDR;
     .idt (NOLOAD) : { 

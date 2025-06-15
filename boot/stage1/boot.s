@@ -15,9 +15,6 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-global mmap_seg
-global mmap_off
-
 extern vga_page_rst
 extern cursor_rst
 extern init_video
@@ -127,12 +124,6 @@ bits 32
     mov   esp, 0x7FFF0
     mov   ebp, 0x7FFF0
     
-    cli
-    push  mmap
-    call  rmode_trampoline
-    add   esp, 4
-    sti
-
     call  read_elf
     mov   dword edx, dword [elf_entry]
 
@@ -142,10 +133,7 @@ bits 32
     xor   ebx, ebx
     xor   ecx, ecx
 
-    ; push memory map
-
-    push  word [mmap_seg]
-    push  word [mmap_off]
+    ; push __start
 
     push  edx
     ret

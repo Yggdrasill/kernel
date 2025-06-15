@@ -43,6 +43,11 @@ struct e820_map {
     uint32_t    attrib;
 };
 
+struct mmap_array {
+    struct e820_map *start;
+    uint32_t length;
+};
+
 extern char __bios_start;
 extern char __bios_end;
 extern char __bootloader_start;

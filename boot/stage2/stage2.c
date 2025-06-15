@@ -46,7 +46,7 @@ union rmode_i16 {
     uint16_t    u16;
 };
 
-extern void bios_print(void);
+extern void mmap(void);
 /*
  * rmode_trampoline cannot directly return union because it invokes sret stack
  * behaviour, which then causes rmode_trampoline to pop the wrong value off the
@@ -159,7 +159,7 @@ uint32_t rmode_call32(
     return rv;
 }
 
-int main(struct e820_map *start, struct e820_map *end)
+int main(void)
 {
 #ifdef TEST_MMAP
     struct e820_map test_map[MMAP_MAX_ENTRIES];
@@ -184,6 +184,7 @@ int main(struct e820_map *start, struct e820_map *end)
 #endif
     struct idt_ptr *idtp;
     struct idt_entry *entries;
+    struct mmap_array *mmap_entries;
 
     entries = (void *)&__IDT_BASE_LOCATION;
 
@@ -195,12 +196,10 @@ int main(struct e820_map *start, struct e820_map *end)
     memcpy(test_map, broken_map, sizeof(broken_map) );
     mmap_init(test_map, sizeof(broken_map) / sizeof(*broken_map) );
 #else
-    mmap_init(start, end - start);
 #endif
 
     idtp = idt_init();
     idt_install(idtp);
-
     exception_idt_init(entries);
 
     irq_init();
@@ -208,6 +207,9 @@ int main(struct e820_map *start, struct e820_map *end)
     irq_mask_all();
     irq_unmask(IRQ_KEYBOARD);
     ints_flag_set();
+
+    mmap_entries = (void *)rmode_call16(idtp, mmap, 0);
+    mmap_init(mmap_entries->start, mmap_entries->length);
 
     for(;;) {
         __asm__ volatile(

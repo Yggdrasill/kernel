@@ -18,16 +18,12 @@
 global mmap
 extern bios_error
 
-extern mmap_seg
-extern mmap_off
-
 bits    16
-section .stage15 alloc exec progbits nowrite
+section .text
 
 mmap:
     push  dword ebp
     mov   ebp, esp 
-    push  dword eax
     push  dword ebx
     push  dword ecx
     push  dword edx
@@ -60,15 +56,24 @@ mmap_continue:
     add   di, 0x18
     jmp   loop
 mmap_done:
-    mov   [mmap_seg], es
-    mov   [mmap_off], di
+
+    mov   eax, es
+    shl   eax, 4
+    mov   [mmap_ptr], eax
+
+    xor   edx, edx
+    mov   eax, edi
+    mov   ebx, 0x18
+    div   ebx
+
+    mov   [mmap_len], eax
+    mov   eax, mmap_ptr
 
     pop   word es
     pop   dword edi
     pop   dword edx
     pop   dword ecx
     pop   dword ebx
-    pop   dword eax
     pop   dword ebp
 
     ret
@@ -82,6 +87,11 @@ mmap_e2:
     push  mmap_err2
     push  me2_len
     call  bios_error
+
+section .data
+mmap_array:
+    mmap_ptr  dd 0
+    mmap_len  dd 0
 
 section .rodata
 mmap_err1 db "E: E820 not supported.",0x0D,0x0A
