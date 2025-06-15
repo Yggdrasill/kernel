@@ -19,10 +19,6 @@
  *
  */
 
-#define RMODE_MAX_ARGS 16
-
-#include <stdarg.h>
-
 #include "stdint.h"
 #include "string.h"
 
@@ -32,7 +28,6 @@
 #include "mmap.h"
 #include "interrupt.h"
 
-void __bios_print(ptr16_t str, uint16_t len);
 struct mmap_array *__bios_mmap(void);
 
 /*
@@ -89,40 +84,21 @@ void rmode_call16(
         struct idt_ptr *idtp, 
         void (*callee)(void), 
         uint16_t argc, 
-        ... )
+        uint16_t argv[])
 {
-    uint16_t args[RMODE_MAX_ARGS];
     uint16_t i;
-
-    va_list ap;
-
-    if(argc > RMODE_MAX_ARGS) {
-        puts("args > 16, maximum real mode arguments exceeded!");
-        rv->i32 = -1;
-        goto exit16;
-    }
-
-    /*
-     * Can't manipulate the stack while va_list is used.
-     */
-
-    va_start(ap, argc);
-    for(i = 0; i < argc; i++) {
-        args[i] = (uint16_t)va_arg(ap, int);
-    }
-    va_end(ap);
 
     ints_flag_clear();
 
     /*
      * This is a manual function call made with __asm__ inlines. We first push
-     * all the arguments in the arguments array, which were provided by va_list
-     * before. We then push the callee's function pointer, call rmode_trampline,
-     * and finally clean up all arguments manually.
+     * all the arguments in the arguments array, which are provided by argv[].
+     * We then push the callee's function pointer, call rmode_trampline, and
+     * finally clean up all arguments manually.
      */
 
     for(i = 0; i < argc; i++) {
-        PUSH_ARG16(args[i]);
+        PUSH_ARG16(argv[i]);
     }
     PUSH_ARG32(callee);
     RMODE_CALL(rv); 
@@ -132,7 +108,6 @@ void rmode_call16(
     idt_install(idtp);
     ints_flag_set();
 
-exit16:
     return;
 }
 
@@ -141,40 +116,21 @@ void rmode_call32(
         struct idt_ptr *idtp, 
         void (*callee)(void), 
         uint32_t argc, 
-        ... )
+        uint32_t argv[])
 {
-    uint32_t args[RMODE_MAX_ARGS];
     uint32_t i;
-
-    va_list ap;
-
-    /*
-     * Can't manipulate the stack while va_list is used.
-     */
-
-    if(argc > RMODE_MAX_ARGS) {
-        puts("args > 16, maximum real mode arguments exceeded!");
-        rv->i32 = -1;
-        goto exit32;
-    }
-
-    va_start(ap, argc);
-    for(i = 0; i < argc; i++) {
-        args[i] = va_arg(ap, int);
-    }
-    va_end(ap);
 
     ints_flag_clear();
 
     /*
      * This is a manual function call made with __asm__ inlines. We first push
-     * all the arguments in the arguments array, which were provided by va_list
-     * before. We then push the callee's function pointer, call rmode_trampline,
-     * and finally clean up all arguments manually.
+     * all the arguments in the arguments array, which are provided by argv[].
+     * We then push the callee's function pointer, call rmode_trampline, and
+     * finally clean up all arguments manually.
      */
 
     for(i = 0; i < argc; i++) {
-        PUSH_ARG32(args[i]);
+        PUSH_ARG32(argv[i]);
     }
     PUSH_ARG32(callee);
     RMODE_CALL(rv); 
@@ -184,7 +140,6 @@ void rmode_call32(
     idt_install(idtp);
     ints_flag_set();
 
-exit32:
     return;
 }
 
@@ -192,7 +147,7 @@ struct mmap_array *bios_mmap(struct idt_ptr *idtp)
 {
     union rmode_ret_t rv;
 
-    rmode_call16(&rv, idtp, (void (*)(void))__bios_mmap, 0);
+    rmode_call16(&rv, idtp, (void (*)(void))__bios_mmap, 0, NULL);
 
     return rv.ptr;
 }

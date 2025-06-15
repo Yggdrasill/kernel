@@ -24,8 +24,6 @@
  * use the C standard's variable argument lists.
  */
 
-#include <stdarg.h>
-
 #include "string.h"
 #include "idt.h"
 #include "irq.h"

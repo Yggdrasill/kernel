@@ -38,8 +38,18 @@ union rmode_i16 {
 };
 
 
-void rmode_call16(union rmode_ret_t *, struct idt_ptr *, void (*)(void), uint16_t argc, ...);
-void rmode_call32(union rmode_ret_t *, struct idt_ptr *, void (*)(void), uint32_t argc, ...);
+void rmode_call16(
+        union rmode_ret_t *, 
+        struct idt_ptr *, 
+        void (*)(void), 
+        uint16_t, 
+        uint16_t []);
+void rmode_call32(
+        union rmode_ret_t *, 
+        struct idt_ptr *, 
+        void (*)(void), 
+        uint32_t, 
+        uint32_t []);
 
 struct mmap_array *bios_mmap(struct idt_ptr *);
 
