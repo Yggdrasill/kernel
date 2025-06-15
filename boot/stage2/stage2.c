@@ -33,21 +33,7 @@
 #include "mmap.h"
 #include "util.h"
 
-#define PUSH_ARG16(a)                   \
-        do {                            \
-            __asm__ volatile(           \
-                    "push word [%0]"    \
-                    : : "m"(a)          \
-            );                          \
-        } while(0)                      
-
-#define PUSH_ARG32(a)                   \
-        do {                            \
-            __asm__ volatile(           \
-                    "push dword [%0]"   \
-                    : : "m"(a)          \
-            );                          \
-        } while(0)                      
+#define RMODE_MAX_ARGS 16
 
 union rmode_ret_t {
     void        *ptr;
@@ -69,27 +55,104 @@ extern void bios_print(void);
  */
 extern uint32_t rmode_trampoline(void (*)(void));
 
-union rmode_ret_t rmode_call16(
+uint32_t rmode_call16(
         struct idt_ptr *idtp, 
         void (*callee)(void), 
         uint16_t argc, 
         ... )
 {
-    union rmode_ret_t rv;
+    uint16_t args[RMODE_MAX_ARGS];
+    uint32_t rv;
     uint16_t i;
-    uint16_t arg;
 
     va_list ap;
 
+    if(argc > RMODE_MAX_ARGS) {
+        puts("args > 16, maximum real mode arguments exceeded!");
+        return -1;
+    }
+
     va_start(ap, argc);
     for(i = 0; i < argc; i++) {
-        arg = va_arg(ap, int);
-        PUSH_ARG16(arg);
+        args[i] = (uint16_t)va_arg(ap, int);
     }
     va_end(ap);
 
     ints_flag_clear();
-    rv.u32 = rmode_trampoline(callee);
+    __asm__ volatile(
+            "xor    ecx, ecx                \n"
+            "push16_loop:                   \n"
+            "cmp    cx, %2                  \n"
+            "je push16_done                 \n"
+            "push word ptr [%4 + ecx * 2]   \n"
+            "inc    cx                      \n"
+            "jmp push16_loop                \n"
+            "push16_done:                   \n"
+            "push   %5                      \n"
+            "call   rmode_trampoline        \n"
+            "add    esp, %3                 \n"
+            "add    esp, %6                 \n"
+            :   "=a"(rv), 
+                "+c"(i)
+            :   "r"(argc),
+                "r"(argc * sizeof(argc)),
+                "r"(args), 
+                "r"(callee), 
+                "r"(sizeof(callee))
+            :   "memory", "cc"
+    );
+    idt_install(idtp);
+    ints_flag_set();
+
+    return rv;
+}
+
+uint32_t rmode_call32(
+        struct idt_ptr *idtp, 
+        void (*callee)(void), 
+        uint32_t argc, 
+        ... )
+{
+    uint32_t args[RMODE_MAX_ARGS];
+    uint32_t rv;
+    uint32_t i;
+
+    va_list ap;
+
+    if(argc > RMODE_MAX_ARGS) {
+        puts("args > 16, maximum real mode arguments exceeded!");
+        return -1;
+    }
+
+    va_start(ap, argc);
+    for(i = 0; i < argc; i++) {
+        args[i] = va_arg(ap, int);
+    }
+    va_end(ap);
+
+    ints_flag_clear();
+    __asm__ volatile(
+            "xor    ecx, ecx                \n"
+            "push32_loop:                   \n"
+            "cmp    ecx, %2                 \n"
+            "je push32_done                 \n"
+            "push dword ptr [%4 + ecx * 4]  \n"
+            "inc    cx                      \n"
+            "jmp push32_loop                \n"
+            "push32_done:                   \n"
+            "push   %5                      \n"
+            "call   rmode_trampoline        \n"
+            "add    esp, %3                 \n"
+            "add    esp, %6                 \n"
+            :   "=a"(rv), 
+                "+c"(i)
+            :   "r"(argc),
+                "r"(argc * sizeof(argc)),
+                "r"(args), 
+                "r"(callee), 
+                "r"(sizeof(callee))
+            :   "memory", "cc"
+    );
     idt_install(idtp);
     ints_flag_set();
 
