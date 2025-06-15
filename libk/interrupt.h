@@ -74,4 +74,7 @@ void irq_idt_init(struct idt_entry *entries);
 void exception_handler(struct interrupt_info *info);
 void irq_handler(struct interrupt_info *info);
 
+void ints_flag_clear(void);
+void ints_flag_set(void);
+
 #endif

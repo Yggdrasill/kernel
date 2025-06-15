@@ -138,3 +138,20 @@ void irq_handler(struct interrupt_info *info)
 
     return;
 }
+
+void ints_flag_clear(void)
+{
+    __asm__ volatile(
+            "cli;"
+    );
+
+    return;
+}
+void ints_flag_set(void)
+{
+    __asm__ volatile(
+            "sti;"
+    );
+
+    return;
+}

@@ -16,7 +16,7 @@
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 global mmap
-extern error
+extern bios_error
 
 extern mmap_seg
 extern mmap_off
@@ -76,12 +76,12 @@ mmap_done:
 mmap_e1:
     push  mmap_err1
     push  me1_len
-    call  error
+    call  bios_error
 
 mmap_e2:
     push  mmap_err2
     push  me2_len
-    call  error
+    call  bios_error
 
 section .rodata
 mmap_err1 db "E: E820 not supported.",0x0D,0x0A

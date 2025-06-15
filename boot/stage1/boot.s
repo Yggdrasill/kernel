@@ -25,7 +25,7 @@ extern reset
 extern read
 extern a20_init
 extern mmap
-extern error
+extern bios_error
 extern pmode_init
 extern rmode_trampoline
 
@@ -185,7 +185,7 @@ read_elf:
     cli
     push  word elf_err
     push  word elf_len
-    push  error
+    push  bios_error
     call  rmode_trampoline
     sti
 
@@ -282,7 +282,7 @@ shr_cont:
     cli
     push        word init_err
     push        word init_elen
-    push        error
+    push        bios_error
     call        rmode_trampoline
     sti
 

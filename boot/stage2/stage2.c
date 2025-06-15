@@ -74,10 +74,7 @@ int main(struct e820_map *start, struct e820_map *end)
     irq_idt_init(entries + 0x20);
     irq_mask_all();
     irq_unmask(IRQ_KEYBOARD);
-
-    __asm__ volatile(
-            "sti;"
-            );
+    ints_flag_set();
 
     for(;;) {
         __asm__ volatile(
