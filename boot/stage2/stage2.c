@@ -69,7 +69,6 @@ int main(void)
 #ifdef TEST_MMAP
     memcpy(test_map, broken_map, sizeof(broken_map) );
     mmap_init(test_map, sizeof(broken_map) / sizeof(*broken_map) );
-#else
 #endif
 
     idtp = idt_init();
@@ -82,8 +81,10 @@ int main(void)
     irq_unmask(IRQ_KEYBOARD);
     ints_flag_set();
 
+#ifndef TEST_MMAP
     mmap_entries = bios_mmap(idtp);
     mmap_init(mmap_entries->start, mmap_entries->length);
+#endif
 
     for(;;) {
         __asm__ volatile(
