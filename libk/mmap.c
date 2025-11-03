@@ -72,6 +72,11 @@ static struct e820_map *const new_map = __mmap_new_map;
 static int old_nmemb;
 static int new_nmemb;
 
+/*
+ * mmap_sanitize() is roughly based on the Linux implementation, using a
+ * line-sweeping type algorithm to resolve overlapping memory regions.
+ */
+
 int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 {
     struct e820_point e820_points[2 * MMAP_MAX_ENTRIES];
