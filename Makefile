@@ -50,3 +50,9 @@ clean:
 
 debug: CFLAGS+=-g
 debug: all
+
+dd_image:
+	dd if=/dev/zero of=image.img bs=512 count=2880
+	dd if=bin/boot.bin of=image.img conv=notrunc bs=512 count=4
+	dd if=bin/stage2.elf of=image.img conv=notrunc bs=512 seek=4
+image: all dd_image
