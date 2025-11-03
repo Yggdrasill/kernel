@@ -27,8 +27,10 @@ __bios_print:
     push  bx
     push  cx
     push  dx
+    push  es
     mov   ax, 0x0300
     xor   bx, bx
+    mov   es, bx
     int   0x10
     mov   cx, [ss:bp + 4]
     mov   ax, [ss:bp + 6]
@@ -38,6 +40,7 @@ __bios_print:
     mov   ax, 0x1301
     int   0x10
     pop   bp
+    pop   es
     pop   dx
     pop   cx
     pop   bx
