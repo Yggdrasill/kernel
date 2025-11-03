@@ -1,51 +1,184 @@
+Description
+-----------
+
+A work-in-progress bootloader and kernel written in C and some x86 assembly. The
+goal is a bootloader and microkernel that runs on real hardware. I work on this
+project when I have time, between work and studying.
+
+The bootloader will load a Unix-clone microkernel from an ext2 partition. The
+microkernel will be split into modules, each having its own ELF binary on the
+boot partition. These modules should be able to be reloaded and replaced by
+other implementations without restarting the system.
+
+License
+-------
+
+GPLv2, see the COPYING file for details.
+
+Requirements
+------------
+
+Unfortunately Assembly languages are not very portable between different
+assemblers, as any assembler can have their own dialect. This uses the Netwide
+Assembler, or nasm, and will likely use this assembler forever.
+
+While the project intends to be reasonably compiler-portable, is is currently
+not, and requires a linker that understands GNU ld's linkerscripts, depends on
+GNU Make, and has a few instances of __attribute__((section)). However, it does
+not use __attribute__((packed)) like many OS projects do. All the structs that
+operate with CPU data structures, such as the GDT and IDT, are manually aligned
+and packed. 
+
+Therefore a compiler that understands GCC's __attribute__ are currently
+required.
+
+GNU Make
+GNU/LLVM ld
+GCC/clang
+nasm
+
 Building
 --------
 
-Run make.
+To build the project itself, simply:
 
-Creating an image
------------------
+make
 
-The image can be created by:
+You will be left with bin/boot.img and bin/stage2.elf. Alternatively, you can
+build a basic floppy disk image:
+
+make image
+
+This will create a file called image.img, which can be run by any virtual
+machine software.
+
+Manual image creation
+---------------------
+
+This describes the manual creation process for a basic image. The image can be
+created by running the following commands:
 
 dd if=/dev/zero of=image.img bs=512 count=2880
-
-After the image has been created, you should put the bootloader in it.
-
 dd if=bin/boot.bin of=image.img conv=notrunc bs=512 count=4
-
-The "count" argument can be explained by that the bootloader makes assumptions
-about where on disk the next stage will be. Stage 1 is limited to 512 bytes, and
-stage 1.5 is limited to 1536 bytes, which is enough to put the system in
-protected mode and jump to the actual stage two, which is only limited by the
-empty space between it and the first partition (on legacy systems ~30kiB, on
-modern systems using LBA addressing it's ~1MiB). The bootloader assumes that
-stage 2 can be found at 2048 bytes.
-
-Stage 2 should be put in the image offset 2048 bytes from the start of the
-image. Thus, the command is:
-
 dd if=bin/stage2.elf of=image.img conv=notrunc bs=512 seek=4
 
-It can then be used in a virtual machine, although you may have to convert the
-image using qemu-img or some other program. Personally, I use qemu, and I don't
-care about the warning that the raw image creates so:
+Note that this is not the final form of the project. Eventually stage2.elf will
+live on an ext2 partition on this image alongside the kernel executable, and
+boot.bin will load it from a hardcoded disk location. This hardcoding will be
+done by the install script.
+
+Running
+-------
+
+To run the project in a QEMU VM, using the basic image created by make:
 
 qemu-system-i386 image.img
-
-Or:
-
 qemu-system-i386 -enable-kvm image.img
 
-Note that the exact executable may not be called qemu-system-i386. It is on
-Debian, which is the distribution that I use.
+Your particular Linux distribution may call the executable for an i386 QEMU
+environment something else. Its name on Debian GNU/Linux is qemu-system-i386.
+
+If you instead prefer to use Bochs, which can be useful at times, this is a
+basic .bochsrc file appropriate for the basic image created by make:
+
+floppya: 1_44="image.img", status=inserted
+boot: floppy
+vgaromimage: file="/usr/share/seabios/vgabios.bin"
+display_library: sdl2, options="gui_debug"
+
+This may not be completely appropriate for your particular Linux distribution.
+For instance, the VGA ROM image may be located somewhere else, or have a
+different name.
+
+Binaries
+--------
+
+bin/boot.bin: The MBR boot image that occupies a maximum of 2048 bytes of space
+on the disk. This is the bootloader's first stage, containing the immediate MBR
+sector in the first 512 bytes and stage 1.5 which are an additional 1536 bytes
+of code/data. This is a raw binary file of mixed 16-bit and 32-bit x86 machine
+code. It contains minimal amounts of code to:
+
+    - read the disk
+    - print out error messages
+    - set up a basic GDT and null IDT, mask all interrupts
+    - enter protected mode
+    - do very basic ELF executable loading
+    - trampoline switch between real/protected modes
+
+bin/stage2.elf: Stage 2 of the bootloader, in an ELF executable file. This will
+live on an ext2 boot partition like /boot. Its location on disk and file size
+will be hardcoded into the MBR disk image by an install script. This is
+currently not implemented. This will use the trampoline described in stage 1 to
+perform real-mode BIOS calls for detecting hardware and configuring the system.
+
+UEFI would load this file as the bootloader, though with a different entry point
+than the MBR's stage 1. This is because the UEFI loader needs to query the UEFI
+image for information, whereas the MBR entry point needs to make real-mode BIOS
+calls. UEFI support is a long way off and not likely to be implemented any time
+soon.
+
+This is currently not complete, but the general plan is as follows:
+
+    - Perform real-mode calls for BIOS functions, for example the E820 memory
+      map, gather hardware information, configure VGA modes etc.
+    - Manage memory, allocate and deallocate buffers as needed.
+    - Share a limited set of drivers with the microkernel, e.g. the ATAPI disk
+      driver, ext2 filesystem (though in read-only mode), USB, keyboard etc.
+    - Load the kernel ELF image into memory and transfer control, passing all
+      required information on the stack.
+
+MBR disk usage
+--------------
+
+There are certain limits that the size of our MBR bootloader can be. Stage 1
+should consume as little space as possible, certainly no more than 31.5KiB, and
+I can explain this number. It comes from what's called the DOS compatibility
+region, which while originally for MS-DOS compatibility, is actually otherwise a
+useful construct.
+
+The disk addressing system on MBR systems is CHS, which means
+cylinder-head-sector. The addressing mode here is related to disk geometry, and
+since I cannot adequately represent this graphically in a text file, I would
+suggest you read about it elsewhere. However, I can explain the concept of
+tracks and how cylinders and heads fit into it. 
+
+On hard drives a track is composed of 63 sectors, which are 512 bytes each. This
+means that each track is 31.5KiB in size. These tracks are read by a particular
+head, as an example reading from:
+
+Cylinder = 1
+Head = 1
+Sector = 0
+
+This reads the first 512 bytes of track 1 on head 1. The cylinder addresses the
+track across *all* heads, and the head address determines exactly which track on
+cylinder 1 is being read. The sector address determines which offset into that
+track is read.
+
+MS-DOS required that all partitions start on cylinder boundaries. Since the MBR
+boot sector is the first 512 bytes of the disk, this means that MS-DOS could not
+partition the first track. This leaves an empty space on the disk between the
+MBR boot sector and the first possible partition for MS-DOS systems. This is
+typically referred to as the DOS compatibility region, and became endemic due to
+its usefulness. This is because 512 bytes of space is really not enough to do
+much of anything.
+
+Most bootloaders use this space for extra code, because it's practically
+impossible to boot an entire system from 512 bytes alone. This is especially the
+case considering many BIOSes assume that a BIOS Parameter Block exists and
+clobber it. This leaves bootloaders with little choice but to reserve this
+space, which narrows the room for code even more. Therefore most bootloaders
+will use this 31.5KiB region for other boot code. Other software can also live
+here, for instance rootkits may use this space.
 
 Notes
 -----
 
-The ASM for the bootloader is written on the assumption that the assembler is
-nasm, so that is a requirement to build it. You should install nasm if you don't
-have it.
+On modern systems with UEFI and LBA disk addresses (flat address space)), it is
+typically the case that partitions are aligned alongside 1 MiB boundaries. The
+reasons for this are actually quite varied, but almost all partitioning tools
+leave a gap of this size. 
 
 A README documenting various x86 things can be found in boot/, and this README
 also includes a rather long section on the A20 gate and what the current goals
