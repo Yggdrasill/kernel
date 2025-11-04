@@ -159,11 +159,19 @@ pmode16:
 rmode:
 bits 16
 
+    ; Initialize segment registers for real mode.
     xor   ax, ax
     mov   es, ax
     mov   ds, ax
     mov   gs, ax
     mov   fs, ax
+
+    ; This calculates a valid stack segment for
+    ; any value below 1MiB. That means the stack
+    ; can live within any part of low memory.
+    ; That is the memory that real mode is limited
+    ; to anyway, so it is of course otherwise
+    ; impossible to use the same stack.
     mov   eax, ebp
     shr   eax, 4
     and   eax, 0xF000

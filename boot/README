@@ -4,7 +4,7 @@ a case-insensitive search.
 -- common/print.s
 
     This file implements BIOS print interrupt calls, which is used for
-    displaying messages on the screen during real-mode execution. This is a
+    displaying messages on the screen during real mode execution. This is a
     practical consideration as it consumes far less space than writing to the
     VGA framebuffer.
 
@@ -15,12 +15,17 @@ a case-insensitive search.
     process. What it does NOT do is enable the A20 gate, see stage1/a20.s for
     that.
 
-    This file also implements a real-mode trampoline, which enables me to pass
-    arguments from 32-bit protected-mode code to 16-bit real-mode BIOS calls on
+    This file also implements a real mode trampoline, which enables me to pass
+    arguments from 32-bit protected mode code to 16-bit real mode BIOS calls on
     the stack. Most bootloaders do this by passing arguments in the registers,
     but I think passing arguments on the stack is nicer. This does mean that
     there are some very real limitations on where the stack can be located,
-    however.
+    however. 
+
+    IMPORTANT: The stack ***MUST*** be located in low memory below 1MiB, as this
+    is the only memory that real mode code can use. This is a very real design
+    limitation that cannot be avoided while passing arguments on the stack. The
+    trampoline is NOT THREAD SAFE. It's designed for single-core execution ONLY.
 
     These functions take care of actually putting the processor into 32-bit
     protected mode. A requirement for this is to provide the processor with
