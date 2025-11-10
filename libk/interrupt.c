@@ -19,10 +19,11 @@
  *
  */
 
+#include "interrupt.h"
 #include "io.h"
 #include "string.h"
-#include "interrupt.h"
 
+// clang-format off
 char *exceptions[] = {
     "Division by zero",
     "Debug interrupt",
@@ -57,101 +58,95 @@ char *irq_interrupts[] = {
     "Hard disk",
     "IRQ 15"
 };
+// clang-format on
 
 /* This is disgusting, I know, but also necessary */
 
 void exception_idt_init(struct idt_entry *entries)
 {
-    idt_set_entry(entries++, &exception_0x00, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x01, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x02, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x03, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x04, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x05, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x06, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x07, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x08, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x0A, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x0B, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x0C, 0x08, 0x8E);
-    idt_set_entry(entries++, &exception_0x0D, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x00, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x01, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x02, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x03, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x04, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x05, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x06, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x07, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x08, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x0A, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x0B, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x0C, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x0D, 0x08, 0x8E);
 
-    /* while(entries < 0x20) */
+	/* while(entries < 0x20) */
 
-    while(entries != (&__IDT_BASE_LOCATION) + IDT_ENTRY_NUM) {
-        idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
-    }
+	while(entries != (&__IDT_BASE_LOCATION) + IDT_ENTRY_NUM) {
+		idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+	}
 
-    return;
+	return;
 }
 
 void irq_idt_init(struct idt_entry *entries)
 {
-    idt_set_entry(entries++, &irq_0x00, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x01, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x02, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x03, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x04, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x05, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x06, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x07, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x08, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x09, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x0A, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x0B, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x0C, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x0D, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x0E, 0x08, 0x8E);
-    idt_set_entry(entries++, &irq_0x0F, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x00, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x01, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x02, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x03, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x04, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x05, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x06, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x07, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x08, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x09, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x0A, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x0B, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x0C, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x0D, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x0E, 0x08, 0x8E);
+	idt_set_entry(entries++, &irq_0x0F, 0x08, 0x8E);
 
-    return;
+	return;
 }
 
 void exception_handler(struct interrupt_info *info)
 {
-    if(info->intno > 0x1F) return;
+	if(info->intno > 0x1F) return;
 
-    if(info->intno == 0x1F) puts("Unhandled exception!");
-    else puts(exceptions[info->intno]);
+	if(info->intno == 0x1F) puts("Unhandled exception!");
+	else puts(exceptions[info->intno]);
 
-    __asm__ volatile(
-            "hlt;"
-            );
+	__asm__ volatile("hlt;");
 }
 
 void irq_handler(struct interrupt_info *info)
 {
-    char ch;
+	char ch;
 
-    switch(info->intno) {
-        case IRQ_KEYBOARD:
-            ch = inb(0x60);
-    }
+	switch(info->intno) {
+	case IRQ_KEYBOARD: ch = inb(0x60);
+	}
 
-    outb(0x20, 0x20);
-    if(info->intno > 0x08) {
-        outb(0xA0, 0x20);
-    }
+	outb(0x20, 0x20);
+	if(info->intno > 0x08) {
+		outb(0xA0, 0x20);
+	}
 
-    puts(irq_interrupts[info->intno]);
+	puts(irq_interrupts[info->intno]);
 
-    return;
+	return;
 }
 
 void ints_flag_clear(void)
 {
-    __asm__ volatile(
-            "cli;"
-    );
+	__asm__ volatile("cli;");
 
-    return;
+	return;
 }
 void ints_flag_set(void)
 {
-    __asm__ volatile(
-            "sti;"
-    );
+	__asm__ volatile("sti;");
 
-    return;
+	return;
 }

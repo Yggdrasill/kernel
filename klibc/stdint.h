@@ -24,30 +24,30 @@
 
 #define NULL (void *)0
 
-# ifdef __i386__
+#ifdef __i386__
 
-    typedef char                int8_t;
-    typedef short               int16_t;
-    typedef long                int32_t;
-    typedef long long           int64_t;
+typedef char      int8_t;
+typedef short     int16_t;
+typedef long      int32_t;
+typedef long long int64_t;
 
-    typedef unsigned char       uint8_t;
-    typedef unsigned short      uint16_t;
-    typedef unsigned long       uint32_t;
-    typedef unsigned long long  uint64_t;
+typedef unsigned char      uint8_t;
+typedef unsigned short     uint16_t;
+typedef unsigned long      uint32_t;
+typedef unsigned long long uint64_t;
 
-    typedef long                ssize_t;
-    typedef unsigned long       size_t;
+typedef long          ssize_t;
+typedef unsigned long size_t;
 
-    typedef short               ptr16_t;
-    typedef unsigned short      uptr16_t;
+typedef short          ptr16_t;
+typedef unsigned short uptr16_t;
 
-    typedef long                ptr32_t;
-    typedef unsigned long       uptr32_t;
+typedef long          ptr32_t;
+typedef unsigned long uptr32_t;
 
-    typedef long                intptr_t;
-    typedef unsigned long       uintptr_t;
+typedef long          intptr_t;
+typedef unsigned long uintptr_t;
 
-# endif
+#endif
 
 #endif

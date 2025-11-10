@@ -23,132 +23,132 @@
 
 void memsetw(int16_t *s, int16_t c, size_t n)
 {
-    int16_t *ptr;
-    size_t i;
+	int16_t *ptr;
+	size_t   i;
 
-    ptr = (int16_t *)s;
+	ptr = (int16_t *)s;
 
-    for(i = 0; i < n; i++) {
-        *(ptr + i) = c;
-    }
+	for(i = 0; i < n; i++) {
+		*(ptr + i) = c;
+	}
 
-    return;
+	return;
 }
 
 void memcpy(void *dst, void *src, size_t n)
 {
-    void *end;
+	void *end;
 
-    end = (char *)dst + n;
-    while( (char *)dst < (char *)end) {
-        *(char *)dst = *(char *)src;
-        dst = (char *)dst + 1;
-        src = (char *)src + 1;
-    }
+	end = (char *)dst + n;
+	while((char *)dst < (char *)end) {
+		*(char *)dst = *(char *)src;
+		dst = (char *)dst + 1;
+		src = (char *)src + 1;
+	}
 }
 
 void memmove(void *dst, void *src, size_t n)
 {
-    void *dst_end;
-    void *src_end;
-    char buffer[n];
+	void *dst_end;
+	void *src_end;
+	char  buffer[n];
 
-    dst_end = (char *)dst + n;
-    src_end= (char *)src + n;
-    if( (dst_end >= src && dst_end <= src_end) ||
-            (src_end >= dst && src_end <= dst_end) ) {
-        memcpy(buffer, src, n);
-        memcpy(dst, buffer, n);
-    } else {
-        memcpy(dst, src, n);
-    }
+	dst_end = (char *)dst + n;
+	src_end = (char *)src + n;
+	if((dst_end >= src && dst_end <= src_end) ||
+	   (src_end >= dst && src_end <= dst_end)) {
+		memcpy(buffer, src, n);
+		memcpy(dst, buffer, n);
+	} else {
+		memcpy(dst, src, n);
+	}
 
-    return;
+	return;
 }
 
 int memcmp(const void *s1, const void *s2, size_t n)
 {
-    void *end;
-    int rv;
+	void *end;
+	int   rv;
 
-    rv = 0;
-    end = (char *)s1 + n;
-    while( (char *)s1 < (char *)end) {
-        rv += *(char *)s1 - *(char *)s2;
-        s1 = (char *)s1 + 1;
-        s2 = (char *)s2 + 1;
-    }
+	rv = 0;
+	end = (char *)s1 + n;
+	while((char *)s1 < (char *)end) {
+		rv += *(char *)s1 - *(char *)s2;
+		s1 = (char *)s1 + 1;
+		s2 = (char *)s2 + 1;
+	}
 
-    return rv;
+	return rv;
 }
 
 size_t strlen(char *str)
 {
-    unsigned long long retval;
+	unsigned long long retval;
 
-    retval = 0;
+	retval = 0;
 
-    while(*str++) retval++;
+	while(*str++) retval++;
 
-    return retval;
+	return retval;
 }
 
 void putchar(char ch)
 {
-    int16_t *vga;
+	int16_t *vga;
 
-    static int y;
-    static int x;
+	static int y;
+	static int x;
 
-    if(x >= 80 || ch == '\n') {
-        x = 0;
-        y++;
-    }
-    if(y >= 25) y = 0;
+	if(x >= 80 || ch == '\n') {
+		x = 0;
+		y++;
+	}
+	if(y >= 25) y = 0;
 
-    vga = (int16_t *)&FB_ADDR + (y * 80) + x;
+	vga = (int16_t *)&FB_ADDR + (y * 80) + x;
 
-    if(ch == '\n') {
-        memsetw(vga, 0x0720, 80 - x);
-        return;
-    }
+	if(ch == '\n') {
+		memsetw(vga, 0x0720, 80 - x);
+		return;
+	}
 
-    *vga = 0x0700 | ch;
-    x++;
+	*vga = 0x0700 | ch;
+	x++;
 
-    return;
+	return;
 }
 
 void puthex(size_t hex)
 {
-    char *hex_array;
-    char chars[2];
-    size_t i, j;
+	char  *hex_array;
+	char   chars[2];
+	size_t i, j;
 
-    hex_array = (char *)&hex;
+	hex_array = (char *)&hex;
 
-    putchar('0');
-    putchar('x');
+	putchar('0');
+	putchar('x');
 
-    for(i = sizeof(hex), j = i - 1; i > 0; i--, j--) {
-        chars[0] = (hex_array[j] & 0xF0) >> 4;
-        chars[1] = hex_array[j] & 0x0F;
-        chars[0] += chars[0] >= 0x0A ? 'A' - 0x0A : '0';
-        chars[1] += chars[1] >= 0x0A ? 'A' - 0x0A : '0';
+	for(i = sizeof(hex), j = i - 1; i > 0; i--, j--) {
+		chars[0] = (hex_array[j] & 0xF0) >> 4;
+		chars[1] = hex_array[j] & 0x0F;
+		chars[0] += chars[0] >= 0x0A ? 'A' - 0x0A : '0';
+		chars[1] += chars[1] >= 0x0A ? 'A' - 0x0A : '0';
 
-        putchar(chars[0]);
-        putchar(chars[1]);
-    }
+		putchar(chars[0]);
+		putchar(chars[1]);
+	}
 
-    return;
+	return;
 }
 
 void puts(char *str)
 {
-    while(*str) {
-        putchar(*str);
-        str++;
-    }
+	while(*str) {
+		putchar(*str);
+		str++;
+	}
 
-    putchar('\n');
+	putchar('\n');
 }

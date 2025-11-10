@@ -25,6 +25,6 @@
 #include "stdint.h"
 
 unsigned char inb(uint16_t);
-void outb(uint16_t, unsigned char);
+void          outb(uint16_t, unsigned char);
 
 #endif

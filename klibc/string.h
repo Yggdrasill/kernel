@@ -27,15 +27,15 @@
 extern int16_t *__FB_ADDR __attribute__((section("fbr")));
 extern int16_t *__FB_END __attribute__((section("fbr")));
 #define FB_ADDR __FB_ADDR
-#define FB_END __FB_END
+#define FB_END  __FB_END
 
-void memsetw(int16_t *, int16_t, size_t);
-void memcpy(void *, void *, size_t);
-void memmove(void *, void *, size_t);
-int memcmp(const void *, const void *, size_t);
+void   memsetw(int16_t *, int16_t, size_t);
+void   memcpy(void *, void *, size_t);
+void   memmove(void *, void *, size_t);
+int    memcmp(const void *, const void *, size_t);
 size_t strlen(char *);
-void putchar(char);
-void puthex(size_t);
-void puts(char *);
+void   putchar(char);
+void   puthex(size_t);
+void   puts(char *);
 
 #endif

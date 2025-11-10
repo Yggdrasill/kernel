@@ -24,30 +24,31 @@
 
 /* Insertion sort for small input sizes */
 
-void isort(void *base,
-        size_t nmemb, 
-        size_t size, 
-        int (*compar)(const void *, const void *))
+void isort(
+    void  *base,
+    size_t nmemb,
+    size_t size,
+    int    (*compar)(const void *, const void *))
 {
-    void *i;
-    void *j;
-    void *end;
+	void *i;
+	void *j;
+	void *end;
 
-    char key[size];
+	char key[size];
 
-    i = (char *)base + size;
-    end = (char *)base + size * nmemb;
+	i = (char *)base + size;
+	end = (char *)base + size * nmemb;
 
-    while(i < end) {
-        memcpy(key, i, size);
-        j = (char *)i - size;
-        while(j >= base && compar(j, key) > 0) {
-            memcpy( (char *)j + size, j, size);
-            j = (char *)j - size;
-        }
-        memcpy( (char *)j + size, key, size);
-        i = (char *)i + size;
-    }
+	while(i < end) {
+		memcpy(key, i, size);
+		j = (char *)i - size;
+		while(j >= base && compar(j, key) > 0) {
+			memcpy((char *)j + size, j, size);
+			j = (char *)j - size;
+		}
+		memcpy((char *)j + size, key, size);
+		i = (char *)i + size;
+	}
 
-    return;
+	return;
 }

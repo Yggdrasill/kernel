@@ -1,0 +1,48 @@
+﻿InsertNewlineAtEOF: true
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: false
+  AfterClass: false
+  AfterControlStatement: false
+  AfterEnum: false
+  AfterFunction: true
+  AfterNamespace: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeWhile: false
+  IndentBraces: false
+AlignAfterOpenBracket: AlwaysBreak
+AlignTrailingComments: false
+AlignConsecutiveMacros: true
+AlignConsecutiveDeclarations:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
+#  AlignFunctionDeclarations: true
+  AlignFunctionPointers: true
+AlignArrayOfStructures: Left
+AllowAllArgumentsOnNextLine: true
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: true
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortFunctionsOnASingleLine: None
+AllowShortLoopsOnASingleLine: true
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackArguments: false
+BinPackParameters: false
+Cpp11BracedListStyle: true
+BreakBeforeInlineASMColon: Always
+ColumnLimit: 80
+IndentPPDirectives: BeforeHash
+IndentWidth: 4
+SortIncludes: true
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceBeforeParens: Never
+SpaceBeforeRangeBasedForLoopColon: false
+SpaceInEmptyParentheses: false
+SpacesInCStyleCastParentheses: false
+TabWidth: 4
+UseTab: ForIndentation

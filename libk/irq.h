@@ -25,10 +25,10 @@
 #include "idt.h"
 #include "interrupt.h"
 
-void irq_init(void);
+void     irq_init(void);
 uint16_t irq_read_reg(unsigned char);
-void irq_unmask(unsigned char);
-void irq_unmask_all(void);
-void irq_mask_all(void);
+void     irq_unmask(unsigned char);
+void     irq_unmask_all(void);
+void     irq_mask_all(void);
 
 #endif
