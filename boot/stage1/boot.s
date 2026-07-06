@@ -237,7 +237,7 @@ sh_reloc:
     
     ; Skip if ._init section found.
 
-    cmp         [init_found], byte 0x1
+    cmp         byte [init_found], byte 0x1
     je          shr_cont
     
     ; String match section name with ._init.
@@ -248,7 +248,7 @@ sh_reloc:
     mov         ecx,  init_slen
     rep         cmpsb
     jne         shr_cont
-    mov         [init_found], byte 0x1
+    mov         byte [init_found], byte 0x1
 shr_cont:
     add         ax,   [e_shentsize]
     dec         edx
@@ -266,7 +266,7 @@ shr_cont:
 
     ; Check if ._init was found, and error if it wasn't.
 
-    cmp         [init_found], byte 0x1
+    cmp         byte [init_found], byte 0x1
     je          ph_loop
 
     cli

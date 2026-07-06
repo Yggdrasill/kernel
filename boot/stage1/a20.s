@@ -38,11 +38,11 @@ a20_check:
     push  ds
 
     xor   ax, ax
-    mov   es, ax
-    not   ax
     mov   ds, ax
-    mov   di, 0x0500
-    mov   si, 0x0510
+    not   ax
+    mov   es, ax
+    mov   si, 0x0500
+    mov   di, 0x0510
 
     mov   ax, word [es:di]
     push  ax
@@ -140,25 +140,25 @@ a20_init:
     push  bp
     mov   bp, sp
     call  a20_check
-    cmp   [has_a20], byte 0x01
+    cmp   byte [has_a20], byte 0x01
     je    done_a20
 
     call  bios_a20
     call  a20_check
-    cmp   [has_a20], byte 0x01
+    cmp   byte [has_a20], byte 0x01
     je    done_a20
 
     call  kbd8042_a20
     call  a20_check
-    cmp   [has_a20], byte 0x01
+    cmp   byte [has_a20], byte 0x01
     je    done_a20
 
     call  a20_ee
     call  a20_check
-    cmp   [has_a20], byte 0x01
+    cmp   byte [has_a20], byte 0x01
     je    done_a20
 
-    cmp   [has_a20], byte 0x01
+    cmp   byte [has_a20], byte 0x01
     jne   a20_error
 done_a20:
     pop   bp
