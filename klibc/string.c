@@ -23,15 +23,15 @@
 
 void *memset(void *s, uint8_t c, size_t n)
 {
-    unsigned char *ptr;
-    size_t i;
+	unsigned char *ptr;
+	size_t         i;
 
-    ptr = (unsigned char *)s;
-    for(i = 0; i < n; i++) {
-        *(ptr + i) = c;
-    }
+	ptr = (unsigned char *)s;
+	for(i = 0; i < n; i++) {
+		*(ptr + i) = c;
+	}
 
-    return s;
+	return s;
 }
 
 void memsetw(int16_t *s, int16_t c, size_t n)
@@ -55,6 +55,7 @@ void memcpy(void *dst, void *src, size_t n)
 	end = (char *)dst + n;
 	while((char *)dst < (char *)end) {
 		*(char *)dst = *(char *)src;
+
 		dst = (char *)dst + 1;
 		src = (char *)src + 1;
 	}
@@ -84,7 +85,7 @@ int memcmp(const void *s1, const void *s2, size_t n)
 	void *end;
 	int   rv;
 
-	rv = 0;
+	rv  = 0;
 	end = (char *)s1 + n;
 	while((char *)s1 < (char *)end) {
 		rv += *(char *)s1 - *(char *)s2;

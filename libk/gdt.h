@@ -25,44 +25,44 @@
 #include "stdint.h"
 
 enum GDT_ACCESS {
-    GDT_ACCESSED    = 1,
-    GDT_RW          = 1 << 1,
-    GDT_DC          = 1 << 2,
-    GDT_EXEC        = 1 << 3,
-    GDT_SEGMENT     = 1 << 4,
-    GDT_PRIV_RING0  = 0 << 5,
-    GDT_PRIV_RING1  = 1 << 5,
-    GDT_PRIV_RING2  = 2 << 5,
-    GDT_PRIV_RING3  = 3 << 5,
-    GDT_PRESENT     = 1 << 7
+	GDT_ACCESSED   = 1,
+	GDT_RW         = 1 << 1,
+	GDT_DC         = 1 << 2,
+	GDT_EXEC       = 1 << 3,
+	GDT_SEGMENT    = 1 << 4,
+	GDT_PRIV_RING0 = 0 << 5,
+	GDT_PRIV_RING1 = 1 << 5,
+	GDT_PRIV_RING2 = 2 << 5,
+	GDT_PRIV_RING3 = 3 << 5,
+	GDT_PRESENT    = 1 << 7
 };
 
 enum GDT_FLAGS {
-    GDT_RESERVED    = 0,
-    GDT_LONG        = 1 << 1,
-    GDT_BITS_16     = 0 << 2,
-    GDT_BITS_32     = 1 << 2,
-    GDT_GRAN        = 1 << 3
+	GDT_RESERVED = 0,
+	GDT_LONG     = 1 << 1,
+	GDT_BITS_16  = 0 << 2,
+	GDT_BITS_32  = 1 << 2,
+	GDT_GRAN     = 1 << 3
 };
 
 struct gdt_ptr {
-    uint8_t size_0;
-    uint8_t size_8;
-    uint8_t base_0;
-    uint8_t base_8;
-    uint8_t base_16;
-    uint8_t base_24;
+	uint8_t size_0;
+	uint8_t size_8;
+	uint8_t base_0;
+	uint8_t base_8;
+	uint8_t base_16;
+	uint8_t base_24;
 };
 
 struct gdt_entry {
-    uint8_t limit_0;
-    uint8_t limit_8;
-    uint8_t base_0;
-    uint8_t base_8;
-    uint8_t base_16;
-    uint8_t access;
-    uint8_t limit_flags;
-    uint8_t base_24;
+	uint8_t limit_0;
+	uint8_t limit_8;
+	uint8_t base_0;
+	uint8_t base_8;
+	uint8_t base_16;
+	uint8_t access;
+	uint8_t limit_flags;
+	uint8_t base_24;
 };
 
 extern struct gdt_ptr   __GDT_PTR_LOCATION;

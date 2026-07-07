@@ -112,10 +112,10 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 	}
 	isort(e820_points, NR_POINTS, sizeof(*e820_points), mmap_cmp);
 
-	new_nr_entries = 0;
-	nr_overlaps = 0;
-	prev_point = e820_points;
-	prev_type = prev_point->entry->type;
+	new_nr_entries             = 0;
+	nr_overlaps                = 0;
+	prev_point                 = e820_points;
+	prev_type                  = prev_point->entry->type;
 	overlap_map[nr_overlaps++] = prev_point->entry;
 
 	for(i = 1; i < NR_POINTS && new_nr_entries < MMAP_MAX_ENTRIES; i++) {
@@ -172,13 +172,13 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 		 */
 
 		if(type != prev_type || i == NR_POINTS - 1) {
-			new_map[new_nr_entries] =
-			    (struct e820_map){prev_point->addr,
-			                      e820_points[i].addr - prev_point->addr,
-			                      prev_type,
-			                      prev_point->entry->attrib};
+			new_map[new_nr_entries] = (struct e820_map){
+			    prev_point->addr,
+			    e820_points[i].addr - prev_point->addr,
+			    prev_type,
+			    prev_point->entry->attrib};
 			prev_point = e820_points + i;
-			prev_type = type;
+			prev_type  = type;
 			new_nr_entries += new_map[new_nr_entries].size > 0;
 		}
 	}
@@ -209,32 +209,32 @@ int mmap_clobber(struct e820_map *mmap, int nmemb)
 	uint32_t        old_type;
 	enum MMAP_TYPES type;
 
-	old_type = mmap[0].type;
-	old_size = mmap[0].size;
-	base = (uintptr_t)&__bios_start;
-	size = (uintptr_t)&__bios_end - (uintptr_t)&__bios_start;
-	type = MMAP_RESERVED;
+	old_type      = mmap[0].type;
+	old_size      = mmap[0].size;
+	base          = (uintptr_t)&__bios_start;
+	size          = (uintptr_t)&__bios_end - (uintptr_t)&__bios_start;
+	type          = MMAP_RESERVED;
 	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base = (uintptr_t)&__bootloader_start;
+	base          = (uintptr_t)&__bootloader_start;
 	size = (uintptr_t)&__bootloader_end - (uintptr_t)&__bootloader_start;
 	type = MMAP_BOOTLOADER_RECLAIMABLE;
 	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base = (uintptr_t)old_map;
-	size = MMAP_TABLE_SIZE;
+	base          = (uintptr_t)old_map;
+	size          = MMAP_TABLE_SIZE;
 	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base = (uintptr_t)new_map;
+	base          = (uintptr_t)new_map;
 	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base = base + size;
-	type = old_type;
-	size = old_size - base;
+	base          = base + size;
+	type          = old_type;
+	size          = old_size - base;
 	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base = (uintptr_t)&FB_ADDR;
-	size = (uintptr_t)&FB_END - (uintptr_t)&FB_ADDR;
-	type = MMAP_FRAMEBUFFER;
+	base          = (uintptr_t)&FB_ADDR;
+	size          = (uintptr_t)&FB_END - (uintptr_t)&FB_ADDR;
+	type          = MMAP_FRAMEBUFFER;
 	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base = (uintptr_t)&__upper_start;
-	size = (uintptr_t)&__upper_end - (uintptr_t)&__upper_start;
-	type = MMAP_RESERVED;
+	base          = (uintptr_t)&__upper_start;
+	size          = (uintptr_t)&__upper_end - (uintptr_t)&__upper_start;
+	type          = MMAP_RESERVED;
 	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
 
 	return nmemb;
@@ -245,9 +245,9 @@ int mmap_init(struct e820_map *mmap, int nmemb)
 
 	old_nmemb = nmemb;
 
-	nmemb = mmap_clobber(mmap, nmemb);
+	nmemb     = mmap_clobber(mmap, nmemb);
 	new_nmemb = mmap_sanitize(&mmap, nmemb);
-	nmemb = new_nmemb;
+	nmemb     = new_nmemb;
 	mmap_print(mmap, nmemb);
 
 	return 0;

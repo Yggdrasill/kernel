@@ -70,7 +70,7 @@ ssize_t heap_sift_down(Heap *heap, ssize_t i)
 
 	if(!heap || i < 0 || i >= heap->nmemb) return -1;
 
-	left = 2 * i + 1;
+	left  = 2 * i + 1;
 	right = 2 * i + 2;
 
 	j = i;
@@ -103,11 +103,11 @@ Heap *heap_create(
 	if(!heap || !compare || !array) return NULL;
 
 	heap->compare = compare;
-	heap->equals = equals;
-	heap->tree = array;
-	heap->size = size;
-	heap->cap = cap;
-	heap->nmemb = nmemb;
+	heap->equals  = equals;
+	heap->tree    = array;
+	heap->size    = size;
+	heap->cap     = cap;
+	heap->nmemb   = nmemb;
 
 	for(i = heap->nmemb / 2 - 1; i >= 0; i--) {
 		heap_sift_down(heap, i);
@@ -168,11 +168,11 @@ ssize_t heap_best_fit(Heap *heap, ssize_t i, void *item)
 	if(!heap->equals) return -2;
 	if(COMPAREQ(heap, item, INDEX(heap, i))) return i;
 
-	left = heap_best_fit(heap, i * 2 + 1, item);
+	left  = heap_best_fit(heap, i * 2 + 1, item);
 	right = heap_best_fit(heap, i * 2 + 2, item);
-	left = left >= 0 ? left : i;
+	left  = left >= 0 ? left : i;
 	right = right >= 0 ? right : i;
-	left = COMPAREQ(heap, item, INDEX(heap, left)) ? left : right;
+	left  = COMPAREQ(heap, item, INDEX(heap, left)) ? left : right;
 	right = COMPAREQ(heap, item, INDEX(heap, right)) ? right : left;
 
 	i = COMPARE(heap, INDEX(heap, left), INDEX(heap, right)) ? left : right;

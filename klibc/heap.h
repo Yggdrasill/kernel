@@ -35,16 +35,17 @@ typedef struct heap {
 	ssize_t nmemb;
 } Heap;
 
+Heap *heap_create(
+    Heap *,
+    int (*compare)(void *, void *),
+    int (*equals)(void *, void *),
+    void *,
+    size_t,
+    ssize_t,
+    ssize_t);
+
 ssize_t heap_sift_up(Heap *, ssize_t);
 ssize_t heap_sift_down(Heap *, ssize_t);
-Heap   *heap_create(
-      Heap *,
-      int (*compare)(void *, void *),
-      int (*equals)(void *, void *),
-      void *,
-      size_t,
-      ssize_t,
-      ssize_t);
 ssize_t heap_insert(Heap *, void *);
 ssize_t heap_delete(Heap *, ssize_t);
 ssize_t heap_find(Heap *, ssize_t, void *);

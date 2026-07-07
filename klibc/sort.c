@@ -36,7 +36,7 @@ void isort(
 
 	char key[size];
 
-	i = (char *)base + size;
+	i   = (char *)base + size;
 	end = (char *)base + size * nmemb;
 
 	while(i < end) {

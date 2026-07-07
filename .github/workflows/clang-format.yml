@@ -28,7 +28,7 @@ jobs:
 
       - name: execute
         run: |
-          CLANG_FORMAT="clang-format-19 --style=file -Werror --dry-run"
+          CLANG_FORMAT="clang-format-22 --style=file -Werror --dry-run"
           TARGET_DIRS=("boot" "libk" "klibc")
 
           find "${TARGET_DIRS[@]}" \( -name "*.h" -o -name "*.c" \) -exec $CLANG_FORMAT {} +
