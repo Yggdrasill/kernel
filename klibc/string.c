@@ -21,6 +21,19 @@
 
 #include "string.h"
 
+void *memset(void *s, uint8_t c, size_t n)
+{
+    unsigned char *ptr;
+    size_t i;
+
+    ptr = (unsigned char *)s;
+    for(i = 0; i < n; i++) {
+        *(ptr + i) = c;
+    }
+
+    return s;
+}
+
 void memsetw(int16_t *s, int16_t c, size_t n)
 {
 	int16_t *ptr;
