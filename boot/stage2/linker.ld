@@ -45,6 +45,7 @@ MEMORY {
     mem1(rx)    :   org = MEM1_ADDR,  len = MEM1_SIZE
     stage2(rx)  :   org = ST2_ADDR,   len = ST2_SIZE
     elf(rw)     :   org = ELF_ADDR,   len = ELF_SIZE
+    gdtr(rw)    :   org = GDTR_ADDR,  len = GDTR_SIZE
     gdt(rw)     :   org = GDT_ADDR,   len = GDT_SIZE
     mmap(rw)    :   org = MMAP_ADDR,  len = MMAP_SIZE
     idt(rw)     :   org = IDT_ADDR,   len = IDT_SIZE
@@ -60,18 +61,27 @@ SECTIONS {
     __bios_start = .;
     . = BIOS_SIZE;
     __bios_end = .;
+
+    . = ENTR_ADDR;
+    __BOOT_ENTRY = .;
     . = BOOT_ADDR;
+    __BOOT_ADDR = .;
     __bootloader_start = .;
-    . = BOOT_ADDR;
     .boot (NOLOAD) : {
-      *(.boot) 
-      *(.boot.util)
-      *(.boot.rodata)
+        *(.boot) 
+        *(.boot.util)
+        *(.boot.rodata)
     } > boot
+    PROVIDE(__BOOT_SIZE = BOOT_ADDR - ENTR_ADDR);
     . = MBR_ADDR;
     .mbr (NOLOAD) : { *(.mbr) } > mbr
+
     . = MEM1_ADDR;
-    .stage15 (NOLOAD) : { *(.stage15) } > mem1
+    .stage15 (NOLOAD) : {
+        __STAGE15_LOAD_ADDR = .;
+        *(.stage15)
+    } > mem1
+
     . = ST2_ADDR;
     stage2.o = .;
     ._init : { *(._init) } > stage2
@@ -81,10 +91,15 @@ SECTIONS {
     .bss (NOLOAD) : { *(.bss) } > stage2
     .elf (NOLOAD) : { *(.elf) } > elf
     __bootloader_end = .;
+    . = GDTR_ADDR;
+    .gdtr (NOLOAD) : {
+        __GDT_PTR_LOCATION = .;
+        KEEP(*(.gdtr) )
+    } > gdtr
     . = GDT_ADDR;
     .gdt (NOLOAD) : {
-        __GDT_PTR_LOCATION = .;
         __GDT_BASE_LOCATION = .;
+        KEEP(*(.gdt) )
     } > gdt
     . = IDT_ADDR;
     .idt (NOLOAD) : { 
@@ -92,7 +107,9 @@ SECTIONS {
         __IDT_BASE_LOCATION = . + 8; 
         KEEP(*(.idt) )
       } > idt
+    . = MMAP_ADDR;
     .mmap (NOLOAD) : {
+        __MMAP_BASE_ADDR = .;
         KEEP(*(.mmap) )
     } > mmap
     .pmm (NOLOAD) : {

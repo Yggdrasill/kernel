@@ -27,19 +27,31 @@ MEMORY {
 }
 
 SECTIONS {
+    . = BIOS_ADDR;
+    __bios_start = .;
+    . = BIOS_SIZE;
+    __bios_end = .;
+
+    . = ENTR_ADDR;
+    __BOOT_ENTRY = .;
     . = BOOT_ADDR;
+    __BOOT_ADDR = .;
+    __bootloader_start = .;
     .boot : {
-      *(.boot) 
-      *(.boot.util)
-      *(.boot.rodata)
+        *(.boot) 
+        *(.boot.util)
+        *(.boot.rodata)
     } > boot
+    PROVIDE(__BOOT_SIZE = BOOT_ADDR - ENTR_ADDR);
     . = MBR_ADDR;
     .mbr : { *(.mbr) } > mbr
+
     . = MEM1_ADDR;
     .stage15 : { 
-      *(.stage15) 
-      *(.data)
-      *(.rodata)
+        __STAGE15_LOAD_ADDR = .;
+        *(.stage15) 
+        *(.data)
+        *(.rodata)
     } > mem1
     . = ST2_ADDR;
     .stage2.bss (NOLOAD) : { *(.stage2.bss) } > stage2

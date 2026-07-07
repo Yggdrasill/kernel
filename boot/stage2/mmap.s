@@ -15,6 +15,8 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+extern __MMAP_BASE_ADDR
+
 global __bios_mmap
 extern __bios_error
 
@@ -32,7 +34,8 @@ __bios_mmap:
     push  dword edi
     push  word es
 
-    mov   eax, 0x000027E0
+    mov   eax, __MMAP_BASE_ADDR
+    shr   eax, 4
     mov   es, ax
     xor   edi, edi
     xor   ebx, ebx

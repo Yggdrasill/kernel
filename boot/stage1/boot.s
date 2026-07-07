@@ -15,6 +15,11 @@
 ; along with this program; if not, write to the Free Software
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
+extern __BOOT_ENTRY
+extern __BOOT_ADDR
+extern __BOOT_SIZE
+extern __STAGE15_LOAD_ADDR
+
 extern vga_page_rst
 extern cursor_rst
 extern init_video
@@ -64,10 +69,10 @@ mov   sp, bp
 xor   ax, ax
 mov   ds, ax
 mov   es, ax
-mov   si, 0x7C00
-mov   di, 0x7E00
+mov   si, __BOOT_ENTRY
+mov   di, __BOOT_ADDR
 
-mov   cx, 0x0200
+mov   cx, __BOOT_SIZE
 rep   movsb
 
 xor   si, si
@@ -91,7 +96,7 @@ boot:
 
     xor   word dx, dx
     mov   byte dl, [drive]
-    push  word 0x8000
+    push  word __STAGE15_LOAD_ADDR
     push  word 0x0240 ; read 32K from disk
     push  word dx
     call  read
