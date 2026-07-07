@@ -14,17 +14,19 @@ MBR_SIZE  = 0x42;
 MEM1_ADDR = 0x8000;
 MEM1_SIZE = 0x600;
 ST2_ADDR  = 0x8600;
-ST2_SIZE  = 26K;
-ELF_ADDR  = 0x10400;
+ST2_SIZE  = 30K;
+ELF_ADDR  = 0x10000;
 ELF_SIZE  = 30K;
-SEG_ADDR  = 0x17E00;
-SEG_SIZE  = 64K;
-MMAP_ADDR = 0x27E00;
+GDTR_ADDR = 0x17800;
+GDTR_SIZE = 0x6;
+GDT_ADDR  = 0x18000;
+GDT_SIZE  = 64K;
+MMAP_ADDR = 0x28000;
 MMAP_SIZE = 64K;
-IDT_ADDR  = 0x37E00;
-IDT_SIZE  = 64K;
-MEM2_ADDR = 0x47E00;
-MEM2_SIZE = 0x38200;
+IDT_ADDR  = 0x38000;
+IDT_SIZE  = 4K;
+MEM2_ADDR = 0x39000;
+MEM2_SIZE = 284K;
 EBDA_ADDR = 0x80000;
 EBDA_SIZE = 128K;
 VGA_ADDR  = 0xA0000;
@@ -43,7 +45,7 @@ MEMORY {
     mem1(rx)    :   org = MEM1_ADDR,  len = MEM1_SIZE
     stage2(rx)  :   org = ST2_ADDR,   len = ST2_SIZE
     elf(rw)     :   org = ELF_ADDR,   len = ELF_SIZE
-    seg(rw)     :   org = SEG_ADDR,   len = SEG_SIZE
+    gdt(rw)     :   org = GDT_ADDR,   len = GDT_SIZE
     mmap(rw)    :   org = MMAP_ADDR,  len = MMAP_SIZE
     idt(rw)     :   org = IDT_ADDR,   len = IDT_SIZE
     mem2(rx)    :   org = MEM2_ADDR,  len = MEM2_SIZE
@@ -79,6 +81,11 @@ SECTIONS {
     .bss (NOLOAD) : { *(.bss) } > stage2
     .elf (NOLOAD) : { *(.elf) } > elf
     __bootloader_end = .;
+    . = GDT_ADDR;
+    .gdt (NOLOAD) : {
+        __GDT_PTR_LOCATION = .;
+        __GDT_BASE_LOCATION = .;
+    } > gdt
     . = IDT_ADDR;
     .idt (NOLOAD) : { 
         __IDT_PTR_LOCATION = .;
