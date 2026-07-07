@@ -60,7 +60,7 @@ extern uint32_t rmode_trampoline(void (*)(void));
 		__asm__ volatile("call rmode_trampoline"                               \
 		                 : "=a"(rv->u32)                                       \
 		                 :                                                     \
-		                 : "memory");                                          \
+		                 : "ecx", "edx", "cc", "memory");                      \
 	} while(0);
 
 #define ARGS_CLEANUP(n_args, size)                                             \
@@ -68,7 +68,7 @@ extern uint32_t rmode_trampoline(void (*)(void));
 		__asm__ volatile("add esp, %0"                                         \
 		                 :                                                     \
 		                 : "r"(n_args * size)                                  \
-		                 : "memory");                                          \
+		                 : "cc", "memory");                                    \
 	} while(0);
 
 void rmode_call16(

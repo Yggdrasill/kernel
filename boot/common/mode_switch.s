@@ -177,7 +177,6 @@ rmode:
     and   eax, 0xF000
     mov   ss, ax
 
-
     lidt  [idt_rmode]
 
     ; Clean up higher bits in esp, as they can mess up
@@ -206,6 +205,11 @@ rmode:
 
 bits 32
 rmode_trampoline:
+	; First order of the day: preserve callee-saved regs
+	mov			[saved_ebx], ebx
+	mov			[saved_esi], esi
+	mov			[saved_edi], edi
+	mov			[saved_ebp], ebp
     ; This may look a bit unconventional, but 
     ; popping the return address from the stack
     ; allows us to pass arguments as if calling
@@ -217,23 +221,20 @@ bits 16
     ; Pop 32-bit callee address and push as 16-bit
     ; address, then call it with a tail call.
     pop         dword [callee]
-	; Function-preserved regs
-	push		ebx
-	push		esi
-	push		edi
 	; Push return pointer, ret into 16-bit callee
     push        rmode_return
     push        word [callee]
     ret
 rmode_return:
-	; About to return, pop preserved regs off stack
-	pop			edi
-	pop			esi
-	pop			ebx
     call        pmode_init
 bits 32
     ; Allocate space for 32-bit return pointer.
     sub         esp, 4
+	; Restore preserved registers
+	mov			ebp, [saved_ebp]
+	mov			edi, [saved_edi]
+	mov			esi, [saved_esi]
+	mov			ebx, [saved_ebx]
     ; Push return path
     push        dword [resume]
     ret
@@ -264,8 +265,11 @@ idt_size    dw 0
 idt_ptr     dd 0
 
 section .bss
-return      dd 0
-stack_seg   dw 0
-
-resume      dd 0
-callee      dd 0
+saved_ebx:	resd 1
+saved_esi:	resd 1
+saved_edi:	resd 1
+saved_ebp:	resd 1
+return:		resd 1
+stack_seg:	resd 1
+resume:		resd 1
+callee:		resd 1
