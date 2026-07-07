@@ -24,6 +24,7 @@
  * use the C standard's variable argument lists.
  */
 
+#include "gdt.h"
 #include "idt.h"
 #include "interrupt.h"
 #include "irq.h"
@@ -56,9 +57,14 @@ int main(void)
 	    {0xF5000,  0x10000, 1, 0}
     };
 #endif
+	struct gdt_ptr    *gdtp;
 	struct idt_ptr    *idtp;
 	struct idt_entry  *entries;
 	struct mmap_array *mmap_entries;
+
+	gdtp = gdt_init();
+	gdt_default_entries_add(gdtp);
+	gdt_install(gdtp);
 
 	entries = (void *)&__IDT_BASE_LOCATION;
 

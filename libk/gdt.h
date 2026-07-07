@@ -40,7 +40,6 @@ enum GDT_ACCESS {
 enum GDT_FLAGS {
 	GDT_RESERVED = 0,
 	GDT_LONG     = 1 << 1,
-	GDT_BITS_16  = 0 << 2,
 	GDT_BITS_32  = 1 << 2,
 	GDT_GRAN     = 1 << 3
 };
@@ -67,5 +66,10 @@ struct gdt_entry {
 
 extern struct gdt_ptr   __GDT_PTR_LOCATION;
 extern struct gdt_entry __GDT_BASE_LOCATION;
+
+struct gdt_ptr *gdt_init(void);
+void gdt_entry_add(struct gdt_ptr *, void *, uint32_t, uint8_t, uint8_t);
+void gdt_default_entries_add(struct gdt_ptr *);
+void gdt_install(struct gdt_ptr *);
 
 #endif

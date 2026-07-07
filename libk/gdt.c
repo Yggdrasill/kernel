@@ -89,3 +89,30 @@ void gdt_entry_add(
 fail:
 	return;
 }
+
+void gdt_default_entries_add(struct gdt_ptr *gdtp)
+{
+	uint8_t access;
+	uint8_t flags;
+
+	access = GDT_PRESENT | GDT_SEGMENT | GDT_RW | GDT_ACCESSED;
+	flags  = GDT_GRAN | GDT_BITS_32;
+
+	gdt_entry_add(gdtp, 0, 0xFFFFF, access | GDT_EXEC, flags);
+	gdt_entry_add(gdtp, 0, 0xFFFFF, access, flags);
+	flags &= ~(GDT_GRAN | GDT_BITS_32);
+	gdt_entry_add(gdtp, 0, 0xFFFFF, access | GDT_EXEC, flags);
+	gdt_entry_add(gdtp, 0, 0xFFFFF, access, flags);
+
+	return;
+}
+
+void gdt_install(struct gdt_ptr *gdtp)
+{
+	__asm__ volatile("mov  eax, %0;"
+	                 "lgdt [eax];"
+	                 :
+	                 : "m"(gdtp));
+
+	return;
+}

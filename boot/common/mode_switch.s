@@ -142,6 +142,7 @@ pmode_exit:
     push  edi
 
     jmp   0x0018:pmode16
+bits 16
 pmode16:
 
     mov   ax, 0x20
@@ -157,7 +158,6 @@ pmode16:
 
     jmp   0x0000:rmode
 rmode:
-bits 16
 
     ; Initialize segment registers for real mode.
     xor   ax, ax
@@ -217,10 +217,19 @@ bits 16
     ; Pop 32-bit callee address and push as 16-bit
     ; address, then call it with a tail call.
     pop         dword [callee]
+	; Function-preserved regs
+	push		ebx
+	push		esi
+	push		edi
+	; Push return pointer, ret into 16-bit callee
     push        rmode_return
     push        word [callee]
     ret
 rmode_return:
+	; About to return, pop preserved regs off stack
+	pop			edi
+	pop			esi
+	pop			ebx
     call        pmode_init
 bits 32
     ; Allocate space for 32-bit return pointer.
@@ -237,8 +246,8 @@ gdt_ptr     dd  gdt
 
 gdt:
 null_gdt    times 8 db 0
-code_32     db 0xFF,0xFF,0x00,0x00,0x00,0x9B,0xFC,0x00
-data_32     db 0xFF,0xFF,0x00,0x00,0x00,0x93,0xFC,0x00
+code_32     db 0xFF,0xFF,0x00,0x00,0x00,0x9B,0xCF,0x00
+data_32     db 0xFF,0xFF,0x00,0x00,0x00,0x93,0xCF,0x00
 code_16     db 0xFF,0xFF,0x00,0x00,0x00,0x9B,0x0F,0x00
 data_16     db 0xFF,0xFF,0x00,0x00,0x00,0x93,0x0F,0x00
 gdt_len     equ $ - gdt
