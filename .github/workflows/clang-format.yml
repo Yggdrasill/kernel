@@ -18,13 +18,13 @@ on:
 
 jobs:
   clang-format:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: checkout
         uses: actions/checkout@v5
 
       - name: setup
-        run: sudo apt-get install -y clang-format-19
+        run: sudo apt-get install -y clang-format-22
 
       - name: execute
         run: |

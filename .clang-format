@@ -20,8 +20,12 @@ AlignConsecutiveDeclarations:
   Enabled: true
   AcrossEmptyLines: false
   AcrossComments: false
-#  AlignFunctionDeclarations: true
+  AlignFunctionDeclarations: true
   AlignFunctionPointers: true
+AlignConsecutiveAssignments:
+  Enabled: true
+  AcrossEmptyLines: false
+  AcrossComments: false
 AlignArrayOfStructures: Left
 AllowAllArgumentsOnNextLine: true
 AllowShortCaseLabelsOnASingleLine: true
