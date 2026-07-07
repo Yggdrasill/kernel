@@ -80,7 +80,7 @@ xor   di, di
 
 sti
 
-jmp   boot
+jmp   0x0000:boot
 
 boot:
     call  vga_page_rst
