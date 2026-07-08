@@ -29,6 +29,7 @@
 #include "mmap.h"
 
 struct mmap_array *__bios_mmap(void);
+void               __bios_print(uint16_t str, uint16_t len);
 
 /*
  * rmode_trampoline cannot directly return union because it invokes sret stack
@@ -37,109 +38,25 @@ struct mmap_array *__bios_mmap(void);
  * bogus address.
  */
 
-extern uint32_t rmode_trampoline(void (*)(void));
-
-#define PUSH_ARG16(arg)                                                        \
-	do {                                                                       \
-		__asm__ volatile("push word ptr %0"                                    \
-		                 :                                                     \
-		                 : "m"(arg)                                            \
-		                 : "memory");                                          \
-	} while(0);
-
-#define PUSH_ARG32(arg)                                                        \
-	do {                                                                       \
-		__asm__ volatile("push dword ptr %0"                                   \
-		                 :                                                     \
-		                 : "m"(arg)                                            \
-		                 : "memory");                                          \
-	} while(0);
-
-#define RMODE_CALL(rv)                                                         \
-	do {                                                                       \
-		__asm__ volatile("call rmode_trampoline"                               \
-		                 : "=a"(rv->u32)                                       \
-		                 :                                                     \
-		                 : "ecx", "edx", "cc", "memory");                      \
-	} while(0);
-
-#define ARGS_CLEANUP(n_args, size)                                             \
-	do {                                                                       \
-		__asm__ volatile("add esp, %0"                                         \
-		                 :                                                     \
-		                 : "r"(n_args * size)                                  \
-		                 : "cc", "memory");                                    \
-	} while(0);
-
-void rmode_call16(
-    union rmode_ret_t *rv,
-    struct idt_ptr    *idtp,
-    void               (*callee)(void),
-    uint16_t           argc,
-    uint16_t           argv[])
-{
-	uint16_t i;
-
-	ints_flag_clear();
-
-	/*
-	 * This is a manual function call made with __asm__ inlines. We first push
-	 * all the arguments in the arguments array, which are provided by argv[].
-	 * We then push the callee's function pointer, call rmode_trampline, and
-	 * finally clean up all arguments manually.
-	 */
-
-	for(i = 0; i < argc; i++) {
-		PUSH_ARG16(argv[i]);
-	}
-	PUSH_ARG32(callee);
-	RMODE_CALL(rv);
-	ARGS_CLEANUP(1, sizeof(callee));
-	ARGS_CLEANUP(argc, sizeof(argc));
-
-	idt_install(idtp);
-	ints_flag_set();
-
-	return;
-}
-
-void rmode_call32(
-    union rmode_ret_t *rv,
-    struct idt_ptr    *idtp,
-    void               (*callee)(void),
-    uint32_t           argc,
-    uint32_t           argv[])
-{
-	uint32_t i;
-
-	ints_flag_clear();
-
-	/*
-	 * This is a manual function call made with __asm__ inlines. We first push
-	 * all the arguments in the arguments array, which are provided by argv[].
-	 * We then push the callee's function pointer, call rmode_trampline, and
-	 * finally clean up all arguments manually.
-	 */
-
-	for(i = 0; i < argc; i++) {
-		PUSH_ARG32(argv[i]);
-	}
-	PUSH_ARG32(callee);
-	RMODE_CALL(rv);
-	ARGS_CLEANUP(1, sizeof(callee));
-	ARGS_CLEANUP(argc, sizeof(argc));
-
-	idt_install(idtp);
-	ints_flag_set();
-
-	return;
-}
+extern uint32_t rmode_trampoline(void (*)(void), ...);
 
 struct mmap_array *bios_mmap(struct idt_ptr *idtp)
 {
 	union rmode_ret_t rv;
 
-	rmode_call16(&rv, idtp, (void (*)(void))__bios_mmap, 0, NULL);
+	ints_flag_clear();
+	rv.u32 = rmode_trampoline((void(*)(void))__bios_mmap);
+	idt_install(idtp);
+	ints_flag_set();
 
 	return rv.ptr;
+}
+
+void bios_print(struct idt_ptr *idtp, char *str, size_t len)
+{
+	ints_flag_clear();
+	rmode_trampoline((void(*)(void))__bios_print, str, len);
+	idt_install(idtp);
+	ints_flag_set();
+	return;
 }

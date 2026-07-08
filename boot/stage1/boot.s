@@ -27,11 +27,10 @@ extern reset
 extern read
 extern a20_init
 extern mmap
-extern __bios_error
 extern pmode_init
 extern rmode_trampoline
 
-%define bios_error __bios_error
+extern __bios_error
 
 bits   16
 
@@ -178,9 +177,9 @@ read_elf:
     je    header_ok
 
     cli
-    push  word elf_err
-    push  word elf_len
-    push  bios_error
+	push  dword elf_len
+    push  dword elf_err
+    push  __bios_error
     call  rmode_trampoline
     sti
 
@@ -275,9 +274,9 @@ shr_cont:
     je          ph_loop
 
     cli
-    push        word init_err
-    push        word init_elen
-    push        bios_error
+	push        dword init_elen
+    push        dword init_err
+    push        __bios_error
     call        rmode_trampoline
     sti
 

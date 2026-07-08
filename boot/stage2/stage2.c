@@ -91,6 +91,7 @@ int main(void)
 	mmap_entries = bios_mmap(idtp);
 	mmap_init(mmap_entries->start, mmap_entries->length);
 #endif
+	bios_print(idtp, "test string", strlen("test string"));
 
 	for(;;) {
 		__asm__ volatile("hlt;");

@@ -19,8 +19,6 @@ global reset
 global read
 extern __bios_error
 
-%define bios_error __bios_error
-
 bits    16
 section .boot.util alloc exec progbits nowrite
 
@@ -75,14 +73,14 @@ readlp:
     ret
 
 reset_e:
-    push  disk_err1
-    push  de1_len
-    call  bios_error
+	push  dword de1_len
+    push  dword disk_err1
+    call  __bios_error
 
 read_e:
-    push  disk_err2
-    push  de2_len
-    call  bios_error
+	push  dword de2_len
+    push  dword disk_err2
+    call  __bios_error
 
 section .boot.rodata alloc noexec progbits nowrite
 disk_err1 db "E: Disk reset failed (5 tries)",0x0D,0x0A

@@ -18,15 +18,13 @@
 global a20_init
 extern __bios_error
 
-%define bios_error __bios_error
-
 bits    16
 section .stage15 alloc exec progbits nowrite
 
 a20_error:
-    push  a20_err
-    push  a20e_len
-    call  bios_error
+	push  dword a20e_len
+    push  dword a20_err
+    call  __bios_error
 
 a20_check:
     push  bp

@@ -20,8 +20,6 @@ extern __MMAP_BASE_ADDR
 global __bios_mmap
 extern __bios_error
 
-%define bios_error __bios_error
-
 bits    16
 section .text
 
@@ -84,14 +82,14 @@ mmap_done:
     ret
 
 mmap_e1:
-    push  mmap_err1
-    push  me1_len
-    call  bios_error
+	push  dword me1_len
+    push  dword mmap_err1
+    call  __bios_error
 
 mmap_e2:
-    push  mmap_err2
-    push  me2_len
-    call  bios_error
+	push  dword me2_len
+    push  dword mmap_err2
+    call  __bios_error
 
 section .data
 mmap_array:

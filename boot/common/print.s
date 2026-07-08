@@ -20,6 +20,7 @@ global __bios_error
 bits    16
 section .boot.util alloc exec progbits nowrite
 
+bios_print:
 __bios_print:
     push  bp
     mov   bp, sp
@@ -32,8 +33,8 @@ __bios_print:
     xor   bx, bx
     mov   es, bx
     int   0x10
-    mov   cx, [ss:bp + 4]
-    mov   ax, [ss:bp + 6]
+    mov   ecx, dword [ss:bp + 8]
+    mov   eax, dword [ss:bp + 4]
     mov   bx, 0x0007
     push  bp
     mov   bp, ax
@@ -48,13 +49,9 @@ __bios_print:
     pop   bp 
     ret
 
+bios_error:
 __bios_error:
-    push  bp
-    mov   bp, sp
-    mov   si, [ss:bp + 6]  ; push error message again
-    push  si
-    mov   si, [ss:bp + 4] 
-    push  si
-    call  __bios_print
+	add	  sp, 2
+    call  bios_print
     cli
     hlt
