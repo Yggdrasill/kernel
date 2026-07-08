@@ -23,144 +23,144 @@ section .stage15 alloc exec progbits nowrite
 
 a20_error:
 	push  dword a20e_len
-    push  dword a20_err
-    call  __bios_error
+	push  dword a20_err
+	call  __bios_error
 
 a20_check:
-    push  bp
-    mov   bp, sp
-    push  ax
-    push  di
-    push  si
-    push  es
-    push  ds
+	push  bp
+	mov   bp, sp
+	push  ax
+	push  di
+	push  si
+	push  es
+	push  ds
 
-    xor   ax, ax
-    mov   ds, ax
-    not   ax
-    mov   es, ax
-    mov   si, 0x0500
-    mov   di, 0x0510
+	xor   ax, ax
+	mov   ds, ax
+	not   ax
+	mov   es, ax
+	mov   si, 0x0500
+	mov   di, 0x0510
 
-    mov   ax, word [es:di]
-    push  ax
-    mov   ax, word [ds:si]
-    push  ax
+	mov   ax, word [es:di]
+	push  ax
+	mov   ax, word [ds:si]
+	push  ax
 
-    mov   word [es:di], 0xAA55
-    mov   word [ds:si], 0x55AA
-    cmp   word [es:di], 0x55AA
+	mov   word [es:di], 0xAA55
+	mov   word [ds:si], 0x55AA
+	cmp   word [es:di], 0x55AA
 
-    pop   ax
-    mov   word [ds:si], ax
-    pop   ax
-    mov   word [es:di], ax
+	pop   ax
+	mov   word [ds:si], ax
+	pop   ax
+	mov   word [es:di], ax
 
-    pop   ds
-    pop   es
-    je    a20_end
+	pop   ds
+	pop   es
+	je    a20_end
 
-    mov   [has_a20], byte 0x01
+	mov   [has_a20], byte 0x01
 a20_end:
-    pop   si
-    pop   di
-    pop   ax
-    pop   bp
-    ret
+	pop   si
+	pop   di
+	pop   ax
+	pop   bp
+	ret
 
 bios_a20:
-    push  ax
-    mov   ax, 0x2401
-    int   0x15
-    pop   ax
-    ret
+	push  ax
+	mov   ax, 0x2401
+	int   0x15
+	pop   ax
+	ret
 
 kbd8042_wait_cmd:
-    in    al, 0x64
-    test  al, 2
-    jnz   kbd8042_wait_cmd
-    ret
+	in    al, 0x64
+	test  al, 2
+	jnz   kbd8042_wait_cmd
+	ret
 
 kbd8042_wait_data:
-    in    al, 0x64
-    test  al, 1
-    jz    kbd8042_wait_data
-    ret
+	in    al, 0x64
+	test  al, 1
+	jz    kbd8042_wait_data
+	ret
 
 kbd8042_a20:
-    push  ax
-    cli
-    call  kbd8042_wait_cmd
-    mov   al, 0xAD
-    out   0x64, al
+	push  ax
+	cli
+	call  kbd8042_wait_cmd
+	mov   al, 0xAD
+	out   0x64, al
 
-    call  kbd8042_wait_cmd
-    mov   al, 0xD0
-    out   0x64, al
+	call  kbd8042_wait_cmd
+	mov   al, 0xD0
+	out   0x64, al
 
-    call  kbd8042_wait_data
-    in    al, 0x60
-    push  ax
+	call  kbd8042_wait_data
+	in    al, 0x60
+	push  ax
 
-    call  kbd8042_wait_cmd
-    mov   al, 0xD1
-    out   0x64, al
+	call  kbd8042_wait_cmd
+	mov   al, 0xD1
+	out   0x64, al
 
-    call  kbd8042_wait_cmd
-    pop   ax
-    or    al, 2
-    out   0x60, al
+	call  kbd8042_wait_cmd
+	pop   ax
+	or    al, 2
+	out   0x60, al
 
-    call  kbd8042_wait_cmd
-    mov   al, 0xAE
-    out   0x64, al
+	call  kbd8042_wait_cmd
+	mov   al, 0xAE
+	out   0x64, al
 
-    call  kbd8042_wait_cmd
-    sti
-    pop   ax
-    ret
+	call  kbd8042_wait_cmd
+	sti
+	pop   ax
+	ret
 
 a20_ee:
-    push  ax
-    in    al, 0xEE
-    pop   ax
-    ret
+	push  ax
+	in    al, 0xEE
+	pop   ax
+	ret
 
 a20_fast:
-    push  ax
-    in    al, 0x92
-    or    al, 2
-    out   0x92, al
-    pop   ax
-    ret
+	push  ax
+	in    al, 0x92
+	or    al, 2
+	out   0x92, al
+	pop   ax
+	ret
 
 a20_init:
-    push  bp
-    mov   bp, sp
-    call  a20_check
-    cmp   byte [has_a20], byte 0x01
-    je    done_a20
+	push  bp
+	mov   bp, sp
+	call  a20_check
+	cmp   byte [has_a20], byte 0x01
+	je    done_a20
 
-    call  bios_a20
-    call  a20_check
-    cmp   byte [has_a20], byte 0x01
-    je    done_a20
+	call  bios_a20
+	call  a20_check
+	cmp   byte [has_a20], byte 0x01
+	je    done_a20
 
-    call  kbd8042_a20
-    call  a20_check
-    cmp   byte [has_a20], byte 0x01
-    je    done_a20
+	call  kbd8042_a20
+	call  a20_check
+	cmp   byte [has_a20], byte 0x01
+	je    done_a20
 
-    call  a20_ee
-    call  a20_check
-    cmp   byte [has_a20], byte 0x01
-    je    done_a20
+	call  a20_ee
+	call  a20_check
+	cmp   byte [has_a20], byte 0x01
+	je    done_a20
 
-    cmp   byte [has_a20], byte 0x01
-    jne   a20_error
+	cmp   byte [has_a20], byte 0x01
+	jne   a20_error
 done_a20:
-    pop   bp
-    ret
+	pop   bp
+	ret
 
 section .data
 has_a20   db 0

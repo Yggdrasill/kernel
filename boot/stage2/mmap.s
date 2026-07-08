@@ -24,77 +24,77 @@ bits    16
 section .text
 
 __bios_mmap:
-    push  dword ebp
-    mov   ebp, esp 
-    push  dword ebx
-    push  dword ecx
-    push  dword edx
-    push  dword edi
-    push  word es
+	push  dword ebp
+	mov   ebp, esp 
+	push  dword ebx
+	push  dword ecx
+	push  dword edx
+	push  dword edi
+	push  word es
 
-    mov   eax, __MMAP_BASE_ADDR
-    shr   eax, 4
-    mov   es, ax
-    xor   edi, edi
-    xor   ebx, ebx
+	mov   eax, __MMAP_BASE_ADDR
+	shr   eax, 4
+	mov   es, ax
+	xor   edi, edi
+	xor   ebx, ebx
 loop:
-    ; clear ACPI 3.0 attribute field if BIOS doesn't fill in
-    mov   dword [es:edi+0x14], 0x00 
-    mov   eax, 0x0000E820
-    mov   ecx, 0x00000018
-    mov   edx, 0x534D4150
+	; clear ACPI 3.0 attribute field if BIOS doesn't fill in
+	mov   dword [es:edi+0x14], 0x00 
+	mov   eax, 0x0000E820
+	mov   ecx, 0x00000018
+	mov   edx, 0x534D4150
 
-    int   0x15
-    jc    mmap_e1
-    cmp   eax, 0x534D4150
-    jne   mmap_e2
-    cmp   ebx, 0x00
-    je    mmap_done
+	int   0x15
+	jc    mmap_e1
+	cmp   eax, 0x534D4150
+	jne   mmap_e2
+	cmp   ebx, 0x00
+	je    mmap_done
 
-    cmp   ecx, 0x14
-    je    mmap_continue
-    cmp   ecx, 0x18
-    jne   mmap_e2
+	cmp   ecx, 0x14
+	je    mmap_continue
+	cmp   ecx, 0x18
+	jne   mmap_e2
 mmap_continue:
-    add   di, 0x18
-    jmp   loop
+	add   di, 0x18
+	jmp   loop
 mmap_done:
 
-    mov   eax, es
-    shl   eax, 4
-    mov   [mmap_ptr], eax
+	mov   eax, es
+	shl   eax, 4
+	mov   [mmap_ptr], eax
 
-    xor   edx, edx
-    mov   eax, edi
-    mov   ebx, 0x18
-    div   ebx
+	xor   edx, edx
+	mov   eax, edi
+	mov   ebx, 0x18
+	div   ebx
 
-    mov   [mmap_len], eax
-    mov   eax, mmap_array
+	mov   [mmap_len], eax
+	mov   eax, mmap_array
 
-    pop   word es
-    pop   dword edi
-    pop   dword edx
-    pop   dword ecx
-    pop   dword ebx
-    pop   dword ebp
+	pop   word es
+	pop   dword edi
+	pop   dword edx
+	pop   dword ecx
+	pop   dword ebx
+	pop   dword ebp
 
-    ret
+	ret
 
 mmap_e1:
 	push  dword me1_len
-    push  dword mmap_err1
-    call  __bios_error
+	push  dword mmap_err1
+	call  __bios_error
 
 mmap_e2:
 	push  dword me2_len
-    push  dword mmap_err2
-    call  __bios_error
+	push  dword mmap_err2
+	call  __bios_error
 
 section .data
 mmap_array:
-    mmap_ptr  dd 0
-    mmap_len  dd 0
+	mmap_ptr  dd 0
+	mmap_len  dd 0
 
 section .rodata
 mmap_err1 db "E: E820 not supported.",0x0D,0x0A

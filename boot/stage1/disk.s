@@ -23,64 +23,64 @@ bits    16
 section .boot.util alloc exec progbits nowrite
 
 reset:
-    push  bp
-    mov   bp, sp
-    push  dx
-    mov   dx, [ss:bp + 4]
-    push  si
-    push  ax
-    xor   si, si
+	push  bp
+	mov   bp, sp
+	push  dx
+	mov   dx, [ss:bp + 4]
+	push  si
+	push  ax
+	xor   si, si
 resetlp:
-    inc   si
-    cmp   si, 0x05
-    je    reset_e
-    xor   word ax, ax
-    int   0x13
-    jc    resetlp
+	inc   si
+	cmp   si, 0x05
+	je    reset_e
+	xor   word ax, ax
+	int   0x13
+	jc    resetlp
 
-    pop   word ax
-    pop   word si
-    pop   dx
-    pop   bp
-    ret
+	pop   word ax
+	pop   word si
+	pop   dx
+	pop   bp
+	ret
 
 read:
-    push  bp
-    mov   word bp, sp
-    push  word ax
-    push  word bx
-    push  word cx
-    mov   word bx, [ss:bp + 8]
-    mov   word ax, [ss:bp + 6]
-    mov   word dx, [ss:bp + 4]
-    push  word si
-    xor   word si, si
+	push  bp
+	mov   word bp, sp
+	push  word ax
+	push  word bx
+	push  word cx
+	mov   word bx, [ss:bp + 8]
+	mov   word ax, [ss:bp + 6]
+	mov   word dx, [ss:bp + 4]
+	push  word si
+	xor   word si, si
 readlp:
-    inc   si
-    cmp   si, 0x05
-    je    read_e
-    mov   dh, 0x00
-    mov   ch, 0x00
-    mov   cl, 0x02
-    int   0x13
-    jc    readlp
+	inc   si
+	cmp   si, 0x05
+	je    read_e
+	mov   dh, 0x00
+	mov   ch, 0x00
+	mov   cl, 0x02
+	int   0x13
+	jc    readlp
 
-    pop   word si
-    pop   word cx
-    pop   word bx
-    pop   word ax
-    pop   bp
-    ret
+	pop   word si
+	pop   word cx
+	pop   word bx
+	pop   word ax
+	pop   bp
+	ret
 
 reset_e:
 	push  dword de1_len
-    push  dword disk_err1
-    call  __bios_error
+	push  dword disk_err1
+	call  __bios_error
 
 read_e:
 	push  dword de2_len
-    push  dword disk_err2
-    call  __bios_error
+	push  dword disk_err2
+	call  __bios_error
 
 section .boot.rodata alloc noexec progbits nowrite
 disk_err1 db "E: Disk reset failed (5 tries)",0x0D,0x0A

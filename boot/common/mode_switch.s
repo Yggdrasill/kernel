@@ -25,183 +25,183 @@ global rmode_trampoline
 section .stage15 alloc exec progbits nowrite
 
 mask_ints:
-    push  bp
-    mov   bp, sp
-    push  ax
+	push  bp
+	mov   bp, sp
+	push  ax
 
-    mov   ax, 0xFF
-    out   0x21, ax
-    out   0xA1, ax
+	mov   ax, 0xFF
+	out   0x21, ax
+	out   0xA1, ax
 
-    pop   ax
-    pop   bp
-    ret
+	pop   ax
+	pop   bp
+	ret
 
 gdt_install:
-    push  bp
-    mov   bp, sp
-    push  di
-    mov   di, gdt_info
-    lgdt  [es:di]
-    pop   di
-    pop   bp
-    ret
+	push  bp
+	mov   bp, sp
+	push  di
+	mov   di, gdt_info
+	lgdt  [es:di]
+	pop   di
+	pop   bp
+	ret
 
 idt_install:
-    push  bp
-    mov   bp, sp
-    push  di
-    mov   di, idt_info
-    lidt  [es:di]
-    pop   di
-    pop   bp
-    ret
+	push  bp
+	mov   bp, sp
+	push  di
+	mov   di, idt_info
+	lidt  [es:di]
+	pop   di
+	pop   bp
+	ret
 
 pmode_init:
-    ; Reserve space for return pointer.
-    sub   esp, 2
+	; Reserve space for return pointer.
+	sub   esp, 2
 
-    push  ebp
-    mov   bp, sp
-    push  eax
+	push  ebp
+	mov   bp, sp
+	push  eax
 
-    call  mask_ints
+	call  mask_ints
 
-    call  idt_install
-    call  gdt_install
+	call  idt_install
+	call  gdt_install
 
-    ; Fix the stack pointers by converting a
-    ; linear address.
+	; Fix the stack pointers by converting a
+	; linear address.
 
-    xor   eax, eax
-    mov   eax, ss
-    mov   [stack_seg], ax
-    shl   eax, 4
-    add   eax, esp
-    mov   esp, eax
+	xor   eax, eax
+	mov   eax, ss
+	mov   [stack_seg], ax
+	shl   eax, 4
+	add   eax, esp
+	mov   esp, eax
 
-    ; Set the protected mode bit.
+	; Set the protected mode bit.
 
-    mov   eax, cr0
-    or    eax, 1
-    mov   cr0, eax
+	mov   eax, cr0
+	or    eax, 1
+	mov   cr0, eax
 
-    ; Initialize segment registers to use the GDT.
-    ; There should be no more 16 bit or real mode
-    ; code executed after this point, except for
-    ; these simple mov instructions and a jump.
+	; Initialize segment registers to use the GDT.
+	; There should be no more 16 bit or real mode
+	; code executed after this point, except for
+	; these simple mov instructions and a jump.
 
-    mov   ax, 0x0010
-    mov   ss, ax
-    mov   es, ax
-    mov   ds, ax
-    mov   gs, ax
-    mov   fs, ax
+	mov   ax, 0x0010
+	mov   ss, ax
+	mov   es, ax
+	mov   ds, ax
+	mov   gs, ax
+	mov   fs, ax
 
-    ; Initialise code segment to use the GDT.
-    ; After this jmp we are in 32-bit pmode.
+	; Initialise code segment to use the GDT.
+	; After this jmp we are in 32-bit pmode.
 
-    jmp   0x0008:pmode32
+	jmp   0x0008:pmode32
 bits 32
 pmode32:
 
-    pop   eax
-    pop   ebp
+	pop   eax
+	pop   ebp
 
-    ; ebp needs to be fixed the same way that
-    ; esp was earlier.
+	; ebp needs to be fixed the same way that
+	; esp was earlier.
 
-    push  eax
-    movzx eax, word [stack_seg]
-    shl   eax, 4
-    add   eax, ebp
-    mov   ebp, eax
+	push  eax
+	movzx eax, word [stack_seg]
+	shl   eax, 4
+	add   eax, ebp
+	mov   ebp, eax
 
-    ; The return pointer was pushed as a 2-byte
-    ; value, since we were called from 16-bit
-    ; code. We have preallocated space for the
-    ; return pointer at the beginning of this
-    ; function, and now need to push it as 4 bytes.
+	; The return pointer was pushed as a 2-byte
+	; value, since we were called from 16-bit
+	; code. We have preallocated space for the
+	; return pointer at the beginning of this
+	; function, and now need to push it as 4 bytes.
 
-    ; Read from esp + 6 to account for extra 2 bytes
-    ; reserved, and the eax push.
-    
-    movzx eax, word [esp + 6]
-    mov   [return], eax
-    pop   eax
-    ; Overwrite old value
-    add   esp, 4
-    push  dword [return]
+	; Read from esp + 6 to account for extra 2 bytes
+	; reserved, and the eax push.
+	
+	movzx eax, word [esp + 6]
+	mov   [return], eax
+	pop   eax
+	; Overwrite old value
+	add   esp, 4
+	push  dword [return]
 
-    ret
+	ret
 
 pmode_exit:
-    push  ebp
-    mov   ebp, esp
-    push  eax
-    push  edi
+	push  ebp
+	mov   ebp, esp
+	push  eax
+	push  edi
 
-    jmp   0x0018:pmode16
+	jmp   0x0018:pmode16
 bits 16
 pmode16:
 
-    mov   ax, 0x20
-    mov   ss, ax
-    mov   es, ax
-    mov   ds, ax
-    mov   gs, ax
-    mov   fs, ax
+	mov   ax, 0x20
+	mov   ss, ax
+	mov   es, ax
+	mov   ds, ax
+	mov   gs, ax
+	mov   fs, ax
 
-    mov   eax, cr0 
-    and   eax, ~1
-    mov   cr0, eax
+	mov   eax, cr0 
+	and   eax, ~1
+	mov   cr0, eax
 
-    jmp   0x0000:rmode
+	jmp   0x0000:rmode
 rmode:
 
-    ; Initialize segment registers for real mode.
-    xor   ax, ax
-    mov   es, ax
-    mov   ds, ax
-    mov   gs, ax
-    mov   fs, ax
+	; Initialize segment registers for real mode.
+	xor   ax, ax
+	mov   es, ax
+	mov   ds, ax
+	mov   gs, ax
+	mov   fs, ax
 
-    ; This calculates a valid stack segment for
-    ; any value below 1MiB. That means the stack
-    ; can live within any part of low memory.
-    ; That is the memory that real mode is limited
-    ; to anyway, so it is of course otherwise
-    ; impossible to use the same stack.
-    mov   eax, ebp
-    shr   eax, 4
-    and   eax, 0xF000
-    mov   ss, ax
+	; This calculates a valid stack segment for
+	; any value below 1MiB. That means the stack
+	; can live within any part of low memory.
+	; That is the memory that real mode is limited
+	; to anyway, so it is of course otherwise
+	; impossible to use the same stack.
+	mov   eax, ebp
+	shr   eax, 4
+	and   eax, 0xF000
+	mov   ss, ax
 
-    lidt  [idt_rmode]
+	lidt  [idt_rmode]
 
-    ; Clean up higher bits in esp, as they can mess up
-    ; the stack. This is because i386 has 32-bit
-    ; register extensions.
-    and   esp, 0xFFFF
+	; Clean up higher bits in esp, as they can mess up
+	; the stack. This is because i386 has 32-bit
+	; register extensions.
+	and   esp, 0xFFFF
 
-    pop   edi
-    pop   eax
+	pop   edi
+	pop   eax
 
-    ;Clean up ebp in the same way, and for the same reason.
-    pop   ebp
-    and   ebp, 0xFFFF
+	;Clean up ebp in the same way, and for the same reason.
+	pop   ebp
+	and   ebp, 0xFFFF
 
-    ; Now fix the return pointer on the stack and realign,
-    ; since this function was entered with a 4-byte return
-    ; pointer and will exit with a 2-byte one.
-    push  eax
-    mov   eax, dword [esp + 4]
-    mov   [return], eax
-    pop   eax
-    add   esp, 4
-    push  word [return]
+	; Now fix the return pointer on the stack and realign,
+	; since this function was entered with a 4-byte return
+	; pointer and will exit with a 2-byte one.
+	push  eax
+	mov   eax, dword [esp + 4]
+	mov   [return], eax
+	pop   eax
+	add   esp, 4
+	push  word [return]
 
-    ret
+	ret
 
 bits 32
 rmode_trampoline:
@@ -210,34 +210,34 @@ rmode_trampoline:
 	mov			[saved_esi], esi
 	mov			[saved_edi], edi
 	mov			[saved_ebp], ebp
-    ; This may look a bit unconventional, but 
-    ; popping the return address from the stack
-    ; allows us to pass arguments as if calling
-    ; from real mode. The return address will be
-    ; pushed later.
-    pop         dword [resume]
-    call        pmode_exit
+	; This may look a bit unconventional, but 
+	; popping the return address from the stack
+	; allows us to pass arguments as if calling
+	; from real mode. The return address will be
+	; pushed later.
+	pop         dword [resume]
+	call        pmode_exit
 bits 16
-    ; Pop 32-bit callee address and push as 16-bit
-    ; address, then call it with a tail call.
-    pop         dword [callee]
+	; Pop 32-bit callee address and push as 16-bit
+	; address, then call it with a tail call.
+	pop         dword [callee]
 	; Push return pointer, ret into 16-bit callee
-    push        rmode_return
-    push        word [callee]
-    ret
+	push        rmode_return
+	push        word [callee]
+	ret
 rmode_return:
-    call        pmode_init
+	call        pmode_init
 bits 32
-    ; Allocate space for 32-bit return pointer.
-    sub         esp, 4
+	; Allocate space for 32-bit return pointer.
+	sub         esp, 4
 	; Restore preserved registers
 	mov			ebp, [saved_ebp]
 	mov			edi, [saved_edi]
 	mov			esi, [saved_esi]
 	mov			ebx, [saved_ebx]
-    ; Push return path
-    push        dword [resume]
-    ret
+	; Push return path
+	push        dword [resume]
+	ret
 
 section .data
 
