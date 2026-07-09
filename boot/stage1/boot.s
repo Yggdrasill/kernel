@@ -21,7 +21,6 @@ extern __BOOT_SIZE
 extern __STAGE15_LOAD_SEG
 extern __STAGE15_LOAD_OFF
 
-extern init_video
 extern disk_geometry
 extern reset
 extern read
@@ -98,6 +97,27 @@ boot:
 	call  read
 
 	jmp   stage15
+
+section .boot.util alloc exec progbits nowrite
+
+init_video:
+	mov   ax, 0x03
+	int   0x10
+
+	mov   ah, 0x01
+	mov   cx, 0x3F00
+	int   0x10
+
+	; page reset
+	mov   ax, 0x0500
+	int   0x10
+
+	; cursor reset
+	mov   ah, 0x02
+	xor   bx, bx
+	xor   dx, dx
+	int   0x10
+	ret
 
 section .mbr alloc noexec progbits write
 part0     times 16 db 0
