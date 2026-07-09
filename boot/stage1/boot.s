@@ -81,10 +81,9 @@ sti
 jmp   0x0000:boot
 
 boot:
-	mov   [drive], dl
-
 	call  init_video
 
+	mov   [drive], dl
 	call  disk_geometry
 	mov   dl, [drive]
 	call  reset
@@ -102,6 +101,8 @@ boot:
 section .boot.util alloc exec progbits nowrite
 
 init_video:
+	pusha
+
 	mov   ax, 0x03
 	int   0x10
 
@@ -118,6 +119,8 @@ init_video:
 	xor   bx, bx
 	xor   dx, dx
 	int   0x10
+
+	popa
 	ret
 
 section .mbr alloc noexec progbits write
