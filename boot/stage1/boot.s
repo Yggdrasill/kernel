@@ -18,15 +18,19 @@
 extern __BOOT_ENTRY
 extern __BOOT_ADDR
 extern __BOOT_SIZE
-extern __STAGE15_LOAD_ADDR
+extern __STAGE15_LOAD_SEG
+extern __STAGE15_LOAD_OFF
 
 extern init_video
+extern disk_geometry
 extern reset
 extern read
 extern a20_init
 extern mmap
 extern pmode_init
 extern rmode_trampoline
+
+extern drive
 
 extern __bios_error
 
@@ -58,50 +62,42 @@ filesystem            db    "FAT12   "
 
 __entry:
 cli
-mov   ax, 0x7000
-mov   ss, ax
+push  word 0x7000
+pop   ss
 mov   bp, 0xFFF0
 mov   sp, bp
 
-xor   ax, ax
-mov   ds, ax
-mov   es, ax
+push  word 0x0000
+push  word 0x0000
+pop   es
+pop   ds
 mov   si, __BOOT_ENTRY
 mov   di, __BOOT_ADDR
 
 mov   cx, __BOOT_SIZE
 rep   movsb
 
-xor   si, si
-xor   di, di
-
 sti
 
 jmp   0x0000:boot
 
 boot:
-	call  vga_page_rst
-	call  cursor_rst
 	call  init_video
 
-	mov   byte [drive], dl
-	xor   word dx, dx
-	mov   byte dl, [drive]
-	push  word dx
+	mov   [drive], dl
+	call  disk_geometry
+	mov   dl, [drive]
 	call  reset
-	mov   word sp, 0xFFF0    ; flush stack
 
-	xor   word dx, dx
-	mov   byte dl, [drive]
-	push  word __STAGE15_LOAD_ADDR
-	push  word 0x0240 ; read 32K from disk
-	push  word dx
+	push  word __STAGE15_LOAD_SEG
+	pop   es
+	mov   bx, __STAGE15_LOAD_OFF
+	mov   cx, 0x02
+	movzx dx, byte [drive]
+	mov   si, 0x3F
 	call  read
-	mov   sp, 0xFFF0
 
-	jmp   0x0000:stage15
-
-drive     db 0
+	jmp   stage15
 
 section .mbr alloc noexec progbits write
 part0     times 16 db 0
