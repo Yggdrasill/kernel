@@ -20,8 +20,6 @@ extern __BOOT_ADDR
 extern __BOOT_SIZE
 extern __STAGE15_LOAD_ADDR
 
-extern vga_page_rst
-extern cursor_rst
 extern init_video
 extern reset
 extern read

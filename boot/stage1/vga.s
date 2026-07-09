@@ -16,56 +16,25 @@
 ; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 global init_video
-global vga_page_rst
-global cursor_rst
 
 bits    16
 section .boot.util alloc exec progbits nowrite
 
 init_video:
-	push  bp
-	mov   bp, sp
-	push  ax
-	push  cx
-
-	mov   ah, 0x00
-	mov   al, 0x03
+	mov   ax, 0x03
 	int   0x10
 
-	xor   ax, ax
-	xor   cx, cx
 	mov   ah, 0x01
-	mov   ch, 0x3F
+	mov   cx, 0x3F00
 	int   0x10
 
-	pop   cx
-	pop   ax
-	pop   bp
-
-	ret
-
-vga_page_rst:
-	push  bp
-	mov   bp, sp
-	push  ax
+	; page reset
 	mov   ax, 0x0500
 	int   0x10
-	pop   ax
-	pop   bp
-	ret
 
-cursor_rst:
-	push  bp
-	mov   bp, sp
-	push  ax
-	push  bx
-	push  dx
-	mov   ax, 0x0002
+	; cursor reset
+	mov   ah, 0x02
 	xor   bx, bx
 	xor   dx, dx
 	int   0x10
-	pop   dx
-	pop   bx
-	pop   ax
-	pop   bp
 	ret
