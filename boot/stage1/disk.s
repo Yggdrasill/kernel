@@ -28,7 +28,9 @@ section .boot.util alloc exec progbits nowrite
 
 disk_geometry:
 	mov   ah, 0x08
+	push  ds
 	int   0x13
+	pop   ds
 	jnc   geometry_done
 geometry_e:
 	push  dword de3_len
@@ -37,7 +39,6 @@ geometry_e:
 geometry_done:
 	mov   al, ch
 	mov   ah, cl
-	and   ah, 0xC0
 	shr   ah, 6
 	and   cx, 0x3F
 	mov   [disk_cylinders], ax
@@ -49,8 +50,14 @@ reset:
 	pusha
 	mov   cx, 0x05
 resetlp:
-	xor   word ax, ax
+	xor   ax, ax
+	push  es
+	push  ds
+	pusha
 	int   0x13
+	popa
+	pop   ds
+	pop   es
 	jnc   reset_done
 	loop  resetlp
 reset_e:
@@ -63,23 +70,22 @@ reset_done:
 
 read:
 	xor   di, di
-	push  word 0x0000
+	or    si, si
+	jz    read_done
 read_sector:
-	pop   ax
-	inc   ax
-	cmp   ax, si
-	ja    read_done
-	push  ax
-read_try:
-	mov   ax, 0x0201
 	push  es
+	push  ds
 	pusha
+	mov   ax, 0x0201
 	int   0x13
 	popa
+	pop   ds
 	pop   es
 	jc    read_recover
 read_success:
 	add   bx, 0x200
+	dec   si
+	jz    read_done
 	xor   di, di
 	mov   al, cl
 	and   al, 0x3F
@@ -110,14 +116,13 @@ read_recover:
 	call  reset
 	inc   di
 	cmp   di, 0x05
-	jl    read_try
+	jl    read_sector
 read_e:
 	push  dword de2_len
 	push  dword disk_err2
 	call  __bios_error
 read_done:
 	ret
-
 
 disk_cylinders		dw 0
 disk_sectors		db 0

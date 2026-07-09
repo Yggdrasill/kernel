@@ -61,13 +61,34 @@ filesystem            db    "FAT12   "
 
 __entry:
 cli
+
 push  word 0x7000
 pop   ss
 mov   bp, 0xFFF0
 mov   sp, bp
+pusha
 
-push  word 0x0000
-push  word 0x0000
+; VGA init
+mov   ax, 0x03
+int   0x10
+mov   ah, 0x01
+mov   cx, 0x3F00
+int   0x10
+
+; VGA page reset
+mov   ax, 0x0500
+int   0x10
+
+; VGA cursor reset
+mov   ah, 0x02
+xor   bx, bx
+xor   dx, dx
+int   0x10
+
+popa
+cld
+
+push  dword 0x00
 pop   es
 pop   ds
 mov   si, __BOOT_ENTRY
@@ -81,8 +102,6 @@ sti
 jmp   0x0000:boot
 
 boot:
-	call  init_video
-
 	mov   [drive], dl
 	call  disk_geometry
 	mov   dl, [drive]
@@ -97,31 +116,6 @@ boot:
 	call  read
 
 	jmp   stage15
-
-section .boot.util alloc exec progbits nowrite
-
-init_video:
-	pusha
-
-	mov   ax, 0x03
-	int   0x10
-
-	mov   ah, 0x01
-	mov   cx, 0x3F00
-	int   0x10
-
-	; page reset
-	mov   ax, 0x0500
-	int   0x10
-
-	; cursor reset
-	mov   ah, 0x02
-	xor   bx, bx
-	xor   dx, dx
-	int   0x10
-
-	popa
-	ret
 
 section .mbr alloc noexec progbits write
 part0     times 16 db 0
