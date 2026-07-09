@@ -69,10 +69,11 @@ reset_done:
 	ret
 
 read:
-	xor   di, di
 	or    si, si
 	jz    read_done
 read_sector:
+	xor   di, di
+read_try:
 	push  es
 	push  ds
 	pusha
@@ -86,7 +87,6 @@ read_success:
 	add   bx, 0x200
 	dec   si
 	jz    read_done
-	xor   di, di
 	mov   al, cl
 	and   al, 0x3F
 	and   cl, 0xC0
@@ -97,9 +97,11 @@ read_success:
 	jmp   read_sector
 read_next_head:
 	inc   cl
-	inc   dh
 	cmp   dh, [disk_heads]
-	jbe   read_sector
+	je    read_next_cylinder
+	inc   dh
+	jmp   read_sector
+read_next_cylinder:
 	xor   dh, dh
 	mov   al, ch
 	mov   ah, cl
@@ -116,7 +118,7 @@ read_recover:
 	call  reset
 	inc   di
 	cmp   di, 0x05
-	jl    read_sector
+	jl    read_try
 read_e:
 	push  dword de2_len
 	push  dword disk_err2

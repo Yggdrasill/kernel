@@ -61,11 +61,11 @@ filesystem            db    "FAT12   "
 
 __entry:
 cli
-
-push  word 0x7000
-pop   ss
-mov   bp, 0xFFF0
-mov   sp, bp
+mov   ax, 0x7000
+mov   ss, ax
+mov   sp, 0xFFF0
+mov   bp, sp
+sti
 pusha
 
 ; VGA init
@@ -97,14 +97,13 @@ mov   di, __BOOT_ADDR
 mov   cx, __BOOT_SIZE
 rep   movsb
 
-sti
-
 jmp   0x0000:boot
 
 boot:
 	mov   [drive], dl
+	push  dx
 	call  disk_geometry
-	mov   dl, [drive]
+	pop   dx
 	call  reset
 
 	push  word __STAGE15_LOAD_SEG
