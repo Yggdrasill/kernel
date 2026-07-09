@@ -81,9 +81,10 @@ sti
 jmp   0x0000:boot
 
 boot:
+	mov   [drive], dl
+
 	call  init_video
 
-	mov   [drive], dl
 	call  disk_geometry
 	mov   dl, [drive]
 	call  reset
