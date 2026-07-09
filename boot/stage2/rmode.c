@@ -45,7 +45,7 @@ struct mmap_array *bios_mmap(struct idt_ptr *idtp)
 	union rmode_ret_t rv;
 
 	ints_flag_clear();
-	rv.u32 = rmode_trampoline((void(*)(void))__bios_mmap);
+	rv.u32 = rmode_trampoline((void (*)(void))__bios_mmap);
 	idt_install(idtp);
 	ints_flag_set();
 
@@ -55,7 +55,7 @@ struct mmap_array *bios_mmap(struct idt_ptr *idtp)
 void bios_print(struct idt_ptr *idtp, char *str, size_t len)
 {
 	ints_flag_clear();
-	rmode_trampoline((void(*)(void))__bios_print, str, len);
+	rmode_trampoline((void (*)(void))__bios_print, str, len);
 	idt_install(idtp);
 	ints_flag_set();
 	return;
