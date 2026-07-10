@@ -40,23 +40,15 @@ void               __bios_print(uint16_t str, uint16_t len);
 
 extern uint32_t rmode_trampoline(void (*)(void), ...);
 
-struct mmap_array *bios_mmap(struct idt_ptr *idtp)
+struct mmap_array *bios_mmap(void)
 {
 	union rmode_ret_t rv;
-
-	ints_flag_clear();
 	rv.u32 = rmode_trampoline((void (*)(void))__bios_mmap);
-	idt_install(idtp);
-	ints_flag_set();
-
 	return rv.ptr;
 }
 
-void bios_print(struct idt_ptr *idtp, char *str, size_t len)
+void bios_print(char *str, size_t len)
 {
-	ints_flag_clear();
 	rmode_trampoline((void (*)(void))__bios_print, str, len);
-	idt_install(idtp);
-	ints_flag_set();
 	return;
 }
