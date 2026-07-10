@@ -41,8 +41,12 @@ gdt_install:
 	push  bp
 	mov   bp, sp
 	push  di
+	push  es
+	push  word 0x00
+	pop   es
 	mov   di, gdt_info
 	lgdt  [es:di]
+	pop   es
 	pop   di
 	pop   bp
 	ret
@@ -51,8 +55,12 @@ idt_install:
 	push  bp
 	mov   bp, sp
 	push  di
+	push  es
+	push  word 0x00
+	pop   es
 	mov   di, idt_info
 	lidt  [es:di]
+	pop   es
 	pop   di
 	pop   bp
 	ret
@@ -204,39 +212,51 @@ rmode:
 	ret
 
 bits 32
+save_state:
+	mov   [saved_ebx], ebx
+	mov   [saved_esi], esi
+	mov   [saved_edi], edi
+	mov   [saved_ebp], ebp
+	sgdt  [gdt_info]
+	sidt  [idt_info]
+	ret
+
+restore_state:
+	lgdt  [gdt_info]
+	lidt  [idt_info]
+	mov   ebp, [saved_ebp]
+	mov   edi, [saved_edi]
+	mov   esi, [saved_esi]
+	mov   ebx, [saved_ebx]
+	ret
+	
 rmode_trampoline:
-	; First order of the day: preserve callee-saved regs
-	mov			[saved_ebx], ebx
-	mov			[saved_esi], esi
-	mov			[saved_edi], edi
-	mov			[saved_ebp], ebp
 	; This may look a bit unconventional, but 
 	; popping the return address from the stack
 	; allows us to pass arguments as if calling
 	; from real mode. The return address will be
 	; pushed later.
-	pop         dword [resume]
-	call        pmode_exit
+	pop   dword [resume]
+	; Save machine state, exit protected mode
+	call  save_state
+	call  pmode_exit
 bits 16
 	; Pop 32-bit callee address and push as 16-bit
 	; address, then call it with a tail call.
-	pop         dword [callee]
+	pop   dword [callee]
 	; Push return pointer, ret into 16-bit callee
-	push        rmode_return
-	push        word [callee]
+	push  rmode_return
+	push  word [callee]
 	ret
 rmode_return:
-	call        pmode_init
+	; Restore machine state, enter protected mode
+	call  pmode_init
 bits 32
+	call  restore_state
 	; Allocate space for 32-bit return pointer.
-	sub         esp, 4
-	; Restore preserved registers
-	mov			ebp, [saved_ebp]
-	mov			edi, [saved_edi]
-	mov			esi, [saved_esi]
-	mov			ebx, [saved_ebx]
+	sub   esp, 4
 	; Push return path
-	push        dword [resume]
+	push  dword [resume]
 	ret
 
 section .data
