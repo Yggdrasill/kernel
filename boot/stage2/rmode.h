@@ -50,7 +50,7 @@ void rmode_call32(
     uint32_t,
     uint32_t[]);
 
-struct mmap_array *bios_mmap(struct idt_ptr *);
-void               bios_print(struct idt_ptr *, char *, size_t);
+struct mmap_array *bios_mmap(void);
+void               bios_print(char *, size_t);
 
 #endif

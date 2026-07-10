@@ -33,7 +33,7 @@
 /* PIC initialisation is global machine state anyway. */
 
 extern struct pic_state_table pic_shadow_table;
-struct pic_state_table pic_state;
+struct pic_state_table        pic_state;
 
 void irq_shadow_write(const struct pic_state_table *state)
 {
@@ -44,14 +44,14 @@ void irq_shadow_write(const struct pic_state_table *state)
 void irq_init(void)
 {
 	const struct pic_state_table state = {
-		.pic0_icw1 = ICW1_INIT | ICW1_IC4,
-		.pic1_icw1 = ICW1_INIT | ICW1_IC4,
-		.pic0_icw2 = IRQ0_BASE_PM,
-		.pic1_icw2 = IRQ1_BASE_PM,
-		.pic0_icw3 = IRQ_CASCADE << 1,
-		.pic1_icw3 = IRQ_CASCADE,
-		.pic0_icw4 = ICW4_MODE,
-		.pic1_icw4 = ICW4_MODE,
+	    .pic0_icw1 = ICW1_INIT | ICW1_IC4,
+	    .pic1_icw1 = ICW1_INIT | ICW1_IC4,
+	    .pic0_icw2 = IRQ0_BASE_PM,
+	    .pic1_icw2 = IRQ1_BASE_PM,
+	    .pic0_icw3 = IRQ_CASCADE << 1,
+	    .pic1_icw3 = IRQ_CASCADE,
+	    .pic0_icw4 = ICW4_MODE,
+	    .pic1_icw4 = ICW4_MODE,
 	};
 
 	/* ICW1 */

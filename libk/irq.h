@@ -33,7 +33,7 @@
 #define IRQ1_BASE_PM IRQ0_BASE_PM + 8
 #define IRQ_CASCADE  0x02
 
-/* 
+/*
  * Reference: PIC8259A datasheet p. 11
  * IC4  low = no ICW4,      high = expect ICW4
  * SNGL low = cascade mode, high = single mode
