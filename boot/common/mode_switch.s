@@ -302,30 +302,37 @@ rmode_trampoline:
 	; allows us to pass arguments as if calling
 	; from real mode. The return address will be
 	; pushed later.
-	pop   dword [resume]
+	pushfd
+	cli
+	cld
+	pop    dword [saved_eflags]
+	pop    dword [resume]
 	; Save machine state, exit protected mode
-	call  save_state
-	call  pmode_exit
+	call   save_state
+	call   pmode_exit
 bits 16
-	call  pic_rmode
+	call   pic_rmode
 	; Pop 32-bit callee address and push as 16-bit
 	; address, then call it with a tail call.
-	pop   dword [callee]
+	pop    dword [callee]
 	; Push return pointer, ret into 16-bit callee
-	push  rmode_return
-	push  word [callee]
+	push   rmode_return
+	push   word [callee]
+	sti
 	ret
 rmode_return:
 	; Restore machine state, enter protected mode
-	call  pmode_init
+	call   pmode_init
 bits 32
-	call  pic_restore
-	call  restore_state
+	call   pic_restore
+	call   restore_state
 	; Allocate space for 32-bit return pointer.
-	sub   esp, 4
+	sub    esp, 4
 	; Push return path
-	push  dword [resume]
-	ret
+	push   dword [saved_eflags]
+	push   dword 0x0008
+	push   dword [resume]
+	iretd
 
 section .stage15.data
 
@@ -365,11 +372,12 @@ imr0_shadow  db 0x00
 imr1_shadow  db 0x00
 
 section .stage15.bss bss alloc noexec nobits write
-saved_ebx:	resd 1
-saved_esi:	resd 1
-saved_edi:	resd 1
-saved_ebp:	resd 1
-return:		resd 1
-stack_seg:	resd 1
-resume:		resd 1
-callee:		resd 1
+saved_eflags: resd 1
+saved_ebx:    resd 1
+saved_esi:    resd 1
+saved_edi:    resd 1
+saved_ebp:    resd 1
+return:       resd 1
+stack_seg:    resd 1
+resume:       resd 1
+callee:       resd 1
