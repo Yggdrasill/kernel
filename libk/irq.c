@@ -28,32 +28,51 @@
  * want to understand what is going on in this file, you should read the data
  * sheet. If this file were to be extensively documented, it would just be
  * another data sheet. I will, however, provide references to pages.
- *
  */
 
-/* Reference: PIC 8259A data sheet pages 10-12 */
+extern struct pic_state_table pic_shadow_table;
+
+void irq_shadow_write(const struct pic_state_table *state)
+{
+	memcpy(&pic_shadow_table, (void *)state, sizeof(*state));
+	return;
+}
 
 void irq_init(void)
 {
-	/* ICW1, tell the PIC 8259s that ICW4 is needed */
+	const struct pic_state_table state = {
+		.pic0_icw1 = ICW1_INIT | ICW1_IC4,
+		.pic1_icw1 = ICW1_INIT | ICW1_IC4,
+		.pic0_icw2 = IRQ0_BASE_PM,
+		.pic1_icw2 = IRQ1_BASE_PM,
+		.pic0_icw3 = IRQ_CASCADE << 1,
+		.pic1_icw3 = IRQ_CASCADE,
+		.pic0_icw4 = ICW4_MODE,
+		.pic1_icw4 = ICW4_MODE,
+	};
 
-	outb(0x20, 0x11);
-	outb(0xA0, 0x11);
+	/* ICW1 */
+	outb(PIC0_CMD, state.pic0_icw1);
+	outb(PIC1_CMD, state.pic1_icw1);
 
-	/* ICW2, tell the PIC 8259s to remap IRQs */
-
-	outb(0x21, 0x20);
-	outb(0xA1, 0x28);
+	/*
+	 * ICW2 - remap IRQs
+	 * In protected mode the interval [0x00, 0x20) is reserved
+	 */
+	outb(PIC0_DATA, state.pic0_icw2);
+	outb(PIC1_DATA, state.pic1_icw2);
 
 	/* ICW3, tell the PIC 8259 chips to use master/slave mode */
 
-	outb(0x21, 0x04);
-	outb(0xA1, 0x02);
+	outb(PIC0_DATA, state.pic0_icw3);
+	outb(PIC1_DATA, state.pic1_icw3);
 
 	/* ICW4, set to 8086 mode */
 
-	outb(0x21, 0x01);
-	outb(0xA1, 0x01);
+	outb(PIC0_DATA, state.pic0_icw4);
+	outb(PIC1_DATA, state.pic1_icw4);
+
+	irq_shadow_write(&state);
 
 	return;
 }
@@ -63,7 +82,7 @@ void irq_init(void)
 
 uint16_t irq_read_reg(unsigned char reg)
 {
-	if(reg != 0x03 || reg != 0x02) return 0x10;
+	if(reg != 0x03 && reg != 0x02) return 0x10;
 
 	outb(0x20, 0x08 | reg);
 	outb(0xA0, 0x08 | reg);

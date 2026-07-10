@@ -83,6 +83,9 @@ SECTIONS {
 	.stage15 (NOLOAD) : {
 		__STAGE15_LOAD_ADDR = .;
 		*(.stage15)
+		*(.stage15.data)
+		*(.stage15.rodata)
+		*(.stage15.bss)
 	} > mem1
 
 	. = ST2_ADDR;

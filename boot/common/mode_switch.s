@@ -22,6 +22,10 @@ global pmode_init
 global pmode_exit
 global rmode_trampoline
 
+global pic_rmode
+
+global pic_shadow_table
+
 section .stage15 alloc exec progbits nowrite
 
 mask_ints:
@@ -211,23 +215,85 @@ rmode:
 
 	ret
 
+pic_rmode:
+	; ICW1
+	push  ax
+	mov   al, 0x11
+	out   0x20, al
+	out   0xA0, al
+	; Default IRQ IVR mappings
+	mov   al, 0x08
+	out   0x21, al
+	mov   al, 0x70
+	out   0xA1, al
+	; IRQ2 cascade mapping
+	mov   al, 0x04
+	out   0x21, al
+	mov   al, 0x02
+	out   0xA1, al
+	; 8086 mode
+	mov   al, 0x01
+	out   0x21, al
+	out   0xA1, al
+	mov   al, 0x00
+	out   0x21, al
+	out   0xA1, al
+	pop   ax
+	ret
+
 bits 32
+pic_restore:
+	push  ax
+	mov   al, [pic0_shadow1]
+	out   0x20, al
+	mov   al, [pic1_shadow1]
+	out   0xA0, al
+	mov   al, [pic0_shadow2]
+	out   0x21, al
+	mov   al, [pic1_shadow2]
+	out   0xA1, al
+	mov   al, [pic0_shadow3]
+	out   0x21, al
+	mov   al, [pic1_shadow3]
+	out   0xA1, al
+	mov   al, [pic0_shadow4]
+	out   0x21, al
+	mov   al, [pic1_shadow4]
+	out   0xA1, al
+	mov   al, 0xFF
+	out   0x21, al
+	out   0xA1, al
+	pop   ax
+	ret
+
 save_state:
+	push  eax
+	in    al, 0x21
+	mov   [imr0_shadow], al
+	in    al, 0xA1
+	mov   [imr1_shadow], al
 	mov   [saved_ebx], ebx
 	mov   [saved_esi], esi
 	mov   [saved_edi], edi
 	mov   [saved_ebp], ebp
 	sgdt  [gdt_info]
 	sidt  [idt_info]
+	pop   eax
 	ret
 
 restore_state:
+	push  eax
 	lgdt  [gdt_info]
 	lidt  [idt_info]
 	mov   ebp, [saved_ebp]
 	mov   edi, [saved_edi]
 	mov   esi, [saved_esi]
 	mov   ebx, [saved_ebx]
+	mov   al, [imr1_shadow]
+	out   0xA1, al
+	mov   al, [imr0_shadow]
+	out   0x21, al
+	pop   eax
 	ret
 	
 rmode_trampoline:
@@ -241,6 +307,7 @@ rmode_trampoline:
 	call  save_state
 	call  pmode_exit
 bits 16
+	call  pic_rmode
 	; Pop 32-bit callee address and push as 16-bit
 	; address, then call it with a tail call.
 	pop   dword [callee]
@@ -252,6 +319,7 @@ rmode_return:
 	; Restore machine state, enter protected mode
 	call  pmode_init
 bits 32
+	call  pic_restore
 	call  restore_state
 	; Allocate space for 32-bit return pointer.
 	sub   esp, 4
@@ -259,7 +327,7 @@ bits 32
 	push  dword [resume]
 	ret
 
-section .data
+section .stage15.data
 
 gdt_info:
 gdt_size    dw  gdt_len - 1
@@ -277,14 +345,26 @@ idt_rmode:
 ; Real mode interrupt vectors are 4 bytes in size:
 ;   256 entries * 4 bytes - 1 = 0x03FF
 ; IVT exists at 0x0000
-idt_rsize   dw 0x03FF
-idt_rptr    dd 0x0000
+idt_rsize    dw 0x03FF
+idt_rptr     dd 0x0000
 
 idt_info:
-idt_size    dw 0
-idt_ptr     dd 0
+idt_size     dw 0
+idt_ptr      dd 0
 
-section .bss
+pic_shadow_table:
+pic0_shadow1 db 0x11
+pic1_shadow1 db 0x11
+pic0_shadow2 db 0x08
+pic1_shadow2 db 0x70
+pic0_shadow3 db 0x04
+pic1_shadow3 db 0x02
+pic0_shadow4 db 0x01
+pic1_shadow4 db 0x01
+imr0_shadow  db 0x00
+imr1_shadow  db 0x00
+
+section .stage15.bss bss alloc noexec nobits write
 saved_ebx:	resd 1
 saved_esi:	resd 1
 saved_edi:	resd 1

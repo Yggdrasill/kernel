@@ -27,6 +27,7 @@ extern read
 extern a20_init
 extern mmap
 extern pmode_init
+extern pic_rmode
 extern rmode_trampoline
 
 extern drive
@@ -130,6 +131,8 @@ stage15:
 	push  dword 0x02
 	popfd
 
+	; Set known PIC 8259A configuration
+	call  pic_rmode
 	call  a20_init
 	call  pmode_init
 bits 32
@@ -318,7 +321,7 @@ phlp_exit:
 	pop         ebp
 	ret
 
-section     .rodata
+section     .stage15.rodata
 init_str    db "._init"
 init_slen   equ $ - init_str
 
@@ -329,7 +332,7 @@ elf_len     equ $ - elf_err
 init_err    db "E: ._init missing!",0x0D,0x0A
 init_elen   equ $ - init_err
 
-section     .data
+section     .stage15.data
 mmap_seg    dw 0
 mmap_off    dw 0
 

@@ -23,7 +23,6 @@
 #include "io.h"
 #include "string.h"
 
-// clang-format off
 char *exceptions[] = {
     "Division by zero",
     "Debug interrupt",
@@ -37,7 +36,7 @@ char *exceptions[] = {
     "Invalid TSS",
     "Segment not present",
     "Stack-segment fault",
-    "General protection fault"
+    "General protection fault",
 };
 
 char *irq_interrupts[] = {
@@ -56,9 +55,8 @@ char *irq_interrupts[] = {
     "Auxiliary",
     "FPU",
     "Hard disk",
-    "IRQ 15"
+    "IRQ 15",
 };
-// clang-format on
 
 /* This is disgusting, I know, but also necessary */
 
