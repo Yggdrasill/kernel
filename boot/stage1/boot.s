@@ -26,8 +26,10 @@ extern reset
 extern read
 extern a20_init
 extern mmap
-extern pmode_init
+extern save_ints
 extern pic_rmode
+extern mask_ints
+extern pmode_init
 extern rmode_trampoline
 
 extern drive
@@ -131,9 +133,15 @@ stage15:
 	push  dword 0x02
 	popfd
 
-	; Set known PIC 8259A configuration
+	; Set known PIC 8259A configuration,
+	; store the BIOS interrupt mask, and
+	; then mask all ints for transition
+	; to protected mode
+
 	cli
+	call  save_ints
 	call  pic_rmode
+	call  mask_ints
 	call  a20_init
 	call  pmode_init
 bits 32

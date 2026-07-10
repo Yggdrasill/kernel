@@ -17,6 +17,7 @@
 
 bits 16
 
+global save_ints
 global mask_ints
 global pmode_init
 global pmode_exit
@@ -28,17 +29,31 @@ global pic_shadow_table
 
 section .stage15 alloc exec progbits nowrite
 
-mask_ints:
+save_ints:
 	push  bp
 	mov   bp, sp
 	push  ax
+
+	in    al, 0x21
+	mov   [bios_imr0], al
+	in    al, 0xA1
+	mov   [bios_imr1], al
+
+	pop   ax
+	pop   bp
+	ret
+
+mask_ints:
+	push  ebp
+	mov   ebp, esp
+	push  eax
 
 	mov   al, 0xFF
 	out   0x21, al
 	out   0xA1, al
 
-	pop   ax
-	pop   bp
+	pop   eax
+	pop   ebp
 	ret
 
 gdt_install:
@@ -77,8 +92,6 @@ pmode_init:
 	mov   bp, sp
 	push  eax
 
-	call  mask_ints
-
 	call  idt_install
 	call  gdt_install
 
@@ -98,10 +111,14 @@ pmode_init:
 	or    eax, 1
 	mov   cr0, eax
 
+	; Initialise code segment to use the GDT.
+	; After this jmp we are in 32-bit pmode.
+
+	jmp   0x0008:pmode32
+bits 32
+pmode32:
+
 	; Initialize segment registers to use the GDT.
-	; There should be no more 16 bit or real mode
-	; code executed after this point, except for
-	; these simple mov instructions and a jump.
 
 	mov   ax, 0x0010
 	mov   ss, ax
@@ -109,13 +126,6 @@ pmode_init:
 	mov   ds, ax
 	mov   gs, ax
 	mov   fs, ax
-
-	; Initialise code segment to use the GDT.
-	; After this jmp we are in 32-bit pmode.
-
-	jmp   0x0008:pmode32
-bits 32
-pmode32:
 
 	pop   eax
 	pop   ebp
@@ -235,8 +245,9 @@ pic_rmode:
 	mov   al, 0x01
 	out   0x21, al
 	out   0xA1, al
-	mov   al, 0x00
+	mov   al, [bios_imr0]
 	out   0x21, al
+	mov   al, [bios_imr1]
 	out   0xA1, al
 	pop   ax
 	ret
@@ -309,6 +320,7 @@ rmode_trampoline:
 	pop    dword [resume]
 	; Save machine state, exit protected mode
 	call   save_state
+	call   mask_ints
 	call   pmode_exit
 bits 16
 	call   pic_rmode
@@ -323,6 +335,7 @@ bits 16
 rmode_return:
 	; Restore machine state, enter protected mode
 	cli
+	call   mask_ints
 	call   pmode_init
 bits 32
 	call   pic_restore
@@ -371,6 +384,8 @@ pic0_shadow4 db 0x01
 pic1_shadow4 db 0x01
 imr0_shadow  db 0x00
 imr1_shadow  db 0x00
+bios_imr0    db 0x00
+bios_imr1    db 0x00
 
 section .stage15.bss bss alloc noexec nobits write
 saved_eflags: resd 1
