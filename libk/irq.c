@@ -30,7 +30,10 @@
  * another data sheet. I will, however, provide references to pages.
  */
 
+/* PIC initialisation is global machine state anyway. */
+
 extern struct pic_state_table pic_shadow_table;
+struct pic_state_table pic_state;
 
 void irq_shadow_write(const struct pic_state_table *state)
 {
@@ -72,6 +75,8 @@ void irq_init(void)
 	outb(PIC0_DATA, state.pic0_icw4);
 	outb(PIC1_DATA, state.pic1_icw4);
 
+	/* Write initialised PIC state to tables. */
+	pic_state = state;
 	irq_shadow_write(&state);
 
 	return;
