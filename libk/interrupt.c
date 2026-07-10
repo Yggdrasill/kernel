@@ -142,6 +142,7 @@ void ints_flag_clear(void)
 
 	return;
 }
+
 void ints_flag_set(void)
 {
 	__asm__ volatile("sti;");
