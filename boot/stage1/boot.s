@@ -132,6 +132,7 @@ stage15:
 	popfd
 
 	; Set known PIC 8259A configuration
+	cli
 	call  pic_rmode
 	call  a20_init
 	call  pmode_init
@@ -190,12 +191,10 @@ read_elf:
 	cmp   eax, 0x464C457F
 	je    header_ok
 
-	cli
 	push  dword elf_len
 	push  dword elf_err
 	push  __bios_error
 	call  rmode_trampoline
-	sti
 
 header_ok:
 	sub         esp,  0x10
@@ -287,12 +286,10 @@ shr_cont:
 	cmp         byte [init_found], byte 0x1
 	je          ph_loop
 
-	cli
 	push        dword init_elen
 	push        dword init_err
 	push        __bios_error
 	call        rmode_trampoline
-	sti
 
 ph_loop:
 	cmp         ebx,  0

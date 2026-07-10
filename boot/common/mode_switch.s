@@ -322,6 +322,7 @@ bits 16
 	ret
 rmode_return:
 	; Restore machine state, enter protected mode
+	cli
 	call   pmode_init
 bits 32
 	call   pic_restore

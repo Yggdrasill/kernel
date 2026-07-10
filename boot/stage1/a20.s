@@ -89,6 +89,7 @@ kbd8042_wait_data:
 
 kbd8042_a20:
 	push  ax
+	pushfd
 	cli
 	call  kbd8042_wait_cmd
 	mov   al, 0xAD
@@ -117,6 +118,7 @@ kbd8042_a20:
 
 	call  kbd8042_wait_cmd
 	sti
+	popfd
 	pop   ax
 	ret
 
