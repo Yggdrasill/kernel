@@ -18,44 +18,44 @@ ELF_ADDR  = 0x10000;
 ELF_SIZE  = 30K;
 
 MEMORY {
-    entry(rw)   :   org = ENTR_ADDR,  len = ENTR_SIZE
-    boot(rwx)   :   org = BOOT_ADDR,  len = BOOT_SIZE
-    mbr(rw)     :   org = MBR_ADDR,   len = MBR_SIZE
-    mem1(rwx)   :   org = MEM1_ADDR,  len = MEM1_SIZE
-    stage2(rwx) :   org = ST2_ADDR,   len = ST2_SIZE
-    elf(rw)     :   org = ELF_ADDR,   len = ELF_SIZE
+	entry(rw)   :   org = ENTR_ADDR,  len = ENTR_SIZE
+	boot(rwx)   :   org = BOOT_ADDR,  len = BOOT_SIZE
+	mbr(rw)	 :   org = MBR_ADDR,   len = MBR_SIZE
+	mem1(rwx)   :   org = MEM1_ADDR,  len = MEM1_SIZE
+	stage2(rwx) :   org = ST2_ADDR,   len = ST2_SIZE
+	elf(rw)	 :   org = ELF_ADDR,   len = ELF_SIZE
 }
 
 SECTIONS {
-    . = BIOS_ADDR;
-    __bios_start = .;
-    . = BIOS_SIZE;
-    __bios_end = .;
+	. = BIOS_ADDR;
+	__bios_start = .;
+	. = BIOS_SIZE;
+	__bios_end = .;
 
-    . = ENTR_ADDR;
-    __BOOT_ENTRY = .;
-    . = BOOT_ADDR;
-    __BOOT_ADDR = .;
-    __bootloader_start = .;
-    .boot : {
-        *(.boot) 
-        *(.boot.util)
-        *(.boot.rodata)
-    } > boot
-    PROVIDE(__BOOT_SIZE = BOOT_ADDR - ENTR_ADDR);
-    . = MBR_ADDR;
-    .mbr : { *(.mbr) } > mbr
+	. = ENTR_ADDR;
+	__BOOT_ENTRY = .;
+	. = BOOT_ADDR;
+	__BOOT_ADDR = .;
+	__bootloader_start = .;
+	.boot : {
+		*(.boot)
+		*(.boot.util)
+		*(.boot.rodata)
+	} > boot
+	PROVIDE(__BOOT_SIZE = BOOT_ADDR - ENTR_ADDR);
+	. = MBR_ADDR;
+	.mbr : { *(.mbr) } > mbr
 
-    . = MEM1_ADDR;
-    .stage15 : { 
-        __STAGE15_LOAD_ADDR = ABSOLUTE(.);
+	. = MEM1_ADDR;
+	.stage15 : {
+		__STAGE15_LOAD_ADDR = ABSOLUTE(.);
 		__STAGE15_LOAD_SEG = ABSOLUTE((__STAGE15_LOAD_ADDR >> 4) & 0xF000);
 		__STAGE15_LOAD_OFF = ABSOLUTE(__STAGE15_LOAD_ADDR & 0xFFFF);
-        *(.stage15) 
-        *(.data)
-        *(.rodata)
-    } > mem1
-    . = ST2_ADDR;
-    .stage2.bss (NOLOAD) : { *(.stage2.bss) } > stage2
-    .elf (NOLOAD) : { *(.elf) } > elf
+		*(.stage15)
+		*(.data)
+		*(.rodata)
+	} > mem1
+	. = ST2_ADDR;
+	.stage2.bss (NOLOAD) : { *(.stage2.bss) } > stage2
+	.elf (NOLOAD) : { *(.elf) } > elf
 }
