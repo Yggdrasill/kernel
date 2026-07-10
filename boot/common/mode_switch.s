@@ -33,9 +33,9 @@ mask_ints:
 	mov   bp, sp
 	push  ax
 
-	mov   ax, 0xFF
-	out   0x21, ax
-	out   0xA1, ax
+	mov   al, 0xFF
+	out   0x21, al
+	out   0xA1, al
 
 	pop   ax
 	pop   bp
