@@ -45,66 +45,39 @@ save_ints:
 ; Instructions must mean the same thing
 ; in both 16-bit and 32-bit execution!
 mask_ints:
-	push  eax
+	push  ax
 
 	mov   al, 0xFF
 	out   0x21, al
 	out   0xA1, al
 
-	pop   eax
+	pop   ax
 	ret
 
 disable_nmi:
-	push  eax
+	push  ax
 
 	in    al, 0x70
 	or    al, 0x80
 	out   0x70, al
 
-	pop   eax
+	pop   ax
 	ret
 
 enable_nmi:
-	push  eax
+	push  ax
 
 	in    al, 0x70
 	and   al, 0x7F
 	out   0x70, al
 
-	pop   eax
+	pop   ax
 	ret
 ; End mixed-mode functions
 
-gdt_install:
-	push  bp
-	mov   bp, sp
-	push  di
-	push  es
-	push  word 0x00
-	pop   es
-	mov   di, gdt_info
-	lgdt  [es:di]
-	pop   es
-	pop   di
-	pop   bp
-	ret
-
-idt_install:
-	push  bp
-	mov   bp, sp
-	push  di
-	push  es
-	push  word 0x00
-	pop   es
-	mov   di, idt_info
-	lidt  [es:di]
-	pop   es
-	pop   di
-	pop   bp
-	ret
-
 pmode_init:
-	; Reserve space for return pointer.
+	; Fix stack high bytes and reserve
+	; space for return pointer.
 	and   ebp, 0xFFFF
 	and   esp, 0xFFFF
 	sub   esp, 2
@@ -112,9 +85,15 @@ pmode_init:
 	push  ebp
 	mov   bp, sp
 	push  eax
+	; BIOS anti-clobber
+	xor   ax, ax
+	mov   es, ax
+	mov   ds, ax
 
-	call  idt_install
-	call  gdt_install
+	mov   di, gdt_info
+	lgdt  [es:di]
+	mov   di, idt_info
+	lidt  [es:di]
 
 	; Fix the stack pointers by converting a
 	; linear address.
@@ -419,12 +398,13 @@ pic0_shadow3 db 0x04
 pic1_shadow3 db 0x02
 pic0_shadow4 db 0x01
 pic1_shadow4 db 0x01
-imr0_shadow  db 0x00
-imr1_shadow  db 0x00
-bios_imr0    db 0x00
-bios_imr1    db 0x00
 
 section .stage15.bss bss alloc noexec nobits write
+imr0_shadow:  resb 1
+imr1_shadow:  resb 1
+bios_imr0:    resb 1
+bios_imr1:    resb 1
+
 pmode_context:
 saved_eflags: resd 1
 saved_ebx:    resd 1
