@@ -82,6 +82,11 @@ void irq_init(void)
 	return;
 }
 
+uint16_t irq_read_imr(void)
+{
+	return (inb(0xA1) << 8) | inb(0x21);
+}
+
 /* Reference: PIC 8259A data sheet p. 13 and p. 17 */
 /* Returns a value >0x0F if the read is invalid */
 
@@ -92,7 +97,7 @@ uint16_t irq_read_reg(unsigned char reg)
 	outb(0x20, 0x08 | reg);
 	outb(0xA0, 0x08 | reg);
 
-	return (inb(0xA1) << 8) | inb(0x21);
+	return (inb(0xA0) << 8) | inb(0x20);
 }
 
 void irq_mask(unsigned char irq)
