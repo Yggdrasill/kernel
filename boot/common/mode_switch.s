@@ -232,20 +232,24 @@ pic_rmode:
 	mov   al, 0x11
 	out   0x20, al
 	out   0xA0, al
+	out   0x80, al
 	; Default IRQ IVR mappings
 	mov   al, 0x08
 	out   0x21, al
 	mov   al, 0x70
 	out   0xA1, al
+	out   0x80, al
 	; IRQ2 cascade mapping
 	mov   al, 0x04
 	out   0x21, al
 	mov   al, 0x02
 	out   0xA1, al
+	out   0x80, al
 	; 8086 mode
 	mov   al, 0x01
 	out   0x21, al
 	out   0xA1, al
+	out   0x80, al
 	mov   al, [bios_imr0]
 	out   0x21, al
 	mov   al, [bios_imr1]
@@ -260,21 +264,23 @@ pic_restore:
 	out   0x20, al
 	mov   al, [pic1_shadow1]
 	out   0xA0, al
+	out   0x80, al
 	mov   al, [pic0_shadow2]
 	out   0x21, al
 	mov   al, [pic1_shadow2]
 	out   0xA1, al
+	out   0x80, al
 	mov   al, [pic0_shadow3]
 	out   0x21, al
 	mov   al, [pic1_shadow3]
 	out   0xA1, al
+	out   0x80, al
 	mov   al, [pic0_shadow4]
 	out   0x21, al
 	mov   al, [pic1_shadow4]
 	out   0xA1, al
-	mov   al, 0xFF
-	out   0x21, al
-	out   0xA1, al
+	out   0x80, al
+	call  mask_ints
 	pop   ax
 	ret
 
