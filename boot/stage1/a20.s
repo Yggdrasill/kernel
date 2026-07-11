@@ -27,14 +27,6 @@ a20_error:
 	call  __bios_error
 
 a20_check:
-	push  bp
-	mov   bp, sp
-	push  ax
-	push  di
-	push  si
-	push  es
-	push  ds
-
 	xor   ax, ax
 	mov   ds, ax
 	not   ax
@@ -56,23 +48,15 @@ a20_check:
 	pop   ax
 	mov   word [es:di], ax
 
-	pop   ds
-	pop   es
 	je    a20_end
 
 	mov   [has_a20], byte 0x01
 a20_end:
-	pop   si
-	pop   di
-	pop   ax
-	pop   bp
 	ret
 
 bios_a20:
-	push  ax
 	mov   ax, 0x2401
 	int   0x15
-	pop   ax
 	ret
 
 kbd8042_wait_cmd:
@@ -88,7 +72,6 @@ kbd8042_wait_data:
 	ret
 
 kbd8042_a20:
-	push  ax
 	pushfd
 	cli
 	call  kbd8042_wait_cmd
@@ -119,26 +102,19 @@ kbd8042_a20:
 	call  kbd8042_wait_cmd
 	sti
 	popfd
-	pop   ax
 	ret
 
 a20_ee:
-	push  ax
 	in    al, 0xEE
-	pop   ax
 	ret
 
 a20_fast:
-	push  ax
 	in    al, 0x92
 	or    al, 2
 	out   0x92, al
-	pop   ax
 	ret
 
 a20_init:
-	push  bp
-	mov   bp, sp
 	call  a20_check
 	cmp   byte [has_a20], byte 0x01
 	je    done_a20
@@ -158,10 +134,14 @@ a20_init:
 	cmp   byte [has_a20], byte 0x01
 	je    done_a20
 
+	call  a20_fast
+	call  a20_check
+	cmp   byte [has_a20], byte 0x01
+	je    done_a20
+
 	cmp   byte [has_a20], byte 0x01
 	jne   a20_error
 done_a20:
-	pop   bp
 	ret
 
 section .stage15.data
