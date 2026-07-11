@@ -19,6 +19,8 @@ bits 16
 
 global save_ints
 global mask_ints
+global disable_nmi
+global enable_nmi
 global pmode_init
 global rmode_trampoline
 
@@ -29,8 +31,6 @@ global pic_shadow_table
 section .stage15 alloc exec progbits nowrite
 
 save_ints:
-	push  bp
-	mov   bp, sp
 	push  ax
 
 	in    al, 0x21
@@ -39,12 +39,12 @@ save_ints:
 	mov   [bios_imr1], al
 
 	pop   ax
-	pop   bp
 	ret
 
+; Mixed-mode functions. CAREFUL!
+; Instructions must mean the same thing
+; in both 16-bit and 32-bit execution!
 mask_ints:
-	push  ebp
-	mov   ebp, esp
 	push  eax
 
 	mov   al, 0xFF
@@ -52,8 +52,28 @@ mask_ints:
 	out   0xA1, al
 
 	pop   eax
-	pop   ebp
 	ret
+
+disable_nmi:
+	push  eax
+
+	in    al, 0x70
+	or    al, 0x80
+	out   0x70, al
+
+	pop   eax
+	ret
+
+enable_nmi:
+	push  eax
+
+	in    al, 0x70
+	and   al, 0x7F
+	out   0x70, al
+
+	pop   eax
+	ret
+; End mixed-mode functions
 
 gdt_install:
 	push  bp
@@ -321,14 +341,6 @@ restore_state:
 	pop   eax
 	ret
 
-disable_nmi:
-	push  eax
-	in    al, 0x70
-	or    al, 0x80
-	out   0x70, al
-	pop   eax
-	ret
-	
 rmode_trampoline:
 	; This may look a bit unconventional, but 
 	; popping the return address from the stack

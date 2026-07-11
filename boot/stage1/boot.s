@@ -29,6 +29,8 @@ extern mmap
 extern save_ints
 extern pic_rmode
 extern mask_ints
+extern disable_nmi
+extern enable_nmi
 extern pmode_init
 extern rmode_trampoline
 
@@ -142,9 +144,11 @@ stage15:
 	call  save_ints
 	call  pic_rmode
 	call  mask_ints
+	call  disable_nmi
 	call  a20_init
 	call  pmode_init
 bits 32
+	call  enable_nmi
 	; Start a fresh stack frame for 32-bit
 	; protected mode. Stack is aligned on
 	; 16-byte boundary to make various 
