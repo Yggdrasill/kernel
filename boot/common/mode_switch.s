@@ -86,6 +86,8 @@ idt_install:
 
 pmode_init:
 	; Reserve space for return pointer.
+	and   ebp, 0xFFFF
+	and   esp, 0xFFFF
 	sub   esp, 2
 
 	push  ebp
@@ -188,9 +190,10 @@ rmode:
 	mov   gs, ax
 	mov   fs, ax
 
-	; This calculates a valid stack segment for
-	; any value below 1MiB. That means the stack
-	; can live within any part of low memory.
+	; This calculates a valid stack segment below
+	; 1MiB, but ebp stack base CANNOT BE 64K ALIGNED.
+	; With this precondition in mind, the stack can
+	; otherwise live within any part of low memory.
 	; That is the memory that real mode is limited
 	; to anyway, so it is of course otherwise
 	; impossible to use the same stack.
