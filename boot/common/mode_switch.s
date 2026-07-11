@@ -20,7 +20,6 @@ bits 16
 global save_ints
 global mask_ints
 global pmode_init
-global pmode_exit
 global rmode_trampoline
 
 global pic_rmode
@@ -282,6 +281,8 @@ pic_restore:
 
 save_state:
 	push  eax
+	in    al, 0x70
+	mov   [saved_p70h], al
 	in    al, 0x21
 	mov   [imr0_shadow], al
 	in    al, 0xA1
@@ -290,6 +291,10 @@ save_state:
 	mov   [saved_esi], esi
 	mov   [saved_edi], edi
 	mov   [saved_ebp], ebp
+	mov   [saved_es], es
+	mov   [saved_ds], ds
+	mov   [saved_fs], fs
+	mov   [saved_gs], gs
 	sgdt  [gdt_info]
 	sidt  [idt_info]
 	pop   eax
@@ -299,6 +304,10 @@ restore_state:
 	push  eax
 	lgdt  [gdt_info]
 	lidt  [idt_info]
+	mov   es, [saved_es]
+	mov   ds, [saved_ds]
+	mov   fs, [saved_fs]
+	mov   gs, [saved_gs]
 	mov   ebp, [saved_ebp]
 	mov   edi, [saved_edi]
 	mov   esi, [saved_esi]
@@ -307,6 +316,16 @@ restore_state:
 	out   0xA1, al
 	mov   al, [imr0_shadow]
 	out   0x21, al
+	mov   al, [saved_p70h]
+	out   0x70, al
+	pop   eax
+	ret
+
+disable_nmi:
+	push  eax
+	in    al, 0x70
+	or    al, 0x80
+	out   0x70, al
 	pop   eax
 	ret
 	
@@ -317,13 +336,16 @@ rmode_trampoline:
 	; from real mode. The return address will be
 	; pushed later.
 	pushfd
+	push   cs
 	cli
 	cld
+	pop    dword [saved_cs]
 	pop    dword [saved_eflags]
 	pop    dword [resume]
 	; Save machine state, exit protected mode
 	call   save_state
 	call   mask_ints
+	call   disable_nmi
 	call   pmode_exit
 bits 16
 	call   pic_rmode
@@ -347,7 +369,7 @@ bits 32
 	sub    esp, 4
 	; Push return path
 	push   dword [saved_eflags]
-	push   dword 0x0008
+	push   dword [saved_cs]
 	push   dword [resume]
 	iretd
 
@@ -391,12 +413,19 @@ bios_imr0    db 0x00
 bios_imr1    db 0x00
 
 section .stage15.bss bss alloc noexec nobits write
+pmode_context:
 saved_eflags: resd 1
 saved_ebx:    resd 1
 saved_esi:    resd 1
 saved_edi:    resd 1
 saved_ebp:    resd 1
+saved_cs:     resd 1
 return:       resd 1
 stack_seg:    resd 1
 resume:       resd 1
 callee:       resd 1
+saved_es:     resw 1
+saved_ds:     resw 1
+saved_fs:     resw 1
+saved_gs:     resw 1
+saved_p70h:   resb 1
