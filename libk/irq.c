@@ -107,7 +107,7 @@ void irq_mask(unsigned char irq)
 
 	if(irq > 0x0F) return;
 
-	port = irq <= 0x08 ? 0x21 : 0xA1;
+	port = irq < 0x08 ? 0x21 : 0xA1;
 	irq  = irq < 0x08 ? irq : irq - 0x08;
 
 	mask = inb(port);
@@ -124,7 +124,7 @@ void irq_unmask(unsigned char irq)
 
 	if(irq > 0x0F) return;
 
-	port = irq <= 8 ? 0x21 : 0xA1;
+	port = irq < 8 ? 0x21 : 0xA1;
 	irq  = irq < 8 ? irq : irq - 8;
 
 	mask = inb(port);
