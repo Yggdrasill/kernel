@@ -50,6 +50,7 @@ extern void exception_0x05(void);
 extern void exception_0x06(void);
 extern void exception_0x07(void);
 extern void exception_0x08(void);
+extern void exception_0x09(void);
 extern void exception_0x0A(void);
 extern void exception_0x0B(void);
 extern void exception_0x0C(void);

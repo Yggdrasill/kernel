@@ -33,10 +33,12 @@ char *exceptions[] = {
     "Invalid opcode",
     "Device not available",
     "Double fault",
+    "Coprocessor segment overrun",
     "Invalid TSS",
     "Segment not present",
-    "Stack-segment fault",
+    "Stack segment fault",
     "General protection fault",
+    "Page fault",
 };
 
 char *irq_interrupts[] = {
@@ -71,11 +73,12 @@ void exception_idt_init(struct idt_entry *entries)
 	idt_set_entry(entries++, &exception_0x06, 0x08, 0x8E);
 	idt_set_entry(entries++, &exception_0x07, 0x08, 0x8E);
 	idt_set_entry(entries++, &exception_0x08, 0x08, 0x8E);
-	idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x09, 0x08, 0x8E);
 	idt_set_entry(entries++, &exception_0x0A, 0x08, 0x8E);
 	idt_set_entry(entries++, &exception_0x0B, 0x08, 0x8E);
 	idt_set_entry(entries++, &exception_0x0C, 0x08, 0x8E);
 	idt_set_entry(entries++, &exception_0x0D, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
 
 	/* while(entries < 0x20) */
 
@@ -126,10 +129,9 @@ void irq_handler(struct interrupt_info *info)
 	case IRQ_KEYBOARD: ch = inb(0x60);
 	}
 
+	/* OCW2 EOI */
+	if(info->intno >= 0x08) outb(0xA0, 0x20);
 	outb(0x20, 0x20);
-	if(info->intno >= 0x08) {
-		outb(0xA0, 0x20);
-	}
 
 	puts(irq_interrupts[info->intno]);
 

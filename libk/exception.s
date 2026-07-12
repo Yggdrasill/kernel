@@ -30,6 +30,7 @@ global exception_0x05
 global exception_0x06
 global exception_0x07
 global exception_0x08
+global exception_0x09
 global exception_0x0A
 global exception_0x0B
 global exception_0x0C
@@ -123,6 +124,11 @@ exception_0x07:
 
 exception_0x08:
     push  byte 0x08
+
+    jmp   exception_wrapper
+
+exception_0x09:
+    push  byte 0x09
 
     jmp   exception_wrapper
 
