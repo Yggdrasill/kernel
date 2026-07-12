@@ -20,7 +20,6 @@ bits 16
 global store_bios_imr
 global mask_ints
 global ms_nmi_disable
-global ms_nmi_enable
 global pmode_init
 global rmode_trampoline
 
@@ -63,6 +62,8 @@ mask_ints:
 	pop   ax
 	ret
 
+; mode_switch functions do not write
+; port 0x70 shadow state.
 ms_nmi_disable:
 	push  ax
 
