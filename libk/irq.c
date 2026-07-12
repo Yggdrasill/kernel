@@ -30,17 +30,6 @@
  * another data sheet. I will, however, provide references to pages.
  */
 
-/* PIC initialisation is global machine state anyway. */
-
-extern struct pic_state_table pic_shadow_table;
-struct pic_state_table        pic_state;
-
-void irq_shadow_write(const struct pic_state_table *state)
-{
-	memcpy(&pic_shadow_table, (void *)state, sizeof(*state));
-	return;
-}
-
 /*
  * This may seem strange, but there is a fortunate reality to the interrupt
  * vectors. IBM published a document in April 1987 titled:
@@ -106,8 +95,6 @@ void irq_init(void)
 	outb(PIC1_DATA, state.pic1_icw4);
 
 	/* Write initialised PIC state to tables. */
-	pic_state = state;
-	irq_shadow_write(&state);
 	irq_ivt_alias(IRQ0_BASE_PM, IRQ1_BASE_PM);
 
 	return;

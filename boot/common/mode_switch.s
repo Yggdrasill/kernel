@@ -351,15 +351,6 @@ idt_info:
 idt_size     dw 0
 idt_ptr      dd 0
 
-pic_shadow_table:
-pic0_shadow1 db 0x11
-pic1_shadow1 db 0x11
-pic0_shadow2 db 0x08
-pic1_shadow2 db 0x70
-pic0_shadow3 db 0x04
-pic1_shadow3 db 0x02
-pic0_shadow4 db 0x01
-pic1_shadow4 db 0x01
 
 section .stage15.bss bss alloc noexec nobits write
 imr0_shadow:  resb 1
