@@ -248,6 +248,7 @@ save_state:
 	mov   [saved_esi], esi
 	mov   [saved_edi], edi
 	mov   [saved_ebp], ebp
+	mov   [saved_ss], ss
 	mov   [saved_es], es
 	mov   [saved_ds], ds
 	mov   [saved_fs], fs
@@ -261,10 +262,11 @@ restore_state:
 	push  eax
 	lgdt  [gdt_info]
 	lidt  [idt_info]
-	mov   es, [saved_es]
-	mov   ds, [saved_ds]
-	mov   fs, [saved_fs]
 	mov   gs, [saved_gs]
+	mov   fs, [saved_fs]
+	mov   ds, [saved_ds]
+	mov   es, [saved_es]
+	mov   ss, [saved_ss]
 	mov   ebp, [saved_ebp]
 	mov   edi, [saved_edi]
 	mov   esi, [saved_esi]
@@ -376,6 +378,7 @@ return:       resd 1
 stack_seg:    resd 1
 resume:       resd 1
 callee:       resd 1
+saved_ss:     resw 1
 saved_es:     resw 1
 saved_ds:     resw 1
 saved_fs:     resw 1
