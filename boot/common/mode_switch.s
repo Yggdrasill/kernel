@@ -19,7 +19,6 @@ bits 16
 
 global store_bios_imr
 global mask_ints
-global ms_nmi_disable
 global pmode_init
 global rmode_trampoline
 

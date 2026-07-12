@@ -33,6 +33,7 @@ extern pmode_init
 extern rmode_trampoline
 
 extern drive
+extern shadow_p70
 
 extern __bios_error
 
@@ -142,7 +143,7 @@ stage15:
 	cli
 	call  store_bios_imr
 	call  mask_ints
-	call  ms_nmi_disable
+	call  init_nmi_disable
 	call  pmode_init
 bits 32
 	; Start a fresh stack frame for 32-bit
@@ -165,6 +166,12 @@ bits 32
 	; push __start
 
 	push  edx
+	ret
+
+init_nmi_disable:
+	mov   al, 0x80
+	out   0x70, al
+	mov   [shadow_p70], al
 	ret
 
 %define         PT_LOAD_TYPE      0x01
