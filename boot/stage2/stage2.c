@@ -78,12 +78,14 @@ int main(void)
 #endif
 
 	idtp = idt_init();
-	idt_install(idtp);
 	exception_idt_init(entries);
-
 	irq_init();
 	irq_idt_init(entries + 0x20);
+
+	nmi_enable();
 	irq_mask_all();
+	idt_install(idtp);
+
 	irq_unmask(IRQ_KEYBOARD);
 	ints_flag_set();
 
