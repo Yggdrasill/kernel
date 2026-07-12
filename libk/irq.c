@@ -41,6 +41,36 @@ void irq_shadow_write(const struct pic_state_table *state)
 	return;
 }
 
+/*
+ * This may seem strange, but there is a fortunate reality to the interrupt
+ * vectors. IBM published a document in April 1987 titled:
+ * PS/2 and PC BIOS Interface Technical Reference Apr87
+ *
+ * This document defines interrupt vectors [0x20, 0x40) as reserved for DOS. In
+ * practice this means that any IBM compatible machine must adhere to this, as
+ * MS-DOS made extensive use of these interrupt vectors for its own purposes.
+ *
+ * Since this is not an MS-DOS environment, and since any IBM-compatible that
+ * intends to run MS-DOS cannot use these vectors, it should in theory be fine
+ * to alias the interrupt vectors. This helps rmode_trampoline later, where the
+ * PICs do not need to be reinitialised for real mode execution.
+ */
+
+void irq_ivt_alias(uint8_t pic0_base, uint8_t pic1_base)
+{
+	uint32_t *pic0_vectors;
+	uint32_t *pic1_vectors;
+	uint32_t *pic0_shadow;
+	uint32_t *pic1_shadow;
+	pic0_vectors = (uint32_t *)(IVT_VECTOR_SIZE * IRQ0_BASE_RM);
+	pic1_vectors = (uint32_t *)(IVT_VECTOR_SIZE * IRQ1_BASE_RM);
+	pic0_shadow  = (uint32_t *)(IVT_VECTOR_SIZE * pic0_base);
+	pic1_shadow  = (uint32_t *)(IVT_VECTOR_SIZE * pic1_base);
+	memcpy(pic0_shadow, pic0_vectors, IVT_VECTOR_SIZE * NR_PIC_IRQS);
+	memcpy(pic1_shadow, pic1_vectors, IVT_VECTOR_SIZE * NR_PIC_IRQS);
+	return;
+}
+
 void irq_init(void)
 {
 	const struct pic_state_table state = {
@@ -78,6 +108,7 @@ void irq_init(void)
 	/* Write initialised PIC state to tables. */
 	pic_state = state;
 	irq_shadow_write(&state);
+	irq_ivt_alias(IRQ0_BASE_PM, IRQ1_BASE_PM);
 
 	return;
 }

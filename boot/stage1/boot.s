@@ -26,8 +26,7 @@ extern reset
 extern read
 extern a20_init
 extern mmap
-extern save_ints
-extern pic_rmode
+extern store_bios_imr
 extern mask_ints
 extern disable_nmi
 extern enable_nmi
@@ -140,12 +139,11 @@ stage15:
 	; then mask all ints for transition
 	; to protected mode
 
+	call  a20_init
 	cli
-	call  save_ints
-	call  pic_rmode
+	call  store_bios_imr
 	call  mask_ints
 	call  disable_nmi
-	call  a20_init
 	call  pmode_init
 bits 32
 	call  enable_nmi

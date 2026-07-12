@@ -17,26 +17,35 @@
 
 bits 16
 
-global save_ints
+global store_bios_imr
 global mask_ints
 global disable_nmi
 global enable_nmi
 global pmode_init
 global rmode_trampoline
 
-global pic_rmode
-
 global pic_shadow_table
 
 section .stage15 alloc exec progbits nowrite
 
-save_ints:
+store_bios_imr:
 	push  ax
 
 	in    al, 0x21
 	mov   [bios_imr0], al
 	in    al, 0xA1
 	mov   [bios_imr1], al
+
+	pop   ax
+	ret
+
+load_bios_imr:
+	push  ax
+
+	mov   al, [bios_imr0]
+	out   0x21, al
+	mov   al, [bios_imr1]
+	out   0xA1, al
 
 	pop   ax
 	ret
@@ -226,64 +235,7 @@ rmode:
 
 	ret
 
-pic_rmode:
-	; ICW1
-	push  ax
-	mov   al, 0x11
-	out   0x20, al
-	out   0xA0, al
-	out   0x80, al
-	; Default IRQ IVR mappings
-	mov   al, 0x08
-	out   0x21, al
-	mov   al, 0x70
-	out   0xA1, al
-	out   0x80, al
-	; IRQ2 cascade mapping
-	mov   al, 0x04
-	out   0x21, al
-	mov   al, 0x02
-	out   0xA1, al
-	out   0x80, al
-	; 8086 mode
-	mov   al, 0x01
-	out   0x21, al
-	out   0xA1, al
-	out   0x80, al
-	mov   al, [bios_imr0]
-	out   0x21, al
-	mov   al, [bios_imr1]
-	out   0xA1, al
-	pop   ax
-	ret
-
 bits 32
-pic_restore:
-	push  ax
-	mov   al, [pic0_shadow1]
-	out   0x20, al
-	mov   al, [pic1_shadow1]
-	out   0xA0, al
-	out   0x80, al
-	mov   al, [pic0_shadow2]
-	out   0x21, al
-	mov   al, [pic1_shadow2]
-	out   0xA1, al
-	out   0x80, al
-	mov   al, [pic0_shadow3]
-	out   0x21, al
-	mov   al, [pic1_shadow3]
-	out   0xA1, al
-	out   0x80, al
-	mov   al, [pic0_shadow4]
-	out   0x21, al
-	mov   al, [pic1_shadow4]
-	out   0xA1, al
-	out   0x80, al
-	call  mask_ints
-	pop   ax
-	ret
-
 save_state:
 	push  eax
 	in    al, 0x70
@@ -327,25 +279,28 @@ restore_state:
 	ret
 
 rmode_trampoline:
-	; This may look a bit unconventional, but 
-	; popping the return address from the stack
-	; allows us to pass arguments as if calling
-	; from real mode. The return address will be
-	; pushed later.
+	; Save flags, cs, and clear DF/IF
 	pushfd
 	push   cs
 	cli
 	cld
 	pop    dword [saved_cs]
 	pop    dword [saved_eflags]
-	pop    dword [resume]
-	; Save machine state, exit protected mode
+	; Save machine state, mask all interrupts,
+	; disable NMI, then exit protected mode
 	call   save_state
 	call   mask_ints
 	call   disable_nmi
 	call   pmode_exit
 bits 16
-	call   pic_rmode
+	call   enable_nmi
+	call   load_bios_imr
+	; This may look a bit unconventional, but 
+	; popping the return address from the stack
+	; allows us to pass arguments as if calling
+	; from real mode. The return address will be
+	; pushed later.
+	pop    dword [resume]
 	; Pop 32-bit callee address and push as 16-bit
 	; address, then call it with a tail call.
 	pop    dword [callee]
@@ -360,7 +315,6 @@ rmode_return:
 	call   mask_ints
 	call   pmode_init
 bits 32
-	call   pic_restore
 	call   restore_state
 	; Allocate space for 32-bit return pointer.
 	sub    esp, 4

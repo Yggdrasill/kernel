@@ -25,13 +25,20 @@
 #include "idt.h"
 #include "interrupt.h"
 
-#define PIC0_CMD     0x20
-#define PIC0_DATA    0x21
-#define PIC1_CMD     0xA0
-#define PIC1_DATA    0xA1
-#define IRQ0_BASE_PM 0x20
-#define IRQ1_BASE_PM IRQ0_BASE_PM + 8
-#define IRQ_CASCADE  0x02
+#define PIC0_CMD  0x20
+#define PIC0_DATA 0x21
+#define PIC1_CMD  0xA0
+#define PIC1_DATA 0xA1
+
+/* IRQ0_BASEx_PM **MUST** be in range [0x20, 0x40). */
+
+#define IVT_VECTOR_SIZE 4
+#define NR_PIC_IRQS     8
+#define IRQ0_BASE_RM    0x08
+#define IRQ1_BASE_RM    0x70
+#define IRQ0_BASE_PM    0x20
+#define IRQ1_BASE_PM    IRQ0_BASE_PM + 8
+#define IRQ_CASCADE     0x02
 
 /*
  * Reference: PIC8259A datasheet p. 11
