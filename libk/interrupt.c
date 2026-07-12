@@ -127,7 +127,7 @@ void irq_handler(struct interrupt_info *info)
 	}
 
 	outb(0x20, 0x20);
-	if(info->intno > 0x08) {
+	if(info->intno >= 0x08) {
 		outb(0xA0, 0x20);
 	}
 
