@@ -35,6 +35,11 @@ struct interrupt_info {
 	uint32_t eip, cs, eflags, prev_esp, ss;
 };
 
+extern uint8_t shadow_p70;
+
+extern void nmi_disable(void);
+extern void nmi_enable(void);
+
 extern void exception_unknown(void);
 extern void exception_0x00(void);
 extern void exception_0x01(void);

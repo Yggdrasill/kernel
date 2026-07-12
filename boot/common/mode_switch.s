@@ -19,12 +19,12 @@ bits 16
 
 global store_bios_imr
 global mask_ints
-global disable_nmi
-global enable_nmi
+global ms_nmi_disable
+global ms_nmi_enable
 global pmode_init
 global rmode_trampoline
 
-global pic_shadow_table
+global shadow_p70
 
 section .stage15 alloc exec progbits nowrite
 
@@ -63,24 +63,31 @@ mask_ints:
 	pop   ax
 	ret
 
-disable_nmi:
+ms_nmi_disable:
 	push  ax
 
-	in    al, 0x70
+	mov   al, [shadow_p70]
 	or    al, 0x80
 	out   0x70, al
 
 	pop   ax
 	ret
 
-enable_nmi:
+ms_nmi_enable:
 	push  ax
 
-	in    al, 0x70
+	mov   al, [shadow_p70]
 	and   al, 0x7F
 	out   0x70, al
 
 	pop   ax
+	ret
+
+p70_load:
+	push  eax
+	mov   al, [shadow_p70]
+	out   0x70, al
+	pop   eax
 	ret
 ; End mixed-mode functions
 
@@ -238,8 +245,6 @@ rmode:
 bits 32
 save_state:
 	push  eax
-	in    al, 0x70
-	mov   [saved_p70h], al
 	in    al, 0x21
 	mov   [imr0_shadow], al
 	in    al, 0xA1
@@ -275,8 +280,6 @@ restore_state:
 	out   0xA1, al
 	mov   al, [imr0_shadow]
 	out   0x21, al
-	mov   al, [saved_p70h]
-	out   0x70, al
 	pop   eax
 	ret
 
@@ -292,10 +295,10 @@ rmode_trampoline:
 	; disable NMI, then exit protected mode
 	call   save_state
 	call   mask_ints
-	call   disable_nmi
+	call   ms_nmi_disable
 	call   pmode_exit
 bits 16
-	call   enable_nmi
+	call   p70_load
 	call   load_bios_imr
 	; This may look a bit unconventional, but 
 	; popping the return address from the stack
@@ -314,9 +317,11 @@ bits 16
 rmode_return:
 	; Restore machine state, enter protected mode
 	cli
+	call   ms_nmi_disable
 	call   mask_ints
 	call   pmode_init
 bits 32
+	call   p70_load
 	call   restore_state
 	; Allocate space for 32-bit return pointer.
 	sub    esp, 4
@@ -351,6 +356,7 @@ idt_info:
 idt_size     dw 0
 idt_ptr      dd 0
 
+shadow_p70   db 0x00
 
 section .stage15.bss bss alloc noexec nobits write
 imr0_shadow:  resb 1
@@ -374,4 +380,3 @@ saved_es:     resw 1
 saved_ds:     resw 1
 saved_fs:     resw 1
 saved_gs:     resw 1
-saved_p70h:   resb 1
