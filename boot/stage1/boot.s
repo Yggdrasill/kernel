@@ -180,6 +180,7 @@ init_nmi_disable:
 %define         PH_FILE_OFFSET    0x04
 %define         PH_VIRT_ADDR      0x08
 %define         PH_FILE_SIZE      0x10
+%define         PH_MEM_SIZE       0x14
 
 %define         SH_NOBITS_TYPE    0x08
 %define         SH_PROGBITS_TYPE  0x01
@@ -293,8 +294,9 @@ shr_cont:
 	; we have to do this after moving the ELF to a
 	; safe location.
 
-	mov         eax,  [elf_phoff]
-	movzx       ebx,  word [elf_phnum]
+	mov         ebx,  _elf_header
+	add         ebx,  [elf_phoff]
+	movzx       edx,  word [elf_phnum]
 
 	; Check if ._init was found, and error if it wasn't.
 
@@ -307,21 +309,25 @@ shr_cont:
 	call        rmode_trampoline
 
 ph_loop:
-	cmp         ebx,  0
-	je          phlp_exit
-	mov         edi,  _elf_header
-	add         edi,  eax
-	cmp         dword [edi], dword PT_LOAD_TYPE ; Only PT_LOAD
+	cmp         dword [ebx], dword PT_LOAD_TYPE ; Only PT_LOAD
 	jne         phlp_next
-	mov   dword ecx,  [edi + PH_FILE_SIZE]
+	mov   dword ecx,  [ebx + PH_FILE_SIZE]
 	mov         esi,  _elf_header
-	add         esi,  [edi + PH_FILE_OFFSET]
-	mov         edi,  [edi + PH_VIRT_ADDR]
+	add         esi,  [ebx + PH_FILE_OFFSET]
+	mov         edi,  [ebx + PH_VIRT_ADDR]
 	rep         movsb
+
+	; Zero BSS etc.
+
+	xor         eax,  eax
+	mov         ecx,  [ebx + PH_MEM_SIZE]
+	sub         ecx,  [ebx + PH_FILE_SIZE]
+	jc          phlp_next
+	rep         stosb
 phlp_next:
-	add         ax, [elf_phentsize]
-	dec         ebx
-	jmp         ph_loop
+	add         bx, [elf_phentsize]
+	dec         edx
+	jnz         ph_loop
 phlp_exit:
 	add         esp, 0x10
 	pop         edi

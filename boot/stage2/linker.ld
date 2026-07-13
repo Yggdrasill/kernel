@@ -59,6 +59,11 @@ MEMORY {
 	upper(rx)  :   org = UPPR_ADDR,  len = UPPR_SIZE
 }
 
+PHDRS {
+	P_NOLOAD PT_NULL;
+	P_STAGE2 PT_LOAD;
+}
+
 SECTIONS {
 	. = BIOS_ADDR;
 	__bios_start = .;
@@ -74,10 +79,12 @@ SECTIONS {
 		*(.boot)
 		*(.boot.util)
 		*(.boot.rodata)
-	} > boot
+	} > boot : P_NOLOAD
 	PROVIDE(__BOOT_SIZE = BOOT_ADDR - ENTR_ADDR);
 	. = MBR_ADDR;
-	.mbr (NOLOAD) : { *(.mbr) } > mbr
+	.mbr (NOLOAD) : {
+		*(.mbr)
+	} > mbr : P_NOLOAD
 
 	. = MEM1_ADDR;
 	.stage15 (NOLOAD) : {
@@ -86,58 +93,64 @@ SECTIONS {
 		*(.stage15.data)
 		*(.stage15.rodata)
 		*(.stage15.bss)
-	} > mem1
+	} > mem1 : P_NOLOAD
 
 	. = ST2_ADDR;
 	stage2.o = .;
-	._init : { *(._init) } > stage2
-	.text : { *(.text) } > stage2
-	.data : { *(.data) } > stage2
-	.rodata : { *(.rodata) } > stage2
-	.bss (NOLOAD) : { *(.bss) } > stage2
-	.elf (NOLOAD) : { *(.elf) } > elf
+	._init : { *(._init) } > stage2 : P_STAGE2
+	.text : { *(.text) } > stage2 : P_STAGE2
+	.data : { *(.data) } > stage2 : P_STAGE2
+	.rodata : { *(.rodata) } > stage2 : P_STAGE2
+	.bss (NOLOAD) : { *(.bss) } > stage2 : P_STAGE2
+	.elf (NOLOAD) : { *(.elf) } > elf : P_NOLOAD
 	__bootloader_end = .;
+
 	. = GDTR_ADDR;
 	.gdtr (NOLOAD) : {
 		__GDT_PTR_LOCATION = .;
 		KEEP(*(.gdtr) )
-	} > gdtr
+	} > gdtr : P_NOLOAD
 	. = GDT_ADDR;
 	.gdt (NOLOAD) : {
 		__GDT_BASE_LOCATION = .;
 		KEEP(*(.gdt) )
-	} > gdt
+	} > gdt : P_NOLOAD
 	. = MMAP_ADDR;
+
 	.mmap (NOLOAD) : {
 		__MMAP_BASE_ADDR = .;
 		KEEP(*(.mmap) )
-	} > mmap
+	} > mmap : P_NOLOAD
 	. = IDT_ADDR;
+
 	.idt (NOLOAD) : {
 		__IDT_PTR_LOCATION = .;
 		__IDT_BASE_LOCATION = . + 8;
 		KEEP(*(.idt) )
-	  } > idt
+	  } > idt : P_NOLOAD
 	. = MEM2_ADDR;
+
 	.pmm (NOLOAD) : {
 		__MMAP_HEAP_LOCATION = .;
 		KEEP(*(.pmm) )
-	} > mem2
+	} > mem2 : P_NOLOAD
 	. = STACK_ADDR;
+
 	.stack (NOLOAD) : {
 		__STACK_BASE_LOCATION = (. + 64K - 0x10);
-	} > stack
+	} > stack : P_NOLOAD
 	. = FBR_ADDR;
+
 	.fbr (NOLOAD) : {
 		__FB_ADDR = .;
 		KEEP(*(.fbr) )
-	} > fbr
+	} > fbr : P_NOLOAD
 	. = FBR_ADDR + FBR_SIZE;
 	__FB_END = .;
 	.upper (NOLOAD) : {
 		__upper_start = .;
 		KEEP(*(.fbr) )
-	} > upper
+	} > upper : P_NOLOAD
 	. = UPPR_ADDR + UPPR_SIZE;
 	__upper_end = .;
 }
