@@ -37,29 +37,33 @@ __bios_mmap:
 	mov   es, ax
 	xor   edi, edi
 	xor   ebx, ebx
-loop:
+mmap_loop:
 	; clear ACPI 3.0 attribute field if BIOS doesn't fill in
 	mov   dword [es:edi+0x14], 0x00 
 	mov   eax, 0x0000E820
 	mov   ecx, 0x00000018
 	mov   edx, 0x534D4150
 
+	push  edi
+	push  es
+	push  ds
 	int   0x15
-	jc    mmap_e1
+	pop   ds
+	pop   es
+	pop   edi
+	jc    mmap_recover
+
 	cmp   eax, 0x534D4150
 	jne   mmap_e2
-	cmp   ebx, 0x00
-	je    mmap_done
-
 	cmp   ecx, 0x14
 	je    mmap_continue
 	cmp   ecx, 0x18
 	jne   mmap_e2
 mmap_continue:
-	add   di, 0x18
-	jmp   loop
+	add   edi, 0x18
+	cmp   ebx, 0x00
+	jnz   mmap_loop
 mmap_done:
-
 	mov   eax, es
 	shl   eax, 4
 	mov   [mmap_ptr], eax
@@ -80,6 +84,11 @@ mmap_done:
 	pop   dword ebp
 
 	ret
+
+mmap_recover:
+	cmp   edi, 0
+	je    mmap_e1
+	jmp   mmap_done
 
 mmap_e1:
 	push  dword me1_len
