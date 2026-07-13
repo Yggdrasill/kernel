@@ -83,4 +83,6 @@ void irq_handler(struct interrupt_info *info);
 void ints_flag_clear(void);
 void ints_flag_set(void);
 
+uint8_t nmi_status(void);
+
 #endif

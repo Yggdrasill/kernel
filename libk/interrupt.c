@@ -150,3 +150,8 @@ void ints_flag_set(void)
 
 	return;
 }
+
+uint8_t nmi_status(void)
+{
+	return shadow_p70 & 0x80;
+}
