@@ -106,10 +106,8 @@ pmode_init:
 	mov   es, ax
 	mov   ds, ax
 
-	mov   di, gdt_info
-	lgdt  [es:di]
-	mov   di, idt_info
-	lidt  [es:di]
+	lgdt  [gdt_info]
+	lidt  [idt_info]
 
 	; Fix the stack pointers by converting a
 	; linear address.
@@ -178,6 +176,8 @@ pmode_exit:
 	mov   ebp, esp
 	push  eax
 	push  edi
+
+	lgdt  [gdt_info]
 
 	jmp   0x0018:pmode16
 bits 16
@@ -258,14 +258,14 @@ save_state:
 	mov   [saved_ds], ds
 	mov   [saved_fs], fs
 	mov   [saved_gs], gs
-	sgdt  [gdt_info]
+	sgdt  [shadow_gdtr]
 	sidt  [idt_info]
 	pop   eax
 	ret
 
 restore_state:
 	push  eax
-	lgdt  [gdt_info]
+	lgdt  [shadow_gdtr]
 	lidt  [idt_info]
 	mov   gs, [saved_gs]
 	mov   fs, [saved_fs]
@@ -363,6 +363,10 @@ imr0_shadow:  resb 1
 imr1_shadow:  resb 1
 bios_imr0:    resb 1
 bios_imr1:    resb 1
+
+shadow_gdtr:
+sgdt_size     resw 1
+sgdt_ptr      resd 1
 
 pmode_context:
 saved_eflags: resd 1
