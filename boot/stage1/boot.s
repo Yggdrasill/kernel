@@ -28,7 +28,6 @@ extern a20_init
 extern mmap
 extern store_bios_imr
 extern mask_ints
-extern ms_nmi_disable
 extern pmode_init
 extern rmode_trampoline
 
@@ -237,20 +236,23 @@ header_ok:
 
 	mov         esi,  [ebp - 0x1C]
 	mov         edi,  [ebp - 0x20]
+	movzx       eax,  word [e_phnum]
 	movzx       ecx,  word [e_phentsize]
-	imul        cx,   word [e_phnum] 
+	imul        ecx,  eax
 	rep         movsb
 
 	mov         esi,  [ebp - 0x24]
 	mov         edi,  [ebp - 0x28]
+	movzx       eax,  word [e_shnum]
 	movzx       ecx,  word [e_shentsize]
-	imul        cx,   word [e_shnum] 
+	imul        ecx,  eax
 	rep         movsb
 
 	; Find e_shstrndx section
 
+	movzx       eax,  word [e_shstrndx]
 	movzx       ebx,  word [e_shentsize]
-	imul        bx,   word [e_shstrndx]
+	imul        ebx,  eax
 	add         ebx,  [ebp - 0x24]
 	add         ebx,  SH_FILE_OFFSET
 	mov         ebx,  [ebx]
@@ -283,9 +285,9 @@ sh_reloc:
 	jne         shr_cont
 	mov         byte [init_found], byte 0x1
 shr_cont:
-	add         ax,   [e_shentsize]
+	movzx       ecx,  word [e_shentsize]
+	add         eax,  ecx
 	dec         edx
-	test        edx,  edx
 	jnz         sh_reloc
 
 	; Now read the program headers and relocate
@@ -325,7 +327,8 @@ ph_loop:
 	jc          phlp_next
 	rep         stosb
 phlp_next:
-	add         bx, [elf_phentsize]
+	movzx       eax, word [elf_phentsize]
+	add         ebx, eax
 	dec         edx
 	jnz         ph_loop
 phlp_exit:
@@ -340,7 +343,7 @@ phlp_exit:
 	ret
 
 section     .stage15.rodata
-init_str    db "._init"
+init_str    db "._init",0x00
 init_slen   equ $ - init_str
 
 elf_err     db "E: ELF not found!",0x0D,0x0A
