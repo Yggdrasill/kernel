@@ -100,9 +100,6 @@ void gdt_default_entries_add(struct gdt_ptr *gdtp)
 
 	gdt_entry_add(gdtp, 0, 0xFFFFF, access | GDT_EXEC, flags);
 	gdt_entry_add(gdtp, 0, 0xFFFFF, access, flags);
-	flags &= ~(GDT_GRAN | GDT_BITS_32);
-	gdt_entry_add(gdtp, 0, 0xFFFFF, access | GDT_EXEC, flags);
-	gdt_entry_add(gdtp, 0, 0xFFFFF, access, flags);
 
 	return;
 }
