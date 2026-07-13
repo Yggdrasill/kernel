@@ -298,8 +298,8 @@ rmode_trampoline:
 	call   ms_nmi_disable
 	call   pmode_exit
 bits 16
-	call   p70_load
 	call   load_bios_imr
+	call   p70_load
 	; This may look a bit unconventional, but 
 	; popping the return address from the stack
 	; allows us to pass arguments as if calling
@@ -321,8 +321,8 @@ rmode_return:
 	call   mask_ints
 	call   pmode_init
 bits 32
-	call   p70_load
 	call   restore_state
+	call   p70_load
 	; Allocate space for 32-bit return pointer.
 	sub    esp, 4
 	; Push return path
