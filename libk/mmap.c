@@ -211,31 +211,43 @@ int mmap_clobber(struct e820_map *mmap, int nmemb)
 
 	old_type      = mmap[0].type;
 	old_size      = mmap[0].size;
-	base          = (uintptr_t)&__bios_start;
-	size          = (uintptr_t)&__bios_end - (uintptr_t)&__bios_start;
-	type          = MMAP_RESERVED;
-	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base          = (uintptr_t)&__bootloader_start;
-	size = (uintptr_t)&__bootloader_end - (uintptr_t)&__bootloader_start;
-	type = MMAP_BOOTLOADER_RECLAIMABLE;
-	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base          = (uintptr_t)old_map;
-	size          = MMAP_TABLE_SIZE;
-	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base          = (uintptr_t)new_map;
-	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base          = base + size;
-	type          = old_type;
-	size          = old_size - base;
-	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base          = (uintptr_t)&FB_ADDR;
-	size          = (uintptr_t)&FB_END - (uintptr_t)&FB_ADDR;
-	type          = MMAP_FRAMEBUFFER;
-	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
-	base          = (uintptr_t)&__upper_start;
-	size          = (uintptr_t)&__upper_end - (uintptr_t)&__upper_start;
-	type          = MMAP_RESERVED;
-	mmap[nmemb++] = (struct e820_map){base, size, type, 0};
+
+	mmap[nmemb++] = (struct e820_map) {
+		.base   = (uintptr_t)&__bios_start,
+		.size   = (uintptr_t)&__bios_end - (uintptr_t)&__bios_start,
+		.type   = MMAP_RESERVED,
+		.attrib = 0,
+	};
+	mmap[nmemb++] = (struct e820_map) {
+		.base   = (uintptr_t)&__bootloader_start,
+		.size   = (uintptr_t)&__bootloader_end - (uintptr_t)&__bootloader_start,
+		.type   = MMAP_BOOTLOADER_RECLAIMABLE,
+		.attrib = 0,
+	};
+	mmap[nmemb++] = (struct e820_map) {
+		.base   = (uintptr_t)old_map,
+		.size   = MMAP_TABLE_SIZE,
+		.type   = MMAP_BOOTLOADER_RECLAIMABLE,
+		.attrib = 0,
+	};
+	mmap[nmemb++] = (struct e820_map) {
+		.base   = (uintptr_t)new_map,
+		.size   = MMAP_TABLE_SIZE,
+		.type   = MMAP_BOOTLOADER_RECLAIMABLE,
+		.attrib = 0,
+	};
+	mmap[nmemb++] = (struct e820_map) {
+		.base   = (uintptr_t)&FB_ADDR,
+		.size   = (uintptr_t)&FB_END - (uintptr_t)&FB_ADDR,
+		.type   = MMAP_FRAMEBUFFER,
+		.attrib = 0,
+	};
+	mmap[nmemb++] = (struct e820_map) {
+		.base   = (uintptr_t)&__upper_start,
+		.size   = (uintptr_t)&__upper_end - (uintptr_t)&__upper_start,
+		.type   = MMAP_RESERVED,
+		.attrib = 0,
+	};
 
 	return nmemb;
 }
