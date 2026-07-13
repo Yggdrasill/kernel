@@ -91,12 +91,16 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 
 	uint32_t type;
 	uint32_t prev_type;
+	uint32_t attrib;
+	uint32_t prev_attrib;
 
 	const int NR_POINTS = 2 * nr_entries;
 
 	int new_nr_entries;
 	int nr_overlaps;
 	int i, j;
+
+	if(!nr_entries) return nr_entries;
 
 	pmap = *mmap;
 
@@ -119,6 +123,7 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 	nr_overlaps                = 0;
 	prev_point                 = e820_points;
 	prev_type                  = prev_point->entry->type;
+	prev_attrib                = prev_point->entry->attrib;
 	overlap_map[nr_overlaps++] = prev_point->entry;
 
 	for(i = 1; i < NR_POINTS && new_nr_entries < MMAP_MAX_ENTRIES; i++) {
@@ -164,9 +169,11 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 		 * have greater precedence than type 1.
 		 */
 
-		type = nr_overlaps > 0 ? overlap_map[0]->type : MMAP_RESERVED;
+		type   = nr_overlaps > 0 ? overlap_map[0]->type : MMAP_RESERVED;
+		attrib = nr_overlaps > 0 ? overlap_map[0]->attrib : 0;
 		for(j = 1; j < nr_overlaps; j++) {
 			type = mmap_compare_type(overlap_map[j]->type, type);
+			if(type == overlap_map[j]->type) attrib = overlap_map[j]->attrib;
 		}
 
 		/*
@@ -174,15 +181,16 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 		 * are at the last element of the array.
 		 */
 
-		if(type != prev_type || i == NR_POINTS - 1) {
+		if(type != prev_type || attrib != prev_attrib || i == NR_POINTS - 1) {
 			new_map[new_nr_entries] = (struct e820_map){
 			    prev_point->addr,
 			    e820_points[i].addr - prev_point->addr,
 			    prev_type,
-			    prev_point->entry->attrib,
+			    prev_attrib,
 			};
-			prev_point = e820_points + i;
-			prev_type  = type;
+			prev_point  = e820_points + i;
+			prev_type   = type;
+			prev_attrib = attrib;
 			new_nr_entries += new_map[new_nr_entries].size > 0;
 		}
 	}
@@ -207,15 +215,6 @@ void mmap_print(struct e820_map *mmap, int nmemb)
 
 int mmap_clobber(struct e820_map *mmap, int nmemb)
 {
-	uint64_t        base;
-	uint64_t        size;
-	uint64_t        old_size;
-	uint32_t        old_type;
-	enum MMAP_TYPES type;
-
-	old_type = mmap[0].type;
-	old_size = mmap[0].size;
-
 	mmap[nmemb++] = (struct e820_map){
 	    .base   = (uintptr_t)&__bios_start,
 	    .size   = (uintptr_t)&__bios_end - (uintptr_t)&__bios_start,
