@@ -32,11 +32,19 @@ struct e820_point {
 	uint64_t         addr;
 };
 
+int mmap_is_base(struct e820_point *p)
+{
+	return p->addr == p->entry->base;
+}
+
 int mmap_cmp(const void *p1, const void *p2)
 {
-	uint64_t p1_addr = ((struct e820_point *)p1)->addr;
-	uint64_t p2_addr = ((struct e820_point *)p2)->addr;
-	return (p1_addr > p2_addr) - (p1_addr < p2_addr);
+	struct e820_point *pp1;
+	struct e820_point *pp2;
+	pp1 = (struct e820_point *)p1;
+	pp2 = (struct e820_point *)p2;
+	if(pp1->addr == pp2->addr) return mmap_is_base(pp1) ? -1 : 1;
+	return (pp1->addr > pp2->addr) - (pp1->addr < pp2->addr);
 }
 
 int mmap_bad_type(uint32_t type)
@@ -54,11 +62,6 @@ uint32_t mmap_compare_type(const uint32_t t1, const uint32_t t2)
 	if(!mmap_bad_type(t1) && mmap_bad_type(t2)) return t2;
 	if(mmap_bad_type(t1) && !mmap_bad_type(t2)) return t1;
 	return t1 > t2 ? t1 : t2;
-}
-
-int mmap_is_base(struct e820_point *p)
-{
-	return p->addr == p->entry->base;
 }
 
 __attribute__((
@@ -161,7 +164,7 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 		 * have greater precedence than type 1.
 		 */
 
-		type = overlap_map[0]->type;
+		type = nr_overlaps > 0 ? overlap_map[0]->type : MMAP_RESERVED;
 		for(j = 1; j < nr_overlaps; j++) {
 			type = mmap_compare_type(overlap_map[j]->type, type);
 		}
@@ -176,7 +179,8 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 			    prev_point->addr,
 			    e820_points[i].addr - prev_point->addr,
 			    prev_type,
-			    prev_point->entry->attrib};
+			    prev_point->entry->attrib,
+			};
 			prev_point = e820_points + i;
 			prev_type  = type;
 			new_nr_entries += new_map[new_nr_entries].size > 0;
@@ -209,44 +213,44 @@ int mmap_clobber(struct e820_map *mmap, int nmemb)
 	uint32_t        old_type;
 	enum MMAP_TYPES type;
 
-	old_type      = mmap[0].type;
-	old_size      = mmap[0].size;
+	old_type = mmap[0].type;
+	old_size = mmap[0].size;
 
-	mmap[nmemb++] = (struct e820_map) {
-		.base   = (uintptr_t)&__bios_start,
-		.size   = (uintptr_t)&__bios_end - (uintptr_t)&__bios_start,
-		.type   = MMAP_RESERVED,
-		.attrib = 0,
+	mmap[nmemb++] = (struct e820_map){
+	    .base   = (uintptr_t)&__bios_start,
+	    .size   = (uintptr_t)&__bios_end - (uintptr_t)&__bios_start,
+	    .type   = MMAP_RESERVED,
+	    .attrib = 0,
 	};
-	mmap[nmemb++] = (struct e820_map) {
-		.base   = (uintptr_t)&__bootloader_start,
-		.size   = (uintptr_t)&__bootloader_end - (uintptr_t)&__bootloader_start,
-		.type   = MMAP_BOOTLOADER_RECLAIMABLE,
-		.attrib = 0,
+	mmap[nmemb++] = (struct e820_map){
+	    .base   = (uintptr_t)&__bootloader_start,
+	    .size   = (uintptr_t)&__bootloader_end - (uintptr_t)&__bootloader_start,
+	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
+	    .attrib = 0,
 	};
-	mmap[nmemb++] = (struct e820_map) {
-		.base   = (uintptr_t)old_map,
-		.size   = MMAP_TABLE_SIZE,
-		.type   = MMAP_BOOTLOADER_RECLAIMABLE,
-		.attrib = 0,
+	mmap[nmemb++] = (struct e820_map){
+	    .base   = (uintptr_t)old_map,
+	    .size   = MMAP_TABLE_SIZE,
+	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
+	    .attrib = 0,
 	};
-	mmap[nmemb++] = (struct e820_map) {
-		.base   = (uintptr_t)new_map,
-		.size   = MMAP_TABLE_SIZE,
-		.type   = MMAP_BOOTLOADER_RECLAIMABLE,
-		.attrib = 0,
+	mmap[nmemb++] = (struct e820_map){
+	    .base   = (uintptr_t)new_map,
+	    .size   = MMAP_TABLE_SIZE,
+	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
+	    .attrib = 0,
 	};
-	mmap[nmemb++] = (struct e820_map) {
-		.base   = (uintptr_t)&FB_ADDR,
-		.size   = (uintptr_t)&FB_END - (uintptr_t)&FB_ADDR,
-		.type   = MMAP_FRAMEBUFFER,
-		.attrib = 0,
+	mmap[nmemb++] = (struct e820_map){
+	    .base   = (uintptr_t)&FB_ADDR,
+	    .size   = (uintptr_t)&FB_END - (uintptr_t)&FB_ADDR,
+	    .type   = MMAP_FRAMEBUFFER,
+	    .attrib = 0,
 	};
-	mmap[nmemb++] = (struct e820_map) {
-		.base   = (uintptr_t)&__upper_start,
-		.size   = (uintptr_t)&__upper_end - (uintptr_t)&__upper_start,
-		.type   = MMAP_RESERVED,
-		.attrib = 0,
+	mmap[nmemb++] = (struct e820_map){
+	    .base   = (uintptr_t)&__upper_start,
+	    .size   = (uintptr_t)&__upper_end - (uintptr_t)&__upper_start,
+	    .type   = MMAP_RESERVED,
+	    .attrib = 0,
 	};
 
 	return nmemb;
