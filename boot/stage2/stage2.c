@@ -90,7 +90,7 @@ int main(void)
 #ifndef TEST_MMAP
 	mmap_entries = bios_mmap();
 	mmap_init(mmap_entries->start, mmap_entries->length);
-#elif
+#else
 	memcpy(test_map, broken_map, sizeof(broken_map));
 	mmap_init(test_map, sizeof(broken_map) / sizeof(*broken_map));
 #endif
