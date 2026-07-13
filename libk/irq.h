@@ -106,6 +106,7 @@ struct pic_state_table {
 };
 
 void     irq_init(void);
+uint16_t irq_read_imr(void);
 uint16_t irq_read_reg(unsigned char);
 void     irq_unmask(unsigned char);
 void     irq_unmask_all(void);

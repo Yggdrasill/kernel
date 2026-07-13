@@ -62,7 +62,7 @@ int main(void)
 	struct idt_entry  *entries;
 	struct mmap_array *mmap_entries;
 
-	irq_mask_all();
+	if(irq_read_imr() != 0xFFFF) irq_mask_all();
 	if(!nmi_status()) nmi_disable();
 
 	gdtp = gdt_init();
@@ -82,6 +82,7 @@ int main(void)
 
 	idt_install(idtp);
 
+	irq_mask_all();
 	nmi_enable();
 	irq_unmask(IRQ_KEYBOARD);
 	ints_flag_set();
