@@ -50,6 +50,10 @@ clean:
 
 debug: CFLAGS+=-g
 debug: all
+debug:
+	objcopy --only-keep-debug bin/stage2.elf bin/stage2.debug
+	strip --strip-debug --strip-unneeded bin/stage2.elf
+	objcopy --add-gnu-debuglink=bin/stage2.debug bin/stage2.elf
 
 dd_image:
 	dd if=/dev/zero of=image.img bs=512 count=2880
