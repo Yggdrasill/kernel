@@ -100,21 +100,30 @@ void irq_init(void)
 	return;
 }
 
+/*
+ * Reference: PIC 8259A data sheet p. 13 and p. 14.
+ * Reading the IMR can be done by OCW1.
+ */
+
 uint16_t irq_read_imr(void)
 {
 	return (inb(0xA1) << 8) | inb(0x21);
 }
 
-/* Reference: PIC 8259A data sheet p. 13 and p. 17 */
-/* Returns a value >0x0F if the read is invalid */
+/*
+ * Reference: PIC 8259A data sheet p. 13 and p. 17.
+ * The following code is OCW3 to read the IRR or ISR.
+ * - reg = 0x02
+ *   Read the interrupt request register.
+ * - reg = 0x03
+ *   Read the interrupt service register.
+ * Precondition: reg == 0x02 || reg == 0x03
+ */
 
 uint16_t irq_read_reg(unsigned char reg)
 {
-	if(reg != 0x03 && reg != 0x02) return 0x10;
-
 	outb(0x20, 0x08 | reg);
 	outb(0xA0, 0x08 | reg);
-
 	return (inb(0xA0) << 8) | inb(0x20);
 }
 

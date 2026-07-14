@@ -21,6 +21,7 @@
 
 #include "interrupt.h"
 #include "io.h"
+#include "irq.h"
 #include "string.h"
 
 char *exceptions[] = {
@@ -137,10 +138,14 @@ void exception_handler(struct interrupt_info *info)
 
 void irq_handler(struct interrupt_info *info)
 {
-	char ch;
+	if(!(irq_read_reg(0x03) & (1 << info->intno))) {
+		puts("Spurious interrupt");
+		puthex(info->intno);
+		return;
+	}
 
 	switch(info->intno) {
-	case IRQ_KEYBOARD: ch = inb(0x60);
+		case IRQ_KEYBOARD: inb(0x60);
 	}
 
 	/* OCW2 EOI */
