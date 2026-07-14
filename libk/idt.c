@@ -23,43 +23,118 @@
 #include "stdint.h"
 #include "string.h"
 
-struct idt_ptr *idt_init(void)
+#define IDT_ENTRY_NUM 256
+
+/*
+ * Little endian byte alignment follows. These structures are manually packed
+ * because it avoids using compiler pragmas. I do not know of any x86 compiler
+ * that would pad a struct that contains only byte-aligned types.
+ *
+ * Both of these structs will be 8-byte aligned manually.
+ */
+
+struct idt_ptr {
+	unsigned char limit_0;
+	unsigned char limit_8;
+	unsigned char base_0;
+	unsigned char base_8;
+	unsigned char base_16;
+	unsigned char base_24;
+};
+
+struct idt_entry {
+	unsigned char offset_0;
+	unsigned char offset_8;
+	unsigned char selector_0;
+	unsigned char selector_8;
+	unsigned char zero;
+	unsigned char flags;
+	unsigned char offset_16;
+	unsigned char offset_24;
+};
+
+struct idt_info {
+	struct idt_ptr   *idtr;
+	struct idt_entry *entries;
+	size_t            max_nr_entries;
+	size_t            nr_entries;
+};
+
+/*
+ * This global state is a bootloader-only construct and will not be allowed
+ * within the actual kernel.
+ */
+
+extern struct idt_ptr   __IDT_PTR_LOCATION;
+extern struct idt_entry __IDT_BASE_LOCATION;
+static struct idt_info  idt_info;
+
+struct idt_info *idt_info_init(void)
 {
-	struct idt_ptr   *idtp;
+	idt_info = (struct idt_info){
+		.idtr           = &__IDT_PTR_LOCATION,
+		.entries        = &__IDT_BASE_LOCATION,
+		.max_nr_entries = IDT_ENTRY_NUM,
+		.nr_entries     = 0,
+	};
+	return &idt_info;
+}
+
+struct idt_info *idt_init(void)
+{
+	struct idt_ptr   *idtr;
 	struct idt_entry *base;
+	struct idt_info  *info;
 	unsigned char    *arr_limit;
 	unsigned char    *arr_base;
 
 	uint16_t limit;
 
-	idtp = &__IDT_PTR_LOCATION;
+	info = idt_info_init();
 
+	idtr  = info->idtr;
 	limit = sizeof(struct idt_entry) * IDT_ENTRY_NUM - 1;
-	base  = &__IDT_BASE_LOCATION;
+	base  = info->entries;
 
 	arr_limit = (unsigned char *)&limit;
 	arr_base  = (unsigned char *)&base;
 
-	idtp->limit_0 = arr_limit[0];
-	idtp->limit_8 = arr_limit[1];
+	idtr->limit_0 = arr_limit[0];
+	idtr->limit_8 = arr_limit[1];
 
-	idtp->base_0  = arr_base[0];
-	idtp->base_8  = arr_base[1];
-	idtp->base_16 = arr_base[2];
-	idtp->base_24 = arr_base[3];
+	idtr->base_0  = arr_base[0];
+	idtr->base_8  = arr_base[1];
+	idtr->base_16 = arr_base[2];
+	idtr->base_24 = arr_base[3];
 
-	return idtp;
+	idt_install(idtr);
+
+	return info;
 }
 
-void idt_set_entry(
-    struct idt_entry *entry,
-    void              (*idt_handler)(void),
-    uint16_t          select,
-    unsigned char     flags)
+size_t idt_num_entries(struct idt_info *info)
 {
-	intptr_t       raw_ptr;
-	unsigned char *offset;
-	unsigned char *selector;
+	return info->nr_entries;
+}
+
+size_t idt_max_entries(struct idt_info *info)
+{
+	return info->max_nr_entries;
+}
+
+size_t idt_add_entry(
+    struct idt_info *info,
+    void             (*idt_handler)(void),
+    uint16_t         select,
+    unsigned char    flags)
+{
+	struct idt_entry *entry;
+	unsigned char    *offset;
+	unsigned char    *selector;
+	intptr_t         raw_ptr;
+
+	/* TODO: Bounds testing */
+	entry = info->entries + info->nr_entries;
 
 	raw_ptr  = (intptr_t)idt_handler;
 	offset   = (unsigned char *)&raw_ptr;
@@ -76,7 +151,9 @@ void idt_set_entry(
 	entry->zero  = 0;
 	entry->flags = flags;
 
-	return;
+	info->nr_entries++;
+
+	return info->nr_entries;
 }
 
 void idt_install(struct idt_ptr *idtr)

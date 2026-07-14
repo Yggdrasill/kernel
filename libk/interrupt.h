@@ -25,64 +25,13 @@
 #include "idt.h"
 #include "stdint.h"
 
-#define IRQ_KEYBOARD 0x01
-
-struct interrupt_info {
-	uint32_t fs, gs, es, ds;
-	uint32_t edi, esi, ebp, esp;
-	uint32_t ebx, edx, ecx, eax;
-	uint32_t intno, errno;
-	uint32_t eip, cs, eflags, prev_esp, ss;
-};
-
-extern uint8_t shadow_p70;
+struct interrupt_info;
 
 extern void nmi_disable(void);
 extern void nmi_enable(void);
 
-extern void exception_unknown(void);
-extern void exception_0x00(void);
-extern void exception_0x01(void);
-extern void exception_0x02(void);
-extern void exception_0x03(void);
-extern void exception_0x04(void);
-extern void exception_0x05(void);
-extern void exception_0x06(void);
-extern void exception_0x07(void);
-extern void exception_0x08(void);
-extern void exception_0x09(void);
-extern void exception_0x0A(void);
-extern void exception_0x0B(void);
-extern void exception_0x0C(void);
-extern void exception_0x0D(void);
-extern void exception_0x0E(void);
-extern void exception_0x10(void);
-extern void exception_0x11(void);
-extern void exception_0x12(void);
-extern void exception_0x13(void);
-extern void exception_0x14(void);
-extern void exception_0x15(void);
-
-extern void irq_0x00(void);
-extern void irq_0x01(void);
-extern void irq_0x02(void);
-extern void irq_0x03(void);
-extern void irq_0x04(void);
-extern void irq_0x05(void);
-extern void irq_0x06(void);
-extern void irq_0x07(void);
-extern void irq_0x08(void);
-extern void irq_0x09(void);
-extern void irq_0x0A(void);
-extern void irq_0x0B(void);
-extern void irq_0x0C(void);
-extern void irq_0x0D(void);
-extern void irq_0x0E(void);
-extern void irq_0x0F(void);
-extern void irq_wrapper(void);
-
-void exception_idt_init(struct idt_entry *entries);
-void irq_idt_init(struct idt_entry *entries);
+void exception_idt_init(struct idt_info *entries);
+void irq_idt_init(struct idt_info *entries);
 
 void exception_handler(struct interrupt_info *info);
 void irq_handler(struct interrupt_info *info);

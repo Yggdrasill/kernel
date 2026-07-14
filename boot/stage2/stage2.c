@@ -57,9 +57,9 @@ int main(void)
 	    {0xF5000,  0x10000, 1, 0}
     };
 #endif
+
 	struct gdt_ptr    *gdtp;
-	struct idt_ptr    *idtp;
-	struct idt_entry  *entries;
+	struct idt_info   *idt;
 	struct mmap_array *mmap_entries;
 
 	if(irq_read_imr() != 0xFFFF) irq_mask_all();
@@ -69,22 +69,18 @@ int main(void)
 	gdt_default_entries_add(gdtp);
 	gdt_install(gdtp);
 
-	entries = (void *)&__IDT_BASE_LOCATION;
-
 	memsetw((int16_t *)&FB_ADDR, 0x0720, 0x7D0);
 
 	puts("Hello world!");
 
-	idtp = idt_init();
-	exception_idt_init(entries);
+	idt = idt_init();
+	exception_idt_init(idt);
+	irq_idt_init(idt);
 	irq_init();
-	irq_idt_init(entries + 0x20);
-
-	idt_install(idtp);
 
 	irq_mask_all();
 	nmi_enable();
-	irq_unmask(IRQ_KEYBOARD);
+	irq_unmask(IRQ_NUM_KBD);
 	ints_flag_set();
 
 #ifndef TEST_MMAP

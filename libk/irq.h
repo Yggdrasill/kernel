@@ -40,6 +40,25 @@
 #define IRQ1_BASE_PM    IRQ0_BASE_PM + 8
 #define IRQ_CASCADE     0x02
 
+enum IRQ_NUMS {
+	IRQ_NUM_PIT  = 0,
+	IRQ_NUM_KBD  = 1,
+	IRQ_NUM_CASC,
+	IRQ_NUM_COM2,
+	IRQ_NUM_COM1,
+	IRQ_NUM_LPT2,
+	IRQ_NUM_FLOP,
+	IRQ_NUM_LPT1,
+	IRQ_NUM_CMOS,
+	IRQ_NUM_RES1,
+	IRQ_NUM_RES2,
+	IRQ_NUM_RES3,
+	IRQ_NUM_PS2M,
+	IRQ_NUM_FPU,
+	IRQ_NUM_ATA1,
+	IRQ_NUM_ATA2,
+};
+
 /*
  * Reference: PIC8259A datasheet p. 11
  * IC4  low = no ICW4,      high = expect ICW4
