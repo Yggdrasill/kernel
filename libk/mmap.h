@@ -52,6 +52,16 @@ extern char __BIOS_START;
 extern char __BIOS_END;
 extern char __BOOTLOADER_START;
 extern char __BOOTLOADER_END;
+
+extern char __GDTR_START;
+extern char __GDTR_END;
+extern char __GDT_START;
+extern char __GDT_END;
+extern char __IDT_START;
+extern char __IDT_END;
+extern char __STACK_START;
+extern char __STACK_END;
+
 extern char __UPPER_START;
 extern char __UPPER_END;
 
