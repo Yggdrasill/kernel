@@ -1,0 +1,67 @@
+BIOS_ADDR  = 0x0;
+BIOS_SIZE  = 0x500;
+MEM0_ADDR  = 0x500;
+MEM0_SIZE  = 0x7700;
+ENTR_ADDR  = 0x7C00;
+ENTR_SIZE  = 0x200;
+BOOT_ADDR  = 0x7E00;
+BOOT_SIZE  = 0x1BE;
+MBR_ADDR   = 0x7FBE;
+MBR_SIZE   = 0x42;
+MEM1_ADDR  = 0x8000;
+MEM1_SIZE  = 0x600;
+ST2_ADDR   = 0x8600;
+ST2_SIZE   = 30K;
+ELF_ADDR   = 0x10000;
+ELF_SIZE   = 30K;
+GDTR_ADDR  = 0x17800;
+GDTR_SIZE  = 0x6;
+GDT_ADDR   = 0x18000;
+GDT_SIZE   = 64K;
+MMAP_ADDR  = 0x28000;
+MMAP_SIZE  = 64K;
+IDT_ADDR   = 0x38000;
+IDT_SIZE   = 4K;
+MEM2_ADDR  = 0x39000;
+MEM2_SIZE  = 220K;
+STACK_ADDR = 0x70000;
+STACK_SIZE = 64K;
+EBDA_ADDR  = 0x80000;
+EBDA_SIZE  = 128K;
+VGA_ADDR   = 0xA0000;
+VGA_SIZE   = 96K;
+FBR_ADDR   = 0xB8000;
+FBR_SIZE   = 32K;
+UPPR_ADDR  = 0xC0000;
+UPPR_SIZE  = 256K;
+
+MEMORY {
+	bios(rx)   :   org = BIOS_ADDR,  len = BIOS_SIZE
+	mem0(rw)   :   org = MEM0_ADDR,  len = MEM0_SIZE
+	entry(rw)  :   org = ENTR_ADDR,  len = ENTR_SIZE
+	boot(rw)   :   org = BOOT_ADDR,  len = BOOT_SIZE
+	mbr(rw)    :   org = MBR_ADDR,   len = MBR_SIZE
+	mem1(rx)   :   org = MEM1_ADDR,  len = MEM1_SIZE
+	stage2(rx) :   org = ST2_ADDR,   len = ST2_SIZE
+	elf(rw)    :   org = ELF_ADDR,   len = ELF_SIZE
+	gdtr(rw)   :   org = GDTR_ADDR,  len = GDTR_SIZE
+	gdt(rw)    :   org = GDT_ADDR,   len = GDT_SIZE
+	idt(rw)    :   org = IDT_ADDR,   len = IDT_SIZE
+	mmap(rw)   :   org = MMAP_ADDR,  len = MMAP_SIZE
+	mem2(rx)   :   org = MEM2_ADDR,  len = MEM2_SIZE
+	stack(rw)  :   org = STACK_ADDR, len = STACK_SIZE
+	ebda(rx)   :   org = EBDA_ADDR,  len = EBDA_SIZE
+	vga(rw)    :   org = VGA_ADDR,   len = VGA_SIZE
+	fbr(rw)    :   org = FBR_ADDR,   len = FBR_SIZE
+	upper(rx)  :   org = UPPR_ADDR,  len = UPPR_SIZE
+}
+
+SECTIONS {
+	. = BIOS_ADDR;
+	__bios_start = .;
+	. = BIOS_SIZE;
+	__bios_end = .;
+
+	. = ENTR_ADDR;
+	__BOOT_ENTRY = .;
+}
