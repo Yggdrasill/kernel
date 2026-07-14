@@ -10,7 +10,7 @@ PHDRS {
 SECTIONS {
 	. = BOOT_ADDR;
 	__BOOT_ADDR = .;
-	__bootloader_start = .;
+	__BOOTLOADER_START = .;
 	.boot (NOLOAD) : {
 		*(.boot)
 		*(.boot.util)
@@ -39,7 +39,8 @@ SECTIONS {
 	.rodata : { *(.rodata) } > stage2 : P_STAGE2
 	.bss (NOLOAD) : { *(.bss) } > stage2 : P_STAGE2
 	.elf (NOLOAD) : { *(.elf) } > elf : P_NOLOAD
-	__bootloader_end = .;
+	__BOOTLOADER_END = .;
+
 
 	. = GDTR_ADDR;
 	.gdtr (NOLOAD) : {
@@ -84,9 +85,9 @@ SECTIONS {
 	. = FBR_ADDR + FBR_SIZE;
 	__FB_END = .;
 	.upper (NOLOAD) : {
-		__upper_start = .;
+		__UPPER_START = .;
 		KEEP(*(.fbr) )
 	} > upper : P_NOLOAD
 	. = UPPR_ADDR + UPPR_SIZE;
-	__upper_end = .;
+	__UPPER_END = .;
 }

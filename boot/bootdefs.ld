@@ -58,9 +58,9 @@ MEMORY {
 
 SECTIONS {
 	. = BIOS_ADDR;
-	__bios_start = .;
+	__BIOS_START = .;
 	. = BIOS_SIZE;
-	__bios_end = .;
+	__BIOS_END = .;
 
 	. = ENTR_ADDR;
 	__BOOT_ENTRY = .;

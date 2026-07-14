@@ -227,14 +227,14 @@ void mmap_print(struct e820_map *mmap, int nmemb)
 int mmap_clobber(struct e820_map *mmap, int nmemb)
 {
 	mmap[nmemb++] = (struct e820_map){
-	    .base   = (uintptr_t)&__bios_start,
-	    .size   = (uintptr_t)&__bios_end - (uintptr_t)&__bios_start,
+	    .base   = (uintptr_t)&__BIOS_START,
+	    .size   = (uintptr_t)&__BIOS_END - (uintptr_t)&__BIOS_START,
 	    .type   = MMAP_RESERVED,
 	    .attrib = 0,
 	};
 	mmap[nmemb++] = (struct e820_map){
-	    .base   = (uintptr_t)&__bootloader_start,
-	    .size   = (uintptr_t)&__bootloader_end - (uintptr_t)&__bootloader_start,
+	    .base   = (uintptr_t)&__BOOTLOADER_START,
+	    .size   = (uintptr_t)&__BOOTLOADER_END - (uintptr_t)&__BOOTLOADER_START,
 	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
 	    .attrib = 0,
 	};
@@ -257,8 +257,8 @@ int mmap_clobber(struct e820_map *mmap, int nmemb)
 	    .attrib = 0,
 	};
 	mmap[nmemb++] = (struct e820_map){
-	    .base   = (uintptr_t)&__upper_start,
-	    .size   = (uintptr_t)&__upper_end - (uintptr_t)&__upper_start,
+	    .base   = (uintptr_t)&__UPPER_START,
+	    .size   = (uintptr_t)&__UPPER_END - (uintptr_t)&__UPPER_START,
 	    .type   = MMAP_RESERVED,
 	    .attrib = 0,
 	};

@@ -48,12 +48,12 @@ struct mmap_array {
 	uint32_t         length;
 };
 
-extern char __bios_start;
-extern char __bios_end;
-extern char __bootloader_start;
-extern char __bootloader_end;
-extern char __upper_start;
-extern char __upper_end;
+extern char __BIOS_START;
+extern char __BIOS_END;
+extern char __BOOTLOADER_START;
+extern char __BOOTLOADER_END;
+extern char __UPPER_START;
+extern char __UPPER_END;
 
 struct mmap_array mmap_init(struct e820_map *, int);
 struct mmap_array mmap_sanitize(
