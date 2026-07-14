@@ -55,6 +55,13 @@ extern void exception_0x0A(void);
 extern void exception_0x0B(void);
 extern void exception_0x0C(void);
 extern void exception_0x0D(void);
+extern void exception_0x0E(void);
+extern void exception_0x10(void);
+extern void exception_0x11(void);
+extern void exception_0x12(void);
+extern void exception_0x13(void);
+extern void exception_0x14(void);
+extern void exception_0x15(void);
 
 extern void irq_0x00(void);
 extern void irq_0x01(void);

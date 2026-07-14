@@ -39,6 +39,13 @@ char *exceptions[] = {
     "Stack segment fault",
     "General protection fault",
     "Page fault",
+    "Unhandled exception!",
+    "Floating point exception",
+    "Alignment check",
+    "Machine check",
+    "SIMD floating point exception",
+    "Virtualisation exception",
+    "Control protection exception",
 };
 
 char *irq_interrupts[] = {
@@ -78,6 +85,14 @@ void exception_idt_init(struct idt_entry *entries)
 	idt_set_entry(entries++, &exception_0x0B, 0x08, 0x8E);
 	idt_set_entry(entries++, &exception_0x0C, 0x08, 0x8E);
 	idt_set_entry(entries++, &exception_0x0D, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x0E, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_unknown, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x10, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x11, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x12, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x13, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x14, 0x08, 0x8E);
+	idt_set_entry(entries++, &exception_0x15, 0x08, 0x8E);
 
 	/* while(entries < 0x20) */
 
@@ -114,7 +129,7 @@ void exception_handler(struct interrupt_info *info)
 {
 	if(info->intno > 0x1F) return;
 
-	if(info->intno >= 0x0F) puts("Unhandled exception!");
+	if(info->intno == 0x1F) puts("Unhandled exception!");
 	else puts(exceptions[info->intno]);
 
 	__asm__ volatile("hlt;");

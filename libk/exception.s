@@ -35,119 +35,146 @@ global exception_0x0A
 global exception_0x0B
 global exception_0x0C
 global exception_0x0D
+global exception_0x0E
+global exception_0x10
+global exception_0x11
+global exception_0x12
+global exception_0x13
+global exception_0x14
+global exception_0x15
 
 exception_wrapper:
-    cli
+	cli
 
-    pusha
-    push  ds
-    push  es
-    push  gs
-    push  fs
+	pusha
+	push  ds
+	push  es
+	push  gs
+	push  fs
 
-    mov   ax, 0x10
-    mov   ds, ax
-    mov   es, ax
-    mov   gs, ax
-    mov   fs, ax
+	mov   ax, 0x10
+	mov   ds, ax
+	mov   es, ax
+	mov   gs, ax
+	mov   fs, ax
 
-    push  esp
+	push  esp
 
-    call  exception_handler
+	call  exception_handler
 
-    add   esp, 0x04
-    pop   fs
-    pop   gs
-    pop   es
-    pop   ds
-    popa
+	add   esp, 0x04
+	pop   fs
+	pop   gs
+	pop   es
+	pop   ds
+	popa
 
-    add   esp, 0x08
+	add   esp, 0x08
 
-    sti
+	sti
 
-    iret
+	iret
 
 exception_unknown:
-    push  byte 0x00
-    push  byte 0x1F
-
-    jmp   exception_wrapper
+	push  byte 0x00
+	push  byte 0x1F
+	jmp   exception_wrapper
 
 exception_0x00:
-    push  byte 0x00
-    push  byte 0x00
-
-    jmp   exception_wrapper
+	push  byte 0x00
+	push  byte 0x00
+	jmp   exception_wrapper
 
 exception_0x01:
-    push  byte 0x00
-    push  byte 0x01
-
-    jmp   exception_wrapper
+	push  byte 0x00
+	push  byte 0x01
+	jmp   exception_wrapper
 
 exception_0x02:
-    push  byte 0x00
-    push  byte 0x02
+	push  byte 0x00
+	push  byte 0x02
 
-    jmp   exception_wrapper
+	jmp   exception_wrapper
 
 exception_0x03:
-    push  byte 0x00
-    push  byte 0x03
-
-    jmp   exception_wrapper
+	push  byte 0x00
+	push  byte 0x03
+	jmp   exception_wrapper
 
 exception_0x04:
-    push  byte 0x00
-    push  byte 0x04
-
-    jmp   exception_wrapper
+	push  byte 0x00
+	push  byte 0x04
+	jmp   exception_wrapper
 
 exception_0x05:
-    push  byte 0x00
-    push  byte 0x05
-
-    jmp   exception_wrapper
+	push  byte 0x00
+	push  byte 0x05
+	jmp   exception_wrapper
 
 exception_0x06:
-    push  byte 0x00
-    push  byte 0x06
-
-    jmp   exception_wrapper
+	push  byte 0x00
+	push  byte 0x06
+	jmp   exception_wrapper
 
 exception_0x07:
-    push  byte 0x00
-    push  byte 0x07
-
-    jmp   exception_wrapper
+	push  byte 0x00
+	push  byte 0x07
+	jmp   exception_wrapper
 
 exception_0x08:
-    push  byte 0x08
+	push  byte 0x08
 
-    jmp   exception_wrapper
+	jmp   exception_wrapper
 
 exception_0x09:
-    push  byte 0x09
-
-    jmp   exception_wrapper
+	push  byte 0x00
+	push  byte 0x09
+	jmp   exception_wrapper
 
 exception_0x0A:
-    push  byte 0x0A
-
-    jmp   exception_wrapper
+	push  byte 0x0A
+	jmp   exception_wrapper
 
 exception_0x0B:
-    push  byte 0x0B
-
-    jmp   exception_wrapper
+	push  byte 0x0B
+	jmp   exception_wrapper
 
 exception_0x0C:
-    push  byte 0x0C
-
-    jmp   exception_wrapper
+	push  byte 0x0C
+	jmp   exception_wrapper
 
 exception_0x0D:
-    push  byte 0x0D
+	push  byte 0x0D
+	jmp   exception_wrapper
 
-    jmp   exception_wrapper
+exception_0x0E:
+	push  byte 0x0E
+	jmp   exception_wrapper
+
+exception_0x10:
+	push  byte 0x00
+	push  byte 0x10
+	jmp   exception_wrapper
+
+exception_0x11:
+	push  byte 0x11
+	jmp   exception_wrapper
+
+exception_0x12:
+	push  byte 0x00
+	push  byte 0x12
+	jmp   exception_wrapper
+
+exception_0x13:
+	push  byte 0x00
+	push  byte 0x13
+	jmp   exception_wrapper
+
+exception_0x14:
+	push  byte 0x00
+	push  byte 0x14
+	jmp   exception_wrapper
+
+exception_0x15:
+	push  byte 0x15
+	jmp   exception_wrapper
