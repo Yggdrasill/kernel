@@ -138,11 +138,7 @@ void exception_handler(struct interrupt_info *info)
 
 void irq_handler(struct interrupt_info *info)
 {
-	if(!(irq_read_reg(0x03) & (1 << info->intno))) {
-		puts("Spurious interrupt");
-		puthex(info->intno);
-		return;
-	}
+	if(!(irq_read_reg(0x03) & (1 << info->intno))) return;
 
 	switch(info->intno) {
 		case IRQ_KEYBOARD: inb(0x60);
