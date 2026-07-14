@@ -80,13 +80,17 @@ static int new_nmemb;
  * line-sweeping type algorithm to resolve overlapping memory regions.
  */
 
-int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
+struct mmap_array mmap_sanitize(
+    struct e820_map *dst,
+    struct e820_map *src,
+    const uint32_t   nr_entries,
+    const uint32_t   dst_max_entries)
 {
 	struct e820_point e820_points[2 * MMAP_MAX_ENTRIES];
+	struct mmap_array mmap_info;
 
 	struct e820_map *overlap_map[MMAP_MAX_ENTRIES];
 
-	struct e820_map   *pmap;
 	struct e820_point *prev_point;
 
 	uint32_t type;
@@ -100,9 +104,12 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 	int nr_overlaps;
 	int i, j;
 
-	if(!nr_entries) return nr_entries;
+	mmap_info = (struct mmap_array){
+	    .start  = NULL,
+	    .length = 0,
+	};
 
-	pmap = *mmap;
+	if(!nr_entries || dst_max_entries > MMAP_MAX_ENTRIES) return mmap_info;
 
 	/*
 	 * Break down the E820 structure into a sorted list of points that can be
@@ -113,9 +120,9 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 	j = 0;
 	i = 0;
 	for(i = 0; i < nr_entries; i++) {
-		e820_points[j++] = (struct e820_point){pmap + i, pmap[i].base};
+		e820_points[j++] = (struct e820_point){src + i, src[i].base};
 		e820_points[j++] =
-		    (struct e820_point){pmap + i, pmap[i].base + pmap[i].size};
+		    (struct e820_point){src + i, src[i].base + src[i].size};
 	}
 	isort(e820_points, NR_POINTS, sizeof(*e820_points), mmap_cmp);
 
@@ -126,7 +133,7 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 	prev_attrib                = prev_point->entry->attrib;
 	overlap_map[nr_overlaps++] = prev_point->entry;
 
-	for(i = 1; i < NR_POINTS && new_nr_entries < MMAP_MAX_ENTRIES; i++) {
+	for(i = 1; i < NR_POINTS && new_nr_entries < dst_max_entries; i++) {
 
 		/*
 		 * Build a map of possibly overlapping entries. If the point is a base
@@ -182,7 +189,7 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 		 */
 
 		if(type != prev_type || attrib != prev_attrib || i == NR_POINTS - 1) {
-			new_map[new_nr_entries] = (struct e820_map){
+			dst[new_nr_entries] = (struct e820_map){
 			    prev_point->addr,
 			    e820_points[i].addr - prev_point->addr,
 			    prev_type,
@@ -191,12 +198,16 @@ int mmap_sanitize(struct e820_map **mmap, const int nr_entries)
 			prev_point  = e820_points + i;
 			prev_type   = type;
 			prev_attrib = attrib;
-			new_nr_entries += new_map[new_nr_entries].size > 0;
+			new_nr_entries += dst[new_nr_entries].size > 0;
 		}
 	}
 
-	*mmap = new_map;
-	return new_nr_entries;
+	mmap_info = (struct mmap_array){
+	    .start  = dst,
+	    .length = new_nr_entries,
+	};
+
+	return mmap_info;
 }
 
 void mmap_print(struct e820_map *mmap, int nmemb)
@@ -255,15 +266,17 @@ int mmap_clobber(struct e820_map *mmap, int nmemb)
 	return nmemb;
 }
 
-int mmap_init(struct e820_map *mmap, int nmemb)
+struct mmap_array mmap_init(struct e820_map *mmap, int nmemb)
 {
+	struct mmap_array mmap_info;
 
 	old_nmemb = nmemb;
-
+	/*
 	nmemb     = mmap_clobber(mmap, nmemb);
-	new_nmemb = mmap_sanitize(&mmap, nmemb);
+	*/
+	mmap_info = mmap_sanitize(new_map, mmap, nmemb, MMAP_MAX_ENTRIES);
 	nmemb     = new_nmemb;
-	mmap_print(mmap, nmemb);
+	mmap_print(mmap_info.start, mmap_info.length);
 
-	return 0;
+	return mmap_info;
 }

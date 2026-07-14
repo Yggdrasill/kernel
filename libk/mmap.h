@@ -55,6 +55,8 @@ extern char __bootloader_end;
 extern char __upper_start;
 extern char __upper_end;
 
-int mmap_init(struct e820_map *, int);
+struct mmap_array mmap_init(struct e820_map *, int);
+struct mmap_array mmap_sanitize(
+    struct e820_map *, struct e820_map *, const uint32_t, const uint32_t);
 
 #endif
