@@ -50,10 +50,10 @@ int mmap_cmp(const void *p1, const void *p2)
 int mmap_bad_type(uint32_t type)
 {
 	switch(type) {
-	case MMAP_USABLE:
-	case MMAP_ACPI_RECLAIMABLE:
-	case MMAP_BOOTLOADER_RECLAIMABLE: return 0;
-	default: return 1;
+		case MMAP_USABLE:
+		case MMAP_ACPI_RECLAIMABLE:
+		case MMAP_BOOTLOADER_RECLAIMABLE: return 0;
+		default: return 1;
 	}
 }
 

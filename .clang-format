@@ -29,6 +29,7 @@ AlignConsecutiveAssignments:
 AlignArrayOfStructures: Left
 AllowAllArgumentsOnNextLine: true
 AllowShortCaseLabelsOnASingleLine: true
+IndentCaseLabels: true
 AllowShortEnumsOnASingleLine: true
 AllowShortIfStatementsOnASingleLine: AllIfsAndElse
 AllowShortFunctionsOnASingleLine: None
