@@ -138,17 +138,23 @@ void exception_handler(struct interrupt_info *info)
 
 void irq_handler(struct interrupt_info *info)
 {
-	if(!(irq_read_reg(0x03) & (1 << info->intno))) return;
+	uint16_t spurious;
+	spurious = !(irq_read_reg(0x03) & (1 << info->intno));
+	if(spurious) goto eoi;
 
 	switch(info->intno) {
 		case IRQ_KEYBOARD: inb(0x60);
 	}
 
-	/* OCW2 EOI */
-	if(info->intno >= 0x08) outb(0xA0, 0x20);
-	outb(0x20, 0x20);
-
 	puts(irq_interrupts[info->intno]);
+
+	/*
+	 * OCW2 EOI
+	 * Filter out spurious interrupts from EOI.
+	 */
+eoi:
+	if(!spurious && info->intno >= 0x08) outb(0xA0, 0x20);
+	if(!spurious || info->intno >= 0x08) outb(0x20, 0x20);
 
 	return;
 }
