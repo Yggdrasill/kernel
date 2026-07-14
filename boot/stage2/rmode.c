@@ -28,9 +28,6 @@
 #include "interrupt.h"
 #include "mmap.h"
 
-struct mmap_array *__bios_mmap(void);
-void               __bios_print(uint16_t str, uint16_t len);
-
 /*
  * rmode_trampoline cannot directly return union because it invokes sret stack
  * behaviour, which then causes rmode_trampoline to pop the wrong value off the
@@ -38,13 +35,16 @@ void               __bios_print(uint16_t str, uint16_t len);
  * bogus address.
  */
 
+extern int32_t __bios_mmap(struct e820_info *);
+extern void    __bios_print(uint16_t str, uint16_t len);
+
 extern uint32_t rmode_trampoline(void (*)(void), ...);
 
-struct mmap_array *bios_mmap(void)
+int32_t bios_mmap(struct e820_info *mmap)
 {
 	union rmode_ret_t rv;
-	rv.u32 = rmode_trampoline((void (*)(void))__bios_mmap);
-	return rv.ptr;
+	rv.i32 = rmode_trampoline((void (*)(void))__bios_mmap, mmap);
+	return rv.i32;
 }
 
 void bios_print(char *str, size_t len)

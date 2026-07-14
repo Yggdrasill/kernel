@@ -23,6 +23,13 @@ extern __bios_error
 bits    16
 section .text
 
+; mmap.c: struct e820_info
+e820_info:
+E820_INFO_BASE equ 0
+E820_INFO_NR   equ 4
+E820_INFO_MAX  equ 8
+
+; TODO: Bounds checking
 __bios_mmap:
 	push  dword ebp
 	mov   ebp, esp 
@@ -32,10 +39,15 @@ __bios_mmap:
 	push  dword edi
 	push  word es
 
-	mov   eax, __MMAP_BASE_ADDR
+	mov   ebx, [bp + 6]
+	mov   eax, [ebx + E820_INFO_BASE]
+	mov   edi, eax
+	and   edi, 0x0F
 	shr   eax, 4
 	mov   es, ax
-	xor   edi, edi
+	mov   eax, [ebx + E820_INFO_NR]
+	mul   eax, 0x18
+	add   edi, eax
 	xor   ebx, ebx
 mmap_loop:
 	; clear ACPI 3.0 attribute field if BIOS doesn't fill in
@@ -64,17 +76,13 @@ mmap_continue:
 	cmp   ebx, 0x00
 	jnz   mmap_loop
 mmap_done:
-	mov   eax, es
-	shl   eax, 4
-	mov   [mmap_ptr], eax
-
 	xor   edx, edx
 	mov   eax, edi
 	mov   ebx, 0x18
 	div   ebx
 
-	mov   [mmap_len], eax
-	mov   eax, mmap_array
+	mov   ebx, [bp + 6]
+	mov   [ebx + E820_INFO_NR], eax
 
 	pop   word es
 	pop   dword edi
@@ -99,11 +107,6 @@ mmap_e2:
 	push  dword me2_len
 	push  dword mmap_err2
 	call  __bios_error
-
-section .data
-mmap_array:
-	mmap_ptr  dd 0
-	mmap_len  dd 0
 
 section .rodata
 mmap_err1 db "E: E820 not supported.",0x0D,0x0A

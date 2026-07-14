@@ -24,13 +24,55 @@
 #include <stdint.h>
 #include <string.h>
 
+#define MMAP_MAX_ENTRIES 128
+
 #define MMAP_TABLE_SIZE  sizeof(struct e820_map) * MMAP_MAX_ENTRIES
 #define MMAP_END_ADDR(x) ((x)->base + (x)->size)
+
+enum MMAP_TYPES {
+	MMAP_USABLE = 1,
+	MMAP_RESERVED,
+	MMAP_ACPI_RECLAIMABLE,
+	MMAP_ACPI_NVS,
+	MMAP_BAD_MEMORY,
+	MMAP_BOOTLOADER_RECLAIMABLE,
+	MMAP_FRAMEBUFFER
+};
+
+struct e820_map {
+	uint64_t base;
+	uint64_t size;
+	uint32_t type;
+	uint32_t attrib;
+};
+
+struct e820_info {
+	struct e820_map *base;
+	size_t          nr_entries;
+	size_t          max_nr_entries;
+};
 
 struct e820_point {
 	struct e820_map *entry;
 	uint64_t         addr;
 };
+
+extern char __BIOS_START;
+extern char __BIOS_END;
+extern char __BOOTLOADER_START;
+extern char __BOOTLOADER_END;
+
+extern char __GDTR_START;
+extern char __GDTR_END;
+extern char __GDT_START;
+extern char __GDT_END;
+extern char __IDT_START;
+extern char __IDT_END;
+extern char __STACK_START;
+extern char __STACK_END;
+
+extern char __UPPER_START;
+extern char __UPPER_END;
 
 int mmap_is_base(struct e820_point *p)
 {
@@ -72,22 +114,19 @@ __attribute__((
 static struct e820_map *const old_map = __mmap_old_map;
 static struct e820_map *const new_map = __mmap_new_map;
 
-static int old_nmemb;
-static int new_nmemb;
-
 /*
  * mmap_sanitize() is roughly based on the Linux implementation, using a
  * line-sweeping type algorithm to resolve overlapping memory regions.
  */
 
-struct mmap_array mmap_sanitize(
+struct e820_info mmap_sanitize(
     struct e820_map *dst,
     struct e820_map *src,
     const uint32_t   nr_entries,
     const uint32_t   dst_max_entries)
 {
 	struct e820_point e820_points[2 * MMAP_MAX_ENTRIES];
-	struct mmap_array mmap_info;
+	struct e820_info info;
 
 	struct e820_map *overlap_map[MMAP_MAX_ENTRIES];
 
@@ -98,18 +137,19 @@ struct mmap_array mmap_sanitize(
 	uint32_t attrib;
 	uint32_t prev_attrib;
 
-	const int NR_POINTS = 2 * nr_entries;
+	const size_t NR_POINTS = 2 * nr_entries;
 
-	int new_nr_entries;
-	int nr_overlaps;
-	int i, j;
+	size_t new_nr_entries;
+	size_t nr_overlaps;
+	size_t i, j;
 
-	mmap_info = (struct mmap_array){
-	    .start  = NULL,
-	    .length = 0,
+	info = (struct e820_info){
+		.base           = dst,
+		.nr_entries     = 0,
+		.max_nr_entries = MMAP_MAX_ENTRIES,
 	};
 
-	if(!nr_entries || dst_max_entries > MMAP_MAX_ENTRIES) return mmap_info;
+	if(!nr_entries || dst_max_entries > MMAP_MAX_ENTRIES) return info;
 
 	/*
 	 * Break down the E820 structure into a sorted list of points that can be
@@ -202,22 +242,25 @@ struct mmap_array mmap_sanitize(
 		}
 	}
 
-	mmap_info = (struct mmap_array){
-	    .start  = dst,
-	    .length = new_nr_entries,
+	info = (struct e820_info){
+	    .base           = dst,
+	    .nr_entries     = new_nr_entries,
+		.max_nr_entries = MMAP_MAX_ENTRIES,
 	};
 
-	return mmap_info;
+	return info;
 }
 
-void mmap_print(struct e820_map *mmap, int nmemb)
+void mmap_print(struct e820_info *info)
 {
-	for(int i = 0; i < nmemb; i++) {
-		puthex(mmap[i].base);
+	size_t i;
+
+	for(i = 0; i < info->nr_entries; i++) {
+		puthex(info->base[i].base);
 		putchar(' ');
-		puthex(mmap[i].size);
+		puthex(info->base[i].size);
 		putchar(' ');
-		puthex(mmap[i].type);
+		puthex(info->base[i].type);
 		putchar('\n');
 	}
 
@@ -266,17 +309,44 @@ int mmap_clobber(struct e820_map *mmap, int nmemb)
 	return nmemb;
 }
 
-struct mmap_array mmap_init(struct e820_map *mmap, int nmemb)
+/*
+ * As in every other source file: This type of global state is bootloader only.
+ */
+
+static struct e820_info mmap_info;
+
+struct e820_info *mmap_info_init(void)
 {
-	struct mmap_array mmap_info;
+	struct e820_info *info;
 
-	old_nmemb = nmemb;
-	/*
-	nmemb     = mmap_clobber(mmap, nmemb);
-	*/
-	mmap_info = mmap_sanitize(new_map, mmap, nmemb, MMAP_MAX_ENTRIES);
-	nmemb     = new_nmemb;
-	mmap_print(mmap_info.start, mmap_info.length);
+	info = &mmap_info;
 
-	return mmap_info;
+	*info = (struct e820_info){
+		.base           = old_map,
+		.nr_entries     = 0,
+		.max_nr_entries = MMAP_MAX_ENTRIES
+	};
+
+	return info;
+}
+
+struct e820_info *mmap_init(void)
+{
+	struct e820_info *info;
+
+	info = mmap_info_init();
+	info->nr_entries = mmap_clobber(info->base, info->nr_entries);
+
+	return info;
+}
+
+struct e820_info *mmap_setup(struct e820_info *info)
+{
+	struct e820_info new_info;
+	struct e820_map  *old;
+	old = info->base;
+	new_info = mmap_sanitize(new_map, old, info->nr_entries, MMAP_MAX_ENTRIES);
+	memcpy(info, &new_info, sizeof(*info));
+	mmap_print(info);
+	return info;
 }

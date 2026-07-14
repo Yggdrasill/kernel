@@ -58,9 +58,9 @@ int main(void)
     };
 #endif
 
-	struct gdt_ptr    *gdtp;
-	struct idt_info   *idt;
-	struct mmap_array *mmap_entries;
+	struct gdt_ptr   *gdtp;
+	struct idt_info  *idt;
+	struct e820_info *mmap;
 
 	if(irq_read_imr() != 0xFFFF) irq_mask_all();
 	if(!nmi_status()) nmi_disable();
@@ -76,16 +76,17 @@ int main(void)
 	idt = idt_init();
 	exception_idt_init(idt);
 	irq_idt_init(idt);
-	irq_init();
 
+	irq_init();
 	irq_mask_all();
 	nmi_enable();
 	irq_unmask(IRQ_NUM_KBD);
 	ints_flag_set();
 
 #ifndef TEST_MMAP
-	mmap_entries = bios_mmap();
-	mmap_init(mmap_entries->start, mmap_entries->length);
+	mmap = mmap_init();
+	bios_mmap(mmap);
+	mmap = mmap_setup(mmap);
 #else
 	memcpy(test_map, broken_map, sizeof(broken_map));
 	mmap_init(test_map, sizeof(broken_map) / sizeof(*broken_map));

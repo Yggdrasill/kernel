@@ -22,7 +22,6 @@
 #ifndef RMODE_H
 #define RMODE_H
 
-#include "idt.h"
 #include "mmap.h"
 #include "stdint.h"
 
@@ -32,7 +31,7 @@ union rmode_ret_t {
 	uint32_t u32;
 };
 
-struct mmap_array *bios_mmap(void);
-void               bios_print(char *, size_t);
+int32_t bios_mmap(struct e820_info *);
+void    bios_print(char *, size_t);
 
 #endif

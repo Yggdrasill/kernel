@@ -24,49 +24,15 @@
 
 #include "stdint.h"
 
-#define MMAP_MAX_ENTRIES 128
+struct e820_info;
+struct e820_map;
 
-enum MMAP_TYPES {
-	MMAP_USABLE = 1,
-	MMAP_RESERVED,
-	MMAP_ACPI_RECLAIMABLE,
-	MMAP_ACPI_NVS,
-	MMAP_BAD_MEMORY,
-	MMAP_BOOTLOADER_RECLAIMABLE,
-	MMAP_FRAMEBUFFER
-};
-
-struct e820_map {
-	uint64_t base;
-	uint64_t size;
-	uint32_t type;
-	uint32_t attrib;
-};
-
-struct mmap_array {
-	struct e820_map *start;
-	uint32_t         length;
-};
-
-extern char __BIOS_START;
-extern char __BIOS_END;
-extern char __BOOTLOADER_START;
-extern char __BOOTLOADER_END;
-
-extern char __GDTR_START;
-extern char __GDTR_END;
-extern char __GDT_START;
-extern char __GDT_END;
-extern char __IDT_START;
-extern char __IDT_END;
-extern char __STACK_START;
-extern char __STACK_END;
-
-extern char __UPPER_START;
-extern char __UPPER_END;
-
-struct mmap_array mmap_init(struct e820_map *, int);
-struct mmap_array mmap_sanitize(
-    struct e820_map *, struct e820_map *, const uint32_t, const uint32_t);
+struct e820_info mmap_sanitize(
+	struct e820_map *,
+	struct e820_map *,
+	const uint32_t,
+	const uint32_t);
+struct e820_info *mmap_init(void);
+struct e820_info *mmap_setup(struct e820_info *);
 
 #endif
