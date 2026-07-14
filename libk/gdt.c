@@ -68,8 +68,8 @@ struct gdt_entry {
 struct gdt_info {
 	struct gdt_ptr   *gdtr;
 	struct gdt_entry *entries;
-	size_t           max_nr_entries;
-	size_t           nr_entries;
+	size_t            max_nr_entries;
+	size_t            nr_entries;
 };
 
 extern struct gdt_ptr   __GDT_PTR_LOCATION;
@@ -89,10 +89,10 @@ void gdt_install(struct gdt_ptr *gdtr)
 struct gdt_info *gdt_info_init(void)
 {
 	gdt_info = (struct gdt_info){
-		.gdtr           = &__GDT_PTR_LOCATION,
-		.entries        = &__GDT_BASE_LOCATION,
-		.max_nr_entries = GDT_MAX_ENTRIES,
-		.nr_entries     = 0,
+	    .gdtr           = &__GDT_PTR_LOCATION,
+	    .entries        = &__GDT_BASE_LOCATION,
+	    .max_nr_entries = GDT_MAX_ENTRIES,
+	    .nr_entries     = 0,
 	};
 	return &gdt_info;
 }

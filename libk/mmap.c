@@ -48,8 +48,8 @@ struct e820_map {
 
 struct e820_info {
 	struct e820_map *base;
-	size_t          nr_entries;
-	size_t          max_nr_entries;
+	size_t           nr_entries;
+	size_t           max_nr_entries;
 };
 
 struct e820_point {
@@ -126,7 +126,7 @@ struct e820_info mmap_sanitize(
     const uint32_t   dst_max_entries)
 {
 	struct e820_point e820_points[2 * MMAP_MAX_ENTRIES];
-	struct e820_info info;
+	struct e820_info  info;
 
 	struct e820_map *overlap_map[MMAP_MAX_ENTRIES];
 
@@ -144,9 +144,9 @@ struct e820_info mmap_sanitize(
 	size_t i, j;
 
 	info = (struct e820_info){
-		.base           = dst,
-		.nr_entries     = 0,
-		.max_nr_entries = MMAP_MAX_ENTRIES,
+	    .base           = dst,
+	    .nr_entries     = 0,
+	    .max_nr_entries = MMAP_MAX_ENTRIES,
 	};
 
 	if(!nr_entries || dst_max_entries > MMAP_MAX_ENTRIES) return info;
@@ -245,7 +245,7 @@ struct e820_info mmap_sanitize(
 	info = (struct e820_info){
 	    .base           = dst,
 	    .nr_entries     = new_nr_entries,
-		.max_nr_entries = MMAP_MAX_ENTRIES,
+	    .max_nr_entries = MMAP_MAX_ENTRIES,
 	};
 
 	return info;
@@ -322,10 +322,7 @@ struct e820_info *mmap_info_init(void)
 	info = &mmap_info;
 
 	*info = (struct e820_info){
-		.base           = old_map,
-		.nr_entries     = 0,
-		.max_nr_entries = MMAP_MAX_ENTRIES
-	};
+	    .base = old_map, .nr_entries = 0, .max_nr_entries = MMAP_MAX_ENTRIES};
 
 	return info;
 }
@@ -334,7 +331,7 @@ struct e820_info *mmap_init(void)
 {
 	struct e820_info *info;
 
-	info = mmap_info_init();
+	info             = mmap_info_init();
 	info->nr_entries = mmap_clobber(info->base, info->nr_entries);
 
 	return info;
@@ -343,8 +340,8 @@ struct e820_info *mmap_init(void)
 struct e820_info *mmap_setup(struct e820_info *info)
 {
 	struct e820_info new_info;
-	struct e820_map  *old;
-	old = info->base;
+	struct e820_map *old;
+	old      = info->base;
 	new_info = mmap_sanitize(new_map, old, info->nr_entries, MMAP_MAX_ENTRIES);
 	memcpy(info, &new_info, sizeof(*info));
 	mmap_print(info);

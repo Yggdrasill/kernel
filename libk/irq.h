@@ -41,8 +41,8 @@
 #define IRQ_CASCADE     0x02
 
 enum IRQ_NUMS {
-	IRQ_NUM_PIT  = 0,
-	IRQ_NUM_KBD  = 1,
+	IRQ_NUM_PIT = 0,
+	IRQ_NUM_KBD = 1,
 	IRQ_NUM_CASC,
 	IRQ_NUM_COM2,
 	IRQ_NUM_COM1,

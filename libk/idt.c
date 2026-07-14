@@ -72,10 +72,10 @@ static struct idt_info  idt_info;
 struct idt_info *idt_info_init(void)
 {
 	idt_info = (struct idt_info){
-		.idtr           = &__IDT_PTR_LOCATION,
-		.entries        = &__IDT_BASE_LOCATION,
-		.max_nr_entries = IDT_ENTRY_NUM,
-		.nr_entries     = 0,
+	    .idtr           = &__IDT_PTR_LOCATION,
+	    .entries        = &__IDT_BASE_LOCATION,
+	    .max_nr_entries = IDT_ENTRY_NUM,
+	    .nr_entries     = 0,
 	};
 	return &idt_info;
 }
@@ -131,7 +131,7 @@ size_t idt_add_entry(
 	struct idt_entry *entry;
 	unsigned char    *offset;
 	unsigned char    *selector;
-	intptr_t         raw_ptr;
+	intptr_t          raw_ptr;
 
 	/* TODO: Bounds testing */
 	entry = info->entries + info->nr_entries;
