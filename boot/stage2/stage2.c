@@ -58,16 +58,14 @@ int main(void)
     };
 #endif
 
-	struct gdt_ptr   *gdtp;
+	struct gdt_info  *gdt;
 	struct idt_info  *idt;
 	struct e820_info *mmap;
 
 	if(irq_read_imr() != 0xFFFF) irq_mask_all();
 	if(!nmi_status()) nmi_disable();
 
-	gdtp = gdt_init();
-	gdt_default_entries_add(gdtp);
-	gdt_install(gdtp);
+	gdt = gdt_init();
 
 	memsetw((int16_t *)&FB_ADDR, 0x0720, 0x7D0);
 

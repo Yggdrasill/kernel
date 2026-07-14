@@ -24,52 +24,11 @@
 
 #include "stdint.h"
 
-enum GDT_ACCESS {
-	GDT_ACCESSED   = 1,
-	GDT_RW         = 1 << 1,
-	GDT_DC         = 1 << 2,
-	GDT_EXEC       = 1 << 3,
-	GDT_SEGMENT    = 1 << 4,
-	GDT_PRIV_RING0 = 0 << 5,
-	GDT_PRIV_RING1 = 1 << 5,
-	GDT_PRIV_RING2 = 2 << 5,
-	GDT_PRIV_RING3 = 3 << 5,
-	GDT_PRESENT    = 1 << 7
-};
+struct gdt_ptr;
+struct gdt_entry;
+struct gdt_info;
 
-enum GDT_FLAGS {
-	GDT_RESERVED = 0,
-	GDT_LONG     = 1 << 1,
-	GDT_BITS_32  = 1 << 2,
-	GDT_GRAN     = 1 << 3
-};
-
-struct gdt_ptr {
-	uint8_t size_0;
-	uint8_t size_8;
-	uint8_t base_0;
-	uint8_t base_8;
-	uint8_t base_16;
-	uint8_t base_24;
-};
-
-struct gdt_entry {
-	uint8_t limit_0;
-	uint8_t limit_8;
-	uint8_t base_0;
-	uint8_t base_8;
-	uint8_t base_16;
-	uint8_t access;
-	uint8_t limit_flags;
-	uint8_t base_24;
-};
-
-extern struct gdt_ptr   __GDT_PTR_LOCATION;
-extern struct gdt_entry __GDT_BASE_LOCATION;
-
-struct gdt_ptr *gdt_init(void);
-void gdt_entry_add(struct gdt_ptr *, void *, uint32_t, uint8_t, uint8_t);
-void gdt_default_entries_add(struct gdt_ptr *);
-void gdt_install(struct gdt_ptr *);
+struct gdt_info *gdt_init(void);
+void gdt_entry_add(struct gdt_info *, void *, uint32_t, uint8_t, uint8_t);
 
 #endif
