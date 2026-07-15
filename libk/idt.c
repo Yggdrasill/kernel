@@ -26,7 +26,7 @@
 
 #define IDT_ENTRY_NUM 256
 
-#define IDT_BITMAP_NR(x) (IDT_ENTRY_NUM / sizeof(x))
+#define IDT_BITMAP_NR(x) (IDT_ENTRY_NUM / (sizeof(x) * CHAR_BIT))
 
 /*
  * Little endian byte alignment follows. These structures are manually packed
