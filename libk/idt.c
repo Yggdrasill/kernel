@@ -20,10 +20,13 @@
  */
 
 #include "idt.h"
+#include "limits.h"
 #include "stdint.h"
 #include "string.h"
 
 #define IDT_ENTRY_NUM 256
+
+#define IDT_BITMAP_NR(x) (IDT_ENTRY_NUM / sizeof(x))
 
 /*
  * Little endian byte alignment follows. These structures are manually packed
@@ -58,6 +61,7 @@ struct idt_info {
 	struct idt_entry *entries;
 	size_t            max_nr_entries;
 	size_t            nr_entries;
+	uint32_t          present[IDT_BITMAP_NR(uint32_t)];
 };
 
 /*
@@ -107,6 +111,7 @@ struct idt_info *idt_init(void)
 	idtr->base_16 = arr_base[2];
 	idtr->base_24 = arr_base[3];
 
+	memset(info->present, 0, sizeof(info->present));
 	idt_install(info);
 
 	return info;
@@ -133,10 +138,21 @@ size_t idt_entry_set(
 	unsigned char    *offset;
 	unsigned char    *selector;
 	intptr_t          raw_ptr;
+	size_t            nr_entries;
+	uint32_t          bitmap;
+	uint8_t           index;
+	uint8_t           bit;
 
-	/* TODO: Bounds testing */
-	entry = info->entries + at_offset;
+	nr_entries = info->nr_entries;
+	index      = at_offset / (sizeof(info->present[0]) * CHAR_BIT);
+	bit        = at_offset % (sizeof(info->present[0]) * CHAR_BIT);
+	bitmap     = info->present[index] & (1U << bit);
 
+	if(!bitmap) nr_entries++;
+	if(nr_entries > IDT_ENTRY_NUM) goto idt_set_exit;
+	info->present[index] |= 1U << bit;
+
+	entry    = info->entries + at_offset;
 	raw_ptr  = (intptr_t)idt_handler;
 	offset   = (unsigned char *)&raw_ptr;
 	selector = (unsigned char *)&select;
@@ -152,6 +168,8 @@ size_t idt_entry_set(
 	entry->zero  = 0;
 	entry->flags = flags;
 
+	info->nr_entries = nr_entries;
+idt_set_exit:
 	return info->nr_entries;
 }
 
@@ -161,7 +179,7 @@ size_t idt_entry_add(
     uint16_t         select,
     uint8_t          flags)
 {
-	return idt_entry_set(info, idt_handler, select, flags, info->nr_entries++);
+	return idt_entry_set(info, idt_handler, select, flags, info->nr_entries);
 }
 
 void idt_install(struct idt_info *info)

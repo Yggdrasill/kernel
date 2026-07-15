@@ -148,9 +148,9 @@ void exception_idt_init(struct idt_info *info)
 	idt_entry_set(info, &exception_0x14, 0x08, 0x8E, 0x14);
 	idt_entry_set(info, &exception_0x15, 0x08, 0x8E, 0x15);
 
-	for(entries = 0; entries < idt_entries_max(info); entries++) {
-		idt_entry_set(info, &exception_unknown, 0x08, 0x8E, 0x0F);
-	}
+	do {
+		entries = idt_entry_add(info, &exception_unknown, 0x08, 0x8E);
+	} while(entries < idt_entries_max(info));
 
 	return;
 }
@@ -165,14 +165,15 @@ void irq_idt_init(struct idt_info *info)
 	idt_entry_set(info, &irq_0x05, 0x08, 0x8E, IRQ0_BASE_PM + 0x5);
 	idt_entry_set(info, &irq_0x06, 0x08, 0x8E, IRQ0_BASE_PM + 0x6);
 	idt_entry_set(info, &irq_0x07, 0x08, 0x8E, IRQ0_BASE_PM + 0x7);
-	idt_entry_set(info, &irq_0x08, 0x08, 0x8E, IRQ1_BASE_PM + 0x8);
-	idt_entry_set(info, &irq_0x09, 0x08, 0x8E, IRQ1_BASE_PM + 0x9);
-	idt_entry_set(info, &irq_0x0A, 0x08, 0x8E, IRQ1_BASE_PM + 0xA);
-	idt_entry_set(info, &irq_0x0B, 0x08, 0x8E, IRQ1_BASE_PM + 0xB);
-	idt_entry_set(info, &irq_0x0C, 0x08, 0x8E, IRQ1_BASE_PM + 0xC);
-	idt_entry_set(info, &irq_0x0D, 0x08, 0x8E, IRQ1_BASE_PM + 0xD);
-	idt_entry_set(info, &irq_0x0E, 0x08, 0x8E, IRQ1_BASE_PM + 0xE);
-	idt_entry_set(info, &irq_0x0F, 0x08, 0x8E, IRQ1_BASE_PM + 0xF);
+
+	idt_entry_set(info, &irq_0x08, 0x08, 0x8E, IRQ1_BASE_PM);
+	idt_entry_set(info, &irq_0x09, 0x08, 0x8E, IRQ1_BASE_PM + 0x1);
+	idt_entry_set(info, &irq_0x0A, 0x08, 0x8E, IRQ1_BASE_PM + 0x2);
+	idt_entry_set(info, &irq_0x0B, 0x08, 0x8E, IRQ1_BASE_PM + 0x3);
+	idt_entry_set(info, &irq_0x0C, 0x08, 0x8E, IRQ1_BASE_PM + 0x4);
+	idt_entry_set(info, &irq_0x0D, 0x08, 0x8E, IRQ1_BASE_PM + 0x5);
+	idt_entry_set(info, &irq_0x0E, 0x08, 0x8E, IRQ1_BASE_PM + 0x6);
+	idt_entry_set(info, &irq_0x0F, 0x08, 0x8E, IRQ1_BASE_PM + 0x7);
 
 	return;
 }
