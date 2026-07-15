@@ -84,10 +84,10 @@ ms_nmi_enable:
 	ret
 
 p70_load:
-	push  eax
+	push  ax
 	mov   al, [shadow_p70]
 	out   0x70, al
-	pop   eax
+	pop   ax
 	ret
 ; End mixed-mode functions
 

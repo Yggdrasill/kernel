@@ -9,8 +9,8 @@ __start:
 bits 16
 	xor    ax, ax
 	inc    ax
-	shl    ax, 17
-	bt     ax, 17
+	shl    ax, 16
+	bt     ax, 16
 	jc     continue_32
 	push   dword exec_len
 	push   dword exec_err
