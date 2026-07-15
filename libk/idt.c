@@ -107,26 +107,27 @@ struct idt_info *idt_init(void)
 	idtr->base_16 = arr_base[2];
 	idtr->base_24 = arr_base[3];
 
-	idt_install(idtr);
+	idt_install(info);
 
 	return info;
 }
 
-size_t idt_num_entries(struct idt_info *info)
+size_t idt_entries_nr(struct idt_info *info)
 {
 	return info->nr_entries;
 }
 
-size_t idt_max_entries(struct idt_info *info)
+size_t idt_entries_max(struct idt_info *info)
 {
 	return info->max_nr_entries;
 }
 
-size_t idt_add_entry(
+size_t idt_entry_set(
     struct idt_info *info,
     void             (*idt_handler)(void),
     uint16_t         select,
-    unsigned char    flags)
+    uint8_t          flags,
+	uint8_t          at_offset)
 {
 	struct idt_entry *entry;
 	unsigned char    *offset;
@@ -134,7 +135,7 @@ size_t idt_add_entry(
 	intptr_t          raw_ptr;
 
 	/* TODO: Bounds testing */
-	entry = info->entries + info->nr_entries;
+	entry = info->entries + at_offset;
 
 	raw_ptr  = (intptr_t)idt_handler;
 	offset   = (unsigned char *)&raw_ptr;
@@ -151,13 +152,22 @@ size_t idt_add_entry(
 	entry->zero  = 0;
 	entry->flags = flags;
 
-	info->nr_entries++;
-
 	return info->nr_entries;
 }
 
-void idt_install(struct idt_ptr *idtr)
+size_t idt_entry_add(
+	struct idt_info *info,
+	void             (*idt_handler)(void),
+	uint16_t         select,
+	uint8_t          flags)
 {
+	return idt_entry_set(info, idt_handler, select, flags, info->nr_entries++);
+}
+
+void idt_install(struct idt_info *info)
+{
+	struct idt_ptr *idtr;
+	idtr = info->idtr;
 	__asm__ volatile("mov  eax, %0;"
 	                 "lidt [eax];"
 	                 :
