@@ -127,7 +127,7 @@ size_t idt_entry_set(
     void             (*idt_handler)(void),
     uint16_t         select,
     uint8_t          flags,
-	uint8_t          at_offset)
+    uint8_t          at_offset)
 {
 	struct idt_entry *entry;
 	unsigned char    *offset;
@@ -156,10 +156,10 @@ size_t idt_entry_set(
 }
 
 size_t idt_entry_add(
-	struct idt_info *info,
-	void             (*idt_handler)(void),
-	uint16_t         select,
-	uint8_t          flags)
+    struct idt_info *info,
+    void             (*idt_handler)(void),
+    uint16_t         select,
+    uint8_t          flags)
 {
 	return idt_entry_set(info, idt_handler, select, flags, info->nr_entries++);
 }
