@@ -32,10 +32,6 @@ E820_INFO_MAX  equ 8
 __bios_mmap:
 	push  dword ebp
 	mov   ebp, esp 
-	push  dword ebx
-	push  dword ecx
-	push  dword edx
-	push  dword edi
 	push  word es
 	push  word ds
 
@@ -52,13 +48,13 @@ __bios_mmap:
 	mov   eax, [edx + E820_INFO_NR]
 	mul   eax, 0x18
 	add   edi, eax
+	mov   eax, [edx + E820_INFO_MAX]
+	mul   eax, 0x18
+	mov   esi, eax
 	xor   ebx, ebx
 mmap_loop:
-	mov   edx, [bp + 6]
-	and   edx, 0x0F
-	mov   eax, [edx + E820_INFO_NR]
-	add   eax, ebx
-	sub   eax, [edx + E820_INFO_MAX]
+	mov   eax, edi
+	sub   eax, esi
 	js    mmap_e820
 	mov   ecx, -4
 	jmp   mmap_done
@@ -69,11 +65,13 @@ mmap_e820:
 	mov   ecx, 0x00000018
 	mov   edx, 0x534D4150
 	push  edi
+	push  esi
 	push  es
 	push  ds
 	int   0x15
 	pop   ds
 	pop   es
+	pop   esi
 	pop   edi
 	jc    mmap_recover
 
@@ -105,10 +103,6 @@ mmap_done:
 	mov   eax, ecx
 	pop   word ds
 	pop   word es
-	pop   dword edi
-	pop   dword edx
-	pop   dword ecx
-	pop   dword ebx
 	pop   dword ebp
 	ret
 
