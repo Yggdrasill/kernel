@@ -24,11 +24,33 @@
 
 #include "stdint.h"
 
+enum GDT_ACCESS {
+	GDT_ACCESSED   = 1,
+	GDT_RW         = 1 << 1,
+	GDT_DC         = 1 << 2,
+	GDT_EXEC       = 1 << 3,
+	GDT_SEGMENT    = 1 << 4,
+	GDT_PRIV_RING0 = 0 << 5,
+	GDT_PRIV_RING1 = 1 << 5,
+	GDT_PRIV_RING2 = 2 << 5,
+	GDT_PRIV_RING3 = 3 << 5,
+	GDT_PRESENT    = 1 << 7
+};
+
+enum GDT_FLAGS {
+	GDT_RESERVED = 0,
+	GDT_LONG     = 1 << 1,
+	GDT_BITS_32  = 1 << 2,
+	GDT_GRAN     = 1 << 3
+};
+
 struct gdt_ptr;
 struct gdt_entry;
 struct gdt_info;
 
 struct gdt_info *gdt_init(void);
 void gdt_entry_add(struct gdt_info *, void *, uint32_t, uint8_t, uint8_t);
+
+void gdt_install(struct gdt_info *);
 
 #endif
