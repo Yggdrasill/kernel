@@ -28,6 +28,7 @@
 
 #define MMAP_TABLE_SIZE  sizeof(struct e820_map) * MMAP_MAX_ENTRIES
 #define MMAP_END_ADDR(x) ((x)->base + (x)->size)
+#define MMAP_REGION_SIZE(start, end) ((uintptr_t)&end - (uintptr_t)&start)
 
 enum MMAP_TYPES {
 	MMAP_USABLE = 1,
@@ -267,46 +268,77 @@ void mmap_print(struct e820_info *info)
 	return;
 }
 
-int mmap_clobber(struct e820_map *mmap, int nmemb)
+int mmap_clobber(struct e820_info *info)
 {
-	mmap[nmemb++] = (struct e820_map){
+	struct e820_map *mmap;
+	size_t nr_entries;
+
+	mmap = info->base;
+	nr_entries = info->nr_entries;
+
+	mmap[nr_entries++] = (struct e820_map){
 	    .base   = (uintptr_t)&__BIOS_START,
 	    .size   = (uintptr_t)&__BIOS_END - (uintptr_t)&__BIOS_START,
 	    .type   = MMAP_RESERVED,
 	    .attrib = 0,
 	};
-	mmap[nmemb++] = (struct e820_map){
+	mmap[nr_entries++] = (struct e820_map){
 	    .base   = (uintptr_t)&__BOOTLOADER_START,
 	    .size   = (uintptr_t)&__BOOTLOADER_END - (uintptr_t)&__BOOTLOADER_START,
 	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
 	    .attrib = 0,
 	};
-	mmap[nmemb++] = (struct e820_map){
+	mmap[nr_entries++] = (struct e820_map){
+		.base   = (uintptr_t)&__GDTR_START,
+		.size   = MMAP_REGION_SIZE(__GDTR_START, __GDTR_END),
+		.type   = MMAP_BOOTLOADER_RECLAIMABLE,
+		.attrib = 0,
+	};
+	mmap[nr_entries++] = (struct e820_map){
+		.base   = (uintptr_t)&__GDT_START,
+		.size   = MMAP_REGION_SIZE(__GDT_START, __GDT_END),
+		.type   = MMAP_BOOTLOADER_RECLAIMABLE,
+		.attrib = 0,
+	};
+	mmap[nr_entries++] = (struct e820_map){
 	    .base   = (uintptr_t)old_map,
 	    .size   = MMAP_TABLE_SIZE,
 	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
 	    .attrib = 0,
 	};
-	mmap[nmemb++] = (struct e820_map){
+	mmap[nr_entries++] = (struct e820_map){
 	    .base   = (uintptr_t)new_map,
 	    .size   = MMAP_TABLE_SIZE,
 	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
 	    .attrib = 0,
 	};
-	mmap[nmemb++] = (struct e820_map){
+	mmap[nr_entries++] = (struct e820_map){
+		.base   = (uintptr_t)&__IDT_START,
+		.size   = MMAP_REGION_SIZE(__IDT_START, __IDT_END),
+		.type   = MMAP_BOOTLOADER_RECLAIMABLE,
+		.attrib = 0,
+	};
+	mmap[nr_entries++] = (struct e820_map){
+		.base   = (uintptr_t)&__STACK_START,
+		.size   = MMAP_REGION_SIZE(__STACK_START, __STACK_END),
+		.type   = MMAP_BOOTLOADER_RECLAIMABLE,
+		.attrib = 0,
+	};
+	mmap[nr_entries++] = (struct e820_map){
 	    .base   = (uintptr_t)&FB_ADDR,
 	    .size   = (uintptr_t)&FB_END - (uintptr_t)&FB_ADDR,
 	    .type   = MMAP_FRAMEBUFFER,
 	    .attrib = 0,
 	};
-	mmap[nmemb++] = (struct e820_map){
+	mmap[nr_entries++] = (struct e820_map){
 	    .base   = (uintptr_t)&__UPPER_START,
 	    .size   = (uintptr_t)&__UPPER_END - (uintptr_t)&__UPPER_START,
 	    .type   = MMAP_RESERVED,
 	    .attrib = 0,
 	};
 
-	return nmemb;
+	info->nr_entries = nr_entries;
+	return nr_entries;
 }
 
 /*
@@ -331,8 +363,8 @@ struct e820_info *mmap_init(void)
 {
 	struct e820_info *info;
 
-	info             = mmap_info_init();
-	info->nr_entries = mmap_clobber(info->base, info->nr_entries);
+	info = mmap_info_init();
+	mmap_clobber(info);
 
 	return info;
 }
