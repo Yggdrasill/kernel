@@ -40,6 +40,15 @@ extern void    __bios_print(uint16_t str, uint16_t len);
 
 extern uint32_t rmode_trampoline(void (*)(void), ...);
 
+/*
+ * bios_mmap return codes:
+ * return = 0 on success
+ * return = -1 when E820 is unsupported
+ * return = -2 when E820 produced a malformed response
+ * return = -3 when E820 produced a malformed entry size
+ * return = -4 when E820 map has been exhausted
+ */
+
 int32_t bios_mmap(struct e820_info *mmap)
 {
 	union rmode_ret_t rv;

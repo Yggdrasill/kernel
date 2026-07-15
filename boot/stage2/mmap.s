@@ -29,7 +29,6 @@ E820_INFO_BASE equ 0
 E820_INFO_NR   equ 4
 E820_INFO_MAX  equ 8
 
-; TODO: Bounds checking
 __bios_mmap:
 	push  dword ebp
 	mov   ebp, esp 
@@ -38,24 +37,37 @@ __bios_mmap:
 	push  dword edx
 	push  dword edi
 	push  word es
+	push  word ds
 
-	mov   ebx, [bp + 6]
-	mov   eax, [ebx + E820_INFO_BASE]
+	mov   edx, [bp + 6]
+	mov   eax, edx
+	shr   eax, 4
+	mov   ds, ax
+	and   edx, 0x0F
+	mov   eax, [edx + E820_INFO_BASE]
 	mov   edi, eax
-	and   edi, 0x0F
 	shr   eax, 4
 	mov   es, ax
-	mov   eax, [ebx + E820_INFO_NR]
+	and   edi, 0x0F
+	mov   eax, [edx + E820_INFO_NR]
 	mul   eax, 0x18
 	add   edi, eax
 	xor   ebx, ebx
 mmap_loop:
+	mov   edx, [bp + 6]
+	and   edx, 0x0F
+	mov   eax, [edx + E820_INFO_NR]
+	add   eax, ebx
+	sub   eax, [edx + E820_INFO_MAX]
+	js    mmap_e820
+	mov   ecx, -4
+	jmp   mmap_done
+mmap_e820:
 	; clear ACPI 3.0 attribute field if BIOS doesn't fill in
 	mov   dword [es:edi+0x14], 0x00 
 	mov   eax, 0x0000E820
 	mov   ecx, 0x00000018
 	mov   edx, 0x534D4150
-
 	push  edi
 	push  es
 	push  ds
@@ -66,50 +78,43 @@ mmap_loop:
 	jc    mmap_recover
 
 	cmp   eax, 0x534D4150
-	jne   mmap_e2
+	je    check_size
+	mov   ecx, -2
+	jmp   mmap_done
+check_size:
 	cmp   ecx, 0x14
 	je    mmap_continue
 	cmp   ecx, 0x18
-	jne   mmap_e2
+	je    mmap_continue
+	mov   ecx, -3
+	jmp   mmap_done
 mmap_continue:
 	add   edi, 0x18
 	cmp   ebx, 0x00
 	jnz   mmap_loop
+	xor   ecx, ecx
 mmap_done:
 	xor   edx, edx
 	mov   eax, edi
 	mov   ebx, 0x18
 	div   ebx
+	mov   edx, [bp + 6]
+	and   edx, 0x0F
+	mov   [edx + E820_INFO_NR], eax
 
-	mov   ebx, [bp + 6]
-	mov   [ebx + E820_INFO_NR], eax
-
+	mov   eax, ecx
+	pop   word ds
 	pop   word es
 	pop   dword edi
 	pop   dword edx
 	pop   dword ecx
 	pop   dword ebx
 	pop   dword ebp
-
 	ret
 
 mmap_recover:
 	cmp   edi, 0
-	je    mmap_e1
+	jne   mmap_done
+	; E820 not supported
+	mov   ecx, -1
 	jmp   mmap_done
-
-mmap_e1:
-	push  dword me1_len
-	push  dword mmap_err1
-	call  __bios_error
-
-mmap_e2:
-	push  dword me2_len
-	push  dword mmap_err2
-	call  __bios_error
-
-section .rodata
-mmap_err1 db "E: E820 not supported.",0x0D,0x0A
-me1_len   equ $ - mmap_err1
-mmap_err2 db "E: E820 malformed response",0x0D,0x0A
-me2_len   equ $ - mmap_err2
