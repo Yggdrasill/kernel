@@ -47,6 +47,10 @@ extern uint32_t rmode_trampoline(void (*)(void), ...);
  * return = -2 when E820 produced a malformed response
  * return = -3 when E820 produced a malformed entry size
  * return = -4 when E820 map has been exhausted
+ *
+ * The following actions should be performed on error returns:
+ * - if return = -1, try other BIOS memory requests
+ * - if return < -1, these are panic conditions, memory map cannot be trusted
  */
 
 int32_t bios_mmap(struct e820_info *mmap)

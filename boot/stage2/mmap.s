@@ -107,7 +107,11 @@ mmap_done:
 	ret
 
 mmap_recover:
-	cmp   edi, 0
+	mov   edx, [bp + 6]
+	and   edx, 0x0F
+	mov   eax, [edx + E820_INFO_NR]
+	mul   eax, 0x18
+	cmp   edi, eax
 	jne   mmap_done
 	; E820 not supported
 	mov   ecx, -1
