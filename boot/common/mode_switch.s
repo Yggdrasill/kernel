@@ -26,6 +26,7 @@ global shadow_p70
 
 section .stage15 alloc exec progbits nowrite
 
+; Must NEVER be called in 32-bit mode.
 store_bios_imr:
 	push  ax
 
@@ -64,25 +65,24 @@ mask_ints:
 ; mode_switch functions do not write
 ; port 0x70 shadow state.
 
+; Mixed execution dual encoding magic
 ms_nmi_disable:
 	push  ax
 	push  di
+	xor   di, di
 	push  word shadow_p70
 	; Unholy sacrificial instruction
-	; push word 0x00 in binary
-	db    0x6A,00
-	; Operand size prefix override
-	; In 16-bit: pop 4 bytes
-	; In 32-bit: pop 2 bytes
+	push  byte 0x00
+	; Operand size override
 	pop   dword edi
-	cmp   di, 0x00
-	jne   ms_nmi_disable_load
+	or    di, di
+	jnz   short ms_nmi_disable_load
 	shr   edi, 16
 	mov   al, [di]
-	jmp   ms_nmi_disable_write
+	jmp   short ms_nmi_disable_write
 ms_nmi_disable_load:
 bits 32
-	add   sp, 2
+	add   esp, 2
 	mov   al, [di]
 bits 16
 ms_nmi_disable_write:
@@ -92,43 +92,21 @@ ms_nmi_disable_write:
 	pop   ax
 	ret
 
-ms_nmi_enable:
-	push  ax
-	push  di
-	push  word shadow_p70
-	db    0x6A,00
-	pop   dword edi
-	cmp   di, 0x00
-	jne   ms_nmi_enable_load
-	shr   edi, 16
-	mov   al, [di]
-	jmp   ms_nmi_enable_write
-ms_nmi_enable_load:
-bits 32
-	add   sp, 2
-	mov   al, [di]
-bits 16
-ms_nmi_enable_write:
-	and   al, 0x7F
-	out   0x70, al
-	pop   di
-	pop   ax
-	ret
-
 restore_p70:
 	push  ax
 	push  di
+	xor   di, di
 	push  word shadow_p70
-	db    0x6A,00
+	push  byte 0x00
 	pop   dword edi
-	cmp   di, 0x00
-	jne   restore_p70_load
+	or    di, di
+	jnz   short restore_p70_load
 	shr   edi, 16
 	mov   al, [di]
-	jmp   restore_p70_write
+	jmp   short restore_p70_write
 restore_p70_load:
 bits 32
-	add   sp, 2
+	add   esp, 2
 	mov   al, [di]
 bits 16
 restore_p70_write:
