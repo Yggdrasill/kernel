@@ -65,71 +65,83 @@ mask_ints:
 ; mode_switch functions do not write
 ; port 0x70 shadow state.
 
+; NOTE: Clobbers edi, but caller edi
+; is restored in rmode_trampoline
+
 ; Mixed execution dual encoding magic
-; NOTE: Clobbers upper half of edi.
-ms_nmi_disable:
-	push  ax
-	push  di
+get_shadow_p70:
 	xor   di, di
 	push  strict word shadow_p70
 	; Unholy sacrificial instruction
 	push  byte 0x00
 	pop   dword edi
 	or    di, di
-	jnz   short ms_nmi_disable_load
+	jnz   short load_shadow_p70
 	shr   edi, 16
 	mov   al, [di]
-	jmp   short ms_nmi_disable_write
-ms_nmi_disable_load:
+	jmp   short got_shadow_p70
+load_shadow_p70:
 bits 32
 	add   sp, 2
 	mov   al, [di]
 bits 16
-ms_nmi_disable_write:
+got_shadow_p70:
+	sahf
+	jnc   short ms_nmi_disable_ret
+	jmp   short restore_p70_ret
+
+ms_nmi_disable:
+	push  ax
+	lahf
+	and   ah, 0xFE
+	jmp   short get_shadow_p70
+ms_nmi_disable_ret:
 	or    al, 0x80
 	out   0x70, al
-	pop   di
 	pop   ax
 	ret
 
 restore_p70:
 	push  ax
-	push  di
-	; full (e)di clear
-	xor   di, di
-	; In all seriousness, this encodes 16-bit code:
-	; 0x68iw - 3 bytes long, iw = 16-bit address
-	; 0x6Aib - 2 bytes long, ib = 0x00
-	; NOTE: 0x6Aib actually pushes two bytes to stack
-	; In 32-bit mode the interpretation is:
-	; 0x68iw6800 - 5 bytes long, iw = 16-bit address
-	push  strict word shadow_p70
-	push  byte 0x00
-	; 'dword edi' 0x66 operand size override
-	; prefix, so the interpretation in modes is:
-	; 16-bit mode: pop 4 bytes off stack
-	; 32-bit mode: pop 2 bytes off stack
-	pop   dword edi
-	; set zero flag, where in 16-bit mode:
-	; 16-bit mode di = 0xAAAA0000
-	; 32-bit mode di = 0x0000AAAA
-	; zero flag gets set in 16-bit mode only
-	or    di, di
-	; Now act upon modes
-	jnz   short restore_p70_load
-	shr   edi, 16
-	mov   al, [di]
-	jmp   short restore_p70_write
-restore_p70_load:
-bits 32
-	add   sp, 2
-	mov   al, [di]
-bits 16
-restore_p70_write:
+	lahf
+	or    ah, 1
+	jmp   short get_shadow_p70
+restore_p70_ret:
 	out   0x70, al
-	pop   di
 	pop   ax
 	ret
+
+; Explanation of the above:
+; ms_nmi_disable and restore_p70 use flag CF
+; to select the return point, then jump to
+; get_shadow_p70:
+; full (e)di clear, mode dependent
+; xor   di, di
+
+; Magic aside, this encodes 16-bit code:
+; 0x68iw - 3 bytes long, iw = 16-bit address
+; 0x6Aib - 2 bytes long, ib = 0x00
+; NOTE: 0x6Aib actually pushes two bytes to the 
+; stack. In 32-bit mode the interpretation is:
+; 0x68iw6800 - 5 bytes long, iw = 16-bit address
+; push  strict word shadow_p70
+; push  byte 0x00
+
+; 'dword edi' 0x66 operand size override
+; prefix, so the interpretation in modes is:
+; 16-bit mode: pop 4 bytes off stack
+; 32-bit mode: pop 2 bytes off stack
+; pop   dword edi
+
+; set zero flag, where in 16-bit mode:
+; 16-bit mode di = 0xAAAA0000
+; 32-bit mode di = 0x0000AAAA
+; zero flag gets set in 16-bit mode only
+
+; or    di, di
+; Now act upon modes
+; jnz/jmp...
+	
 ; End mixed-mode functions
 
 pmode_init:
