@@ -66,14 +66,14 @@ mask_ints:
 ; port 0x70 shadow state.
 
 ; Mixed execution dual encoding magic
+; NOTE: Clobbers upper half of edi.
 ms_nmi_disable:
 	push  ax
 	push  di
 	xor   di, di
-	push  word shadow_p70
+	push  strict word shadow_p70
 	; Unholy sacrificial instruction
 	push  byte 0x00
-	; Operand size override
 	pop   dword edi
 	or    di, di
 	jnz   short ms_nmi_disable_load
@@ -82,7 +82,7 @@ ms_nmi_disable:
 	jmp   short ms_nmi_disable_write
 ms_nmi_disable_load:
 bits 32
-	add   esp, 2
+	add   sp, 2
 	mov   al, [di]
 bits 16
 ms_nmi_disable_write:
@@ -95,18 +95,34 @@ ms_nmi_disable_write:
 restore_p70:
 	push  ax
 	push  di
+	; full (e)di clear
 	xor   di, di
-	push  word shadow_p70
+	; In all seriousness, this encodes 16-bit code:
+	; 0x68iw - 3 bytes long, iw = 16-bit address
+	; 0x6Aib - 2 bytes long, ib = 0x00
+	; NOTE: 0x6Aib actually pushes two bytes to stack
+	; In 32-bit mode the interpretation is:
+	; 0x68iw6800 - 5 bytes long, iw = 16-bit address
+	push  strict word shadow_p70
 	push  byte 0x00
+	; 'dword edi' 0x66 operand size override
+	; prefix, so the interpretation in modes is:
+	; 16-bit mode: pop 4 bytes off stack
+	; 32-bit mode: pop 2 bytes off stack
 	pop   dword edi
+	; set zero flag, where in 16-bit mode:
+	; 16-bit mode di = 0xAAAA0000
+	; 32-bit mode di = 0x0000AAAA
+	; zero flag gets set in 16-bit mode only
 	or    di, di
+	; Now act upon modes
 	jnz   short restore_p70_load
 	shr   edi, 16
 	mov   al, [di]
 	jmp   short restore_p70_write
 restore_p70_load:
 bits 32
-	add   esp, 2
+	add   sp, 2
 	mov   al, [di]
 bits 16
 restore_p70_write:
