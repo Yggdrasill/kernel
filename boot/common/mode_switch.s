@@ -63,30 +63,73 @@ mask_ints:
 
 ; mode_switch functions do not write
 ; port 0x70 shadow state.
+
 ms_nmi_disable:
 	push  ax
-
-	mov   al, [shadow_p70]
+	push  di
+	push  word shadow_p70
+	; Unholy sacrificial instruction
+	push  word 0x00
+	pop   dword edi
+	cmp   di, 0x00
+	jne   ms_nmi_disable_load
+	shr   edi, 16
+	mov   al, [di]
+	jmp   ms_nmi_disable_write
+ms_nmi_disable_load:
+bits 32
+	add   sp, 2
+	mov   al, [di]
+bits 16
+ms_nmi_disable_write:
 	or    al, 0x80
 	out   0x70, al
-
+	pop   di
 	pop   ax
 	ret
 
 ms_nmi_enable:
 	push  ax
-
-	mov   al, [shadow_p70]
+	push  di
+	push  word shadow_p70
+	push  word 0x00
+	pop   dword edi
+	cmp   di, 0x00
+	jne   ms_nmi_enable_load
+	shr   edi, 16
+	mov   al, [di]
+	jmp   ms_nmi_enable_write
+ms_nmi_enable_load:
+bits 32
+	add   sp, 2
+	mov   al, [di]
+bits 16
+ms_nmi_enable_write:
 	and   al, 0x7F
 	out   0x70, al
-
+	pop   di
 	pop   ax
 	ret
 
-p70_load:
+restore_p70:
 	push  ax
-	mov   al, [shadow_p70]
+	push  di
+	push  word shadow_p70
+	push  word 0x00
+	pop   dword edi
+	cmp   di, 0x00
+	jne   restore_p70_load
+	shr   edi, 16
+	mov   al, [di]
+	jmp   restore_p70_write
+restore_p70_load:
+bits 32
+	add   sp, 2
+	mov   al, [di]
+bits 16
+restore_p70_write:
 	out   0x70, al
+	pop   di
 	pop   ax
 	ret
 ; End mixed-mode functions
@@ -299,7 +342,7 @@ rmode_trampoline:
 	call   pmode_exit
 bits 16
 	call   load_bios_imr
-	call   p70_load
+	call   restore_p70
 	; This may look a bit unconventional, but 
 	; popping the return address from the stack
 	; allows us to pass arguments as if calling
@@ -322,7 +365,7 @@ rmode_return:
 	call   pmode_init
 bits 32
 	call   restore_state
-	call   p70_load
+	call   restore_p70
 	; Allocate space for 32-bit return pointer.
 	sub    esp, 4
 	; Push return path
