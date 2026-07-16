@@ -69,7 +69,11 @@ ms_nmi_disable:
 	push  di
 	push  word shadow_p70
 	; Unholy sacrificial instruction
-	push  word 0x00
+	; push word 0x00 in binary
+	db    0x6A,00
+	; Operand size prefix override
+	; In 16-bit: pop 4 bytes
+	; In 32-bit: pop 2 bytes
 	pop   dword edi
 	cmp   di, 0x00
 	jne   ms_nmi_disable_load
@@ -92,7 +96,7 @@ ms_nmi_enable:
 	push  ax
 	push  di
 	push  word shadow_p70
-	push  word 0x00
+	db    0x6A,00
 	pop   dword edi
 	cmp   di, 0x00
 	jne   ms_nmi_enable_load
@@ -115,7 +119,7 @@ restore_p70:
 	push  ax
 	push  di
 	push  word shadow_p70
-	push  word 0x00
+	db    0x6A,00
 	pop   dword edi
 	cmp   di, 0x00
 	jne   restore_p70_load
