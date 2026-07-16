@@ -71,8 +71,6 @@ exception_wrapper:
 
 	add   esp, 0x08
 
-	sti
-
 	iret
 
 exception_unknown:

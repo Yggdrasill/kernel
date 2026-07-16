@@ -100,7 +100,6 @@ kbd8042_a20:
 	out   0x64, al
 
 	call  kbd8042_wait_cmd
-	sti
 	popfd
 	ret
 

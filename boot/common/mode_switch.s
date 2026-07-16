@@ -68,7 +68,7 @@ mask_ints:
 ; NOTE: Clobbers edi, but caller edi
 ; is restored in rmode_trampoline
 
-; Mixed execution dual encoding magic
+; Mixed execution dual decoding magic
 get_shadow_p70:
 	xor   di, di
 	push  strict word shadow_p70
@@ -134,14 +134,14 @@ restore_p70_ret:
 ; pop   dword edi
 
 ; set zero flag, where in 16-bit mode:
-; 16-bit mode di = 0xAAAA0000
-; 32-bit mode di = 0x0000AAAA
+; 16-bit mode edi = 0xAAAA0000
+; 32-bit mode edi = 0x6A00AAAA
 ; zero flag gets set in 16-bit mode only
 
 ; or    di, di
 ; Now act upon modes
 ; jnz/jmp...
-	
+
 ; End mixed-mode functions
 
 pmode_init:
