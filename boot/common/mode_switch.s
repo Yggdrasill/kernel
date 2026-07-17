@@ -160,10 +160,6 @@ pmode_init:
 	push  ebp
 	mov   bp, sp
 	push  eax
-	; BIOS anti-clobber
-	xor   ax, ax
-	mov   es, ax
-	mov   ds, ax
 
 	lgdt  [gdt_info]
 	lidt  [idt_info]
@@ -301,6 +297,15 @@ rmode:
 
 	ret
 
+segment_fix:
+	; BIOS anti-clobber
+	xor   cx, cx
+	mov   es, cx
+	mov   ds, cx
+	mov   fs, cx
+	mov   gs, cx
+	ret
+
 bits 32
 save_state:
 	push  eax
@@ -376,6 +381,7 @@ bits 16
 rmode_return:
 	; Restore machine state, enter protected mode
 	cli
+	call   segment_fix
 	call   ms_nmi_disable
 	call   mask_ints
 	call   pmode_init
