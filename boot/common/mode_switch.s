@@ -65,35 +65,29 @@ mask_ints:
 ; mode_switch functions do not write
 ; port 0x70 shadow state.
 
-; NOTE: Clobbers edi, but caller edi
-; is restored in rmode_trampoline
+; NOTE: Clobbers ecx, but is caller-saved.
 
 ; Mixed execution dual decoding magic
 get_shadow_p70:
-	xor   di, di
+	xor   cx, cx
 	push  strict word shadow_p70
 	; Unholy sacrificial instruction
-	push  byte 0x00
-	pop   dword edi
-	or    di, di
-	jnz   short load_shadow_p70
-	shr   edi, 16
-	mov   al, [di]
-	jmp   short got_shadow_p70
+	dec   cl
+	pop   cx
+	jns   short fix_shadow_p70+1
+fix_shadow_p70:
+	movzx ecx, cx
+	jns   short load_shadow_p70+1
 load_shadow_p70:
-bits 32
-	add   sp, 2
-	mov   al, [di]
-bits 16
-got_shadow_p70:
+	mov   al, [ecx]
 	sahf
 	jnc   short ms_nmi_disable_ret
 	jmp   short restore_p70_ret
 
 ms_nmi_disable:
 	push  ax
+	clc
 	lahf
-	and   ah, 0xFE
 	jmp   short get_shadow_p70
 ms_nmi_disable_ret:
 	or    al, 0x80
@@ -103,8 +97,8 @@ ms_nmi_disable_ret:
 
 restore_p70:
 	push  ax
+	stc
 	lahf
-	or    ah, 1
 	jmp   short get_shadow_p70
 restore_p70_ret:
 	out   0x70, al
@@ -115,33 +109,45 @@ restore_p70_ret:
 ; ms_nmi_disable and restore_p70 use flag CF
 ; to select the return point, then jump to
 ; get_shadow_p70:
-; full (e)di clear, mode dependent
-; xor   di, di
-
-; Magic aside, this encodes 16-bit code:
+; full (e)cx clear, mode dependent
+; xor cx, cx
+;
+; Now, the next instructions:
+; push strict word shadow_p70
+; dec  cl
+; Magic aside, they encode 16-bit code:
 ; 0x68iw - 3 bytes long, iw = 16-bit address
-; 0x6Aib - 2 bytes long, ib = 0x00
-; NOTE: 0x6Aib actually pushes two bytes to the 
-; stack. In 32-bit mode the interpretation is:
-; 0x68iw6800 - 5 bytes long, iw = 16-bit address
-; push  strict word shadow_p70
-; push  byte 0x00
-
-; 'dword edi' 0x66 operand size override
-; prefix, so the interpretation in modes is:
-; 16-bit mode: pop 4 bytes off stack
-; 32-bit mode: pop 2 bytes off stack
-; pop   dword edi
-
-; set zero flag, where in 16-bit mode:
-; 16-bit mode edi = 0xAAAA0000
-; 32-bit mode edi = 0x6A00AAAA
-; zero flag gets set in 16-bit mode only
-
-; or    di, di
-; Now act upon modes
-; jnz/jmp...
-
+; 0xFEC9 - 2 bytes long
+;
+; In 32-bit mode the decoder interprets:
+; 0x68iwFEC9 - 5 bytes long, iw = 16-bit address
+;
+; In 16-bit mode the decoder interprets:
+; 0x68iw - 3 bytes long, iw = 16-bit address
+; 0xFEC9 - 2 bytes long, dec cl
+;
+; The sign flag now depends on execution mode.
+; In other words, the sign flag is not set in
+; 32-bit mode because the earlier xor cleared
+; it. In 16-bit mode the sign flag IS set, as
+; zero was decremented by one.
+;
+; This whole setup now allows us to use the
+; jns instruction to discriminate mode, which
+; is useful. The following movzx instruction
+; fulfills two purposes: clean up ecx in 32-bit
+; mode, as it contains garbage from dec cl, and
+; clean it up in 16-bit mode in case the high
+; half of ecx contained data not cleared by xor.
+;
+; However, the operand override prefix changes
+; the meaning of movzx ecx, cx in 32-bit mode,
+; meaning the processor will decode as mov cx, cx.
+; The prefix byte is skipped with the jns. The
+; same trick is used in the following mov, as the
+; instruction decodes to different dereferenced
+; registers between modes.
+;
 ; End mixed-mode functions
 
 pmode_init:
