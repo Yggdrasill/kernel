@@ -115,6 +115,7 @@ int memcmp(const void *s1, const void *s2, size_t n)
 	while(i < n) {
 		rv = *(p1 + i) - *(p2 + i);
 		if(rv != 0) break;
+		i++;
 	}
 
 	return rv;
