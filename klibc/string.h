@@ -29,14 +29,14 @@ extern int16_t *__FB_END __attribute__((section("fbr")));
 #define FB_ADDR __FB_ADDR
 #define FB_END  __FB_END
 
-void  *memset(void *, uint8_t, size_t);
-void   memsetw(int16_t *, int16_t, size_t);
-void   memcpy(void *, void *, size_t);
-void   memmove(void *, void *, size_t);
+void  *memset(void *, int, size_t);
+void  *memsetw(int16_t *, int16_t, size_t);
+void  *memcpy(void *restrict, const void *restrict, size_t);
+void  *memmove(void *, const void *, size_t);
 int    memcmp(const void *, const void *, size_t);
-size_t strlen(char *);
+size_t strlen(const char *);
 void   putchar(char);
-void   puthex(size_t);
+void   puthex(void *, size_t);
 void   puts(char *);
 
 #endif

@@ -21,90 +21,111 @@
 
 #include "string.h"
 
-void *memset(void *s, uint8_t c, size_t n)
+void *memset(void *s, int c, size_t n)
 {
 	unsigned char *ptr;
-	size_t         i;
 
+	size_t i;
+
+	i   = 0;
 	ptr = (unsigned char *)s;
-	for(i = 0; i < n; i++) {
+	while(i < n) {
 		*(ptr + i) = c;
+		i++;
 	}
 
 	return s;
 }
 
-void memsetw(int16_t *s, int16_t c, size_t n)
+void *memsetw(int16_t *s, int16_t c, size_t n)
 {
 	int16_t *ptr;
 	size_t   i;
 
-	ptr = (int16_t *)s;
-
-	for(i = 0; i < n; i++) {
+	i   = 0;
+	ptr = s;
+	while(i < n) {
 		*(ptr + i) = c;
+		i++;
 	}
 
-	return;
+	return s;
 }
 
-void memcpy(void *dst, void *src, size_t n)
+void *memcpy(void *restrict s1, const void *restrict s2, size_t n)
 {
-	void *end;
+	unsigned char       *p1;
+	const unsigned char *p2;
 
-	end = (char *)dst + n;
-	while((char *)dst < (char *)end) {
-		*(char *)dst = *(char *)src;
+	size_t i;
 
-		dst = (char *)dst + 1;
-		src = (char *)src + 1;
+	i  = 0;
+	p1 = (unsigned char *)s1;
+	p2 = (const unsigned char *)s2;
+	while(i < n) {
+		*(p1 + i) = *(p2 + i);
+		i++;
 	}
+
+	return s1;
 }
 
-void memmove(void *dst, void *src, size_t n)
+void *memmove(void *s1, const void *s2, size_t n)
 {
-	void *dst_end;
-	void *src_end;
-	char  buffer[n];
+	unsigned char       *p1;
+	const unsigned char *p2;
 
-	dst_end = (char *)dst + n;
-	src_end = (char *)src + n;
-	if((dst_end >= src && dst_end <= src_end) ||
-	   (src_end >= dst && src_end <= dst_end)) {
-		memcpy(buffer, src, n);
-		memcpy(dst, buffer, n);
+	size_t i;
+
+	if(s1 == s2 || !n) goto memmove_exit;
+
+	i  = 0;
+	p1 = (unsigned char *)s1;
+	p2 = (const unsigned char *)s2;
+
+	if((uintptr_t)p1 < (uintptr_t)p2) {
+		while(i < n) {
+			*(p1 + i) = *(p2 + i);
+			i++;
+		}
 	} else {
-		memcpy(dst, src, n);
+		i = n;
+		while(i != 0) {
+			*(p1 + i - 1) = *(p2 + i - 1);
+			i--;
+		}
 	}
 
-	return;
+memmove_exit:
+	return s1;
 }
 
 int memcmp(const void *s1, const void *s2, size_t n)
 {
-	void *end;
-	int   rv;
+	const unsigned char *p1;
+	const unsigned char *p2;
 
-	rv  = 0;
-	end = (char *)s1 + n;
-	while((char *)s1 < (char *)end) {
-		rv += *(char *)s1 - *(char *)s2;
-		s1 = (char *)s1 + 1;
-		s2 = (char *)s2 + 1;
+	size_t i;
+	int    rv;
+
+	i  = 0;
+	rv = 0;
+	p1 = (const unsigned char *)s1;
+	p2 = (const unsigned char *)s2;
+	while(i < n) {
+		rv = *(p1 + i) - *(p2 + i);
+		if(rv != 0) break;
 	}
 
 	return rv;
 }
 
-size_t strlen(char *str)
+size_t strlen(const char *str)
 {
-	unsigned long long retval;
-
-	retval = 0;
-
-	while(*str++) retval++;
-
-	return retval;
+	size_t i;
+	i = 0;
+	while(*(str + i)) i++;
+	return i;
 }
 
 void putchar(char ch)
@@ -133,18 +154,18 @@ void putchar(char ch)
 	return;
 }
 
-void puthex(size_t hex)
+void puthex(void *hex, size_t n)
 {
 	char  *hex_array;
 	char   chars[2];
 	size_t i, j;
 
-	hex_array = (char *)&hex;
+	hex_array = (char *)hex;
 
 	putchar('0');
 	putchar('x');
 
-	for(i = sizeof(hex), j = i - 1; i > 0; i--, j--) {
+	for(i = n, j = i - 1; i > 0; i--, j--) {
 		chars[0] = (hex_array[j] & 0xF0) >> 4;
 		chars[1] = hex_array[j] & 0x0F;
 		chars[0] += chars[0] >= 0x0A ? 'A' - 0x0A : '0';
@@ -163,6 +184,5 @@ void puts(char *str)
 		putchar(*str);
 		str++;
 	}
-
 	putchar('\n');
 }
