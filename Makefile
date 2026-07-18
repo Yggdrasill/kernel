@@ -23,7 +23,8 @@ MKDIR=mkdir -p
 
 INCLUDE_PATH=-I libk/ -I klibc/
 CF_ALL=-m32 -ffreestanding -fno-pic -nodefaultlibs -fno-exceptions \
-	   -fno-asynchronous-unwind-tables -masm=intel -Wall -O0
+	   -fno-asynchronous-unwind-tables -masm=intel -Wall -Wpedantic \
+	   -fomit-frame-pointer -Os -std=c99
 LD_ALL=-m elf_i386 -z noexecstack --nmagic -L boot/
 CFLAGS=-Wall -Wextra -pedantic
 
