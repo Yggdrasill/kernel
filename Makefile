@@ -12,6 +12,12 @@ OBJDIR_STAGE2=$(OBJDIR)/stage2
 OBJDIR_KLIBC=$(OBJDIR)/klibc
 OBJDIR_LIBK=$(OBJDIR)/libk
 
+OBJDIRS=$(OBJDIR) \
+		$(OBJDIR_STAGE1) \
+		$(OBJDIR_STAGE2) \
+		$(OBJDIR_LIBK) \
+		$(OBJDIR_KLIBC)
+
 SRC_STAGE1=$(wildcard $(SRCDIR_STAGE1)/*.s)
 SRC_COMMON=$(wildcard $(SRCDIR_BOOT_COMMON)/*.s)
 
@@ -24,27 +30,21 @@ MKDIR=mkdir -p
 INCLUDE_PATH=-I ./ -I klibc/
 CF_ALL=-m32 -ffreestanding -fno-pic -nodefaultlibs -fno-exceptions \
 	   -fno-asynchronous-unwind-tables -masm=intel -Wall -Wpedantic \
-	   -fomit-frame-pointer -Os -std=c99
+	   -Os -std=c99
+CF_DEP=-MMD -MP -MF $(@:.o=.d) -MT $@
 LD_ALL=-m elf_i386 -z noexecstack --nmagic
 LD_BOOT=-L boot/common/
 CFLAGS=-Wall -Wextra -pedantic
 
-all: $(BINDIR) $(OBJDIR) $(BINDIR)/boot.bin $(BINDIR)/stage2.elf
+all: $(BINDIR)/boot.bin $(BINDIR)/stage2.elf
 
 include $(SRCDIR_STAGE1)/Rules.mk
 include $(SRCDIR_STAGE2)/Rules.mk
 include $(SRCDIR_KLIBC)/Rules.mk
 include $(SRCDIR_LIBK)/Rules.mk
 
-$(BINDIR):
-	$(MKDIR) $(BINDIR)
-
-$(OBJDIR):
-	$(MKDIR) $(OBJDIR)
-	$(MKDIR) $(OBJDIR_STAGE1)
-	$(MKDIR) $(OBJDIR_STAGE2)
-	$(MKDIR) $(OBJDIR_KLIBC)
-	$(MKDIR) $(OBJDIR_LIBK)
+$(BINDIR) $(OBJDIRS):
+	$(MKDIR) $@
 
 clean:
 	rm -rf bin
@@ -52,13 +52,12 @@ clean:
 
 debug: CFLAGS+=-g
 debug: all
-debug:
 	objcopy --only-keep-debug bin/stage2.elf bin/stage2.debug
 	strip --strip-debug --strip-unneeded bin/stage2.elf
 	objcopy --add-gnu-debuglink=bin/stage2.debug bin/stage2.elf
 
-dd_image:
+image: all
+image:
 	dd if=/dev/zero of=image.img bs=512 count=2880
 	dd if=bin/boot.bin of=image.img conv=notrunc bs=512 count=4
 	dd if=bin/stage2.elf of=image.img conv=notrunc bs=512 seek=4
-image: all dd_image
