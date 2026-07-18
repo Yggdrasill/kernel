@@ -33,4 +33,12 @@ struct e820_info mmap_sanitize(
 struct e820_info *mmap_init(void);
 struct e820_info *mmap_setup(struct e820_info *);
 
+extern const size_t __mmap_max_entries;
+extern const size_t __mmap_entry_size;
+
+extern const size_t __mmap_base_offset;
+extern const size_t __mmap_size_offset;
+extern const size_t __mmap_type_offset;
+extern const size_t __mmap_attr_offset;
+
 #endif

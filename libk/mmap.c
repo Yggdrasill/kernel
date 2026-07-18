@@ -47,15 +47,20 @@ struct e820_map {
 	uint32_t attrib;
 };
 
+struct e820_point {
+	struct e820_map *entry;
+	uint64_t         addr;
+};
+
+/*
+ * CAREFUL! Check boot/stage2/mmap.s.
+ * BIOS E820 routine directly addresses byte offsets.
+ */
+
 struct e820_info {
 	struct e820_map *base;
 	size_t           nr_entries;
 	size_t           max_nr_entries;
-};
-
-struct e820_point {
-	struct e820_map *entry;
-	uint64_t         addr;
 };
 
 extern char __BIOS_START;
@@ -74,6 +79,14 @@ extern char __STACK_END;
 
 extern char __UPPER_START;
 extern char __UPPER_END;
+
+const size_t __mmap_max_entries = MMAP_MAX_ENTRIES;
+const size_t __mmap_entry_size  = sizeof(struct e820_map);
+
+const size_t __mmap_base_offset = offsetof(struct e820_map, base);
+const size_t __mmap_size_offset = offsetof(struct e820_map, size);
+const size_t __mmap_type_offset = offsetof(struct e820_map, type);
+const size_t __mmap_attr_offset = offsetof(struct e820_map, attrib);
 
 int mmap_is_base(struct e820_point *p)
 {
@@ -107,10 +120,8 @@ uint32_t mmap_compare_type(const uint32_t t1, const uint32_t t2)
 	return t1 > t2 ? t1 : t2;
 }
 
-__attribute__((
-    __section__(".mmap"))) struct e820_map __mmap_old_map[MMAP_MAX_ENTRIES];
-__attribute__((
-    __section__(".mmap"))) struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
+struct e820_map __mmap_old_map[MMAP_MAX_ENTRIES];
+struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
 
 static struct e820_map *const old_map = __mmap_old_map;
 static struct e820_map *const new_map = __mmap_new_map;
