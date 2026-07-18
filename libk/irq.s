@@ -163,6 +163,4 @@ irq_wrapper:
     popa
     add   esp, 8
 
-    sti
-
     iret
