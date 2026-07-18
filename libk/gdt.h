@@ -22,8 +22,8 @@
 #ifndef GDT_H
 #define GDT_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 enum GDT_ACCESS {
 	GDT_ACCESSED   = 1,

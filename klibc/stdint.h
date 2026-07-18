@@ -34,7 +34,7 @@ typedef unsigned short     uint16_t;
 typedef unsigned long      uint32_t;
 typedef unsigned long long uint64_t;
 
-typedef signed long   ssize_t;
+typedef signed long ssize_t;
 
 typedef signed short   ptr16_t;
 typedef unsigned short uptr16_t;

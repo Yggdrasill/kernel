@@ -22,8 +22,8 @@
 #ifndef SORT_H
 #define SORT_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 void isort(
     void  *base,

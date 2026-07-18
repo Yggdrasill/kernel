@@ -20,12 +20,12 @@
  */
 
 #include <sort.h>
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
-#include <libk/mmap.h>
 #include <libk/config/mmap.h>
+#include <libk/mmap.h>
 
 #define MMAP_END_ADDR(x)             ((x)->base + (x)->size)
 #define MMAP_REGION_SIZE(start, end) ((uintptr_t)&end - (uintptr_t)&start)

@@ -19,12 +19,12 @@
  *
  */
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
-#include <libk/gdt.h>
 #include <libk/config/gdt.h>
+#include <libk/gdt.h>
 
 struct gdt_ptr {
 	uint8_t size_0;
@@ -88,9 +88,9 @@ void gdt_entry_add(
 	gdt_base_addr = (uintptr_t)gdtr->base_24 << 24 |
 	                (uintptr_t)gdtr->base_16 << 16 |
 	                (uintptr_t)gdtr->base_8 << 8 | (uintptr_t)gdtr->base_0;
-	entry         = (struct gdt_entry *)gdt_base_addr;
 
-	size = ((uint16_t)gdtr->size_8 << 8 | (uint16_t)gdtr->size_0) + 1;
+	entry = (struct gdt_entry *)gdt_base_addr;
+	size  = ((uint16_t)gdtr->size_8 << 8 | (uint16_t)gdtr->size_0) + 1;
 	if(size + sizeof(*entry) > 0x10000) goto fail;
 
 	index = size / sizeof(*entry);

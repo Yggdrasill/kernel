@@ -22,8 +22,8 @@
 #ifndef STRING_H
 #define STRING_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 extern int16_t *__FB_ADDR __attribute__((section("fbr")));
 extern int16_t *__FB_END __attribute__((section("fbr")));

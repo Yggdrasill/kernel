@@ -22,8 +22,8 @@
 #ifndef IDT_H
 #define IDT_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 struct idt_ptr;
 struct idt_entry;

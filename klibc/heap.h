@@ -22,8 +22,8 @@
 #ifndef HEAP_H
 #define HEAP_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #define DEFAULT_HEAP_SIZE 8192
 

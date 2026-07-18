@@ -22,8 +22,8 @@
 #ifndef MMAP_H
 #define MMAP_H
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 struct e820_info;
 struct e820_map;

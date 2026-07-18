@@ -19,8 +19,8 @@
  *
  */
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 /* Insertion sort for small input sizes */

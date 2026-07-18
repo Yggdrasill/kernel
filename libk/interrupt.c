@@ -22,9 +22,9 @@
 #include <string.h>
 
 #include <libk/idt.h>
+#include <libk/interrupt.h>
 #include <libk/io.h>
 #include <libk/irq.h>
-#include <libk/interrupt.h>
 
 struct interrupt_info {
 	uint32_t fs, gs, es, ds;
