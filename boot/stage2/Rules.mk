@@ -4,7 +4,7 @@ OBJ_STAGE2=$(patsubst %.s,%.o,$(patsubst %.c,%.o,$(patsubst $(SRCDIR_STAGE2)%,$(
 LD_STAGE2=-T $(SRCDIR_STAGE2)/linker.lds
 
 $(SRCDIR_STAGE2)/linker.lds: $(SRCDIR_BOOT_COMMON)/bootdefs.lds.S
-	$(CC) $(CF_DEP) $(INCLUDE_PATH) -DLD_BOOT_STAGE2 -E -P -x c -o $@ $<
+	$(CC) -MMD -MP -MF $@.d -MT $@ $(INCLUDE_PATH) -DLD_BOOT_STAGE2 -E -P -x c -o $@ $<
 
 $(OBJDIR_STAGE2)/%.o: $(SRCDIR_STAGE2)/%.s | $(OBJDIR_STAGE2)
 	$(AS) -f elf32 -o $@ $<

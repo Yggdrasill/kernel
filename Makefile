@@ -4,13 +4,13 @@ BINDIR:=bin
 SRCDIR_STAGE1=boot/stage1
 SRCDIR_STAGE2=boot/stage2
 SRCDIR_BOOT_COMMON=boot/common
-SRCDIR_KLIBC=klibc
 SRCDIR_LIBK=libk
+SRCDIR_KLIBC=klibc
 
 OBJDIR_STAGE1=$(OBJDIR)/stage1
 OBJDIR_STAGE2=$(OBJDIR)/stage2
-OBJDIR_KLIBC=$(OBJDIR)/klibc
 OBJDIR_LIBK=$(OBJDIR)/libk
+OBJDIR_KLIBC=$(OBJDIR)/klibc
 
 OBJDIRS=$(OBJDIR) \
 		$(OBJDIR_STAGE1) \
@@ -23,6 +23,11 @@ SRC_COMMON=$(wildcard $(SRCDIR_BOOT_COMMON)/*.s)
 
 OBJ_STAGE1=$(patsubst %.s,%.o,$(patsubst $(SRCDIR_STAGE1)%,$(OBJDIR_STAGE1)%,$(SRC_STAGE1) ) )
 OBJ_COMMON=$(patsubst %.s,%.o,$(patsubst $(SRCDIR_BOOT_COMMON)%,$(OBJDIR_STAGE1)%,$(SRC_COMMON) ) )
+
+DEPENDS=$(wildcard $(OBJDIR_STAGE1)/*.d) \
+		$(wildcard $(OBJDIR_STAGE2)/*.d) \
+		$(wildcard $(OBJDIR_LIBK)/*.d)   \
+		$(wildcard $(OBJDIR_KLIBC)/*.d)
 
 AS=nasm
 MKDIR=mkdir -p
@@ -38,10 +43,11 @@ CFLAGS=-Wall -Wextra -pedantic
 
 all: $(BINDIR)/boot.bin $(BINDIR)/stage2.elf
 
+sinclude $(DEPENDS)
 include $(SRCDIR_STAGE1)/Rules.mk
 include $(SRCDIR_STAGE2)/Rules.mk
-include $(SRCDIR_KLIBC)/Rules.mk
 include $(SRCDIR_LIBK)/Rules.mk
+include $(SRCDIR_KLIBC)/Rules.mk
 
 $(BINDIR) $(OBJDIRS):
 	$(MKDIR) $@
