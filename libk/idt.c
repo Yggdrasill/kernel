@@ -25,8 +25,7 @@
 #include <string.h>
 
 #include <libk/idt.h>
-
-#define IDT_ENTRY_NUM 256
+#include <libk/config/idt.h>
 
 #define IDT_BITMAP_NR(x) (IDT_ENTRY_NUM / (sizeof(x) * CHAR_BIT))
 

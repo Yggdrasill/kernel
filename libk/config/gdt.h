@@ -1,0 +1,9 @@
+#ifndef GDT_CONFIG_H
+#define GDT_CONFIG_H
+
+#define GDT_REG_SIZE    48
+#define GDT_ENTRY_SIZE  64
+#define GDT_MAX_ENTRIES 8192
+#define GDT_TABLE_SIZE  GDT_ENTRY_SIZE * GDT_MAX_ENTRIES
+
+#endif

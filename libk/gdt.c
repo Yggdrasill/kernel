@@ -24,8 +24,7 @@
 #include <string.h>
 
 #include <libk/gdt.h>
-
-#define GDT_MAX_ENTRIES 8192
+#include <libk/config/gdt.h>
 
 struct gdt_ptr {
 	uint8_t size_0;

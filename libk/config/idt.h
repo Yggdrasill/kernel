@@ -1,0 +1,9 @@
+#ifndef IDT_CONFIG_H
+#define IDT_CONFIG_H
+
+#define IDT_REG_SIZE   48
+#define IDT_ENTRY_SIZE 64
+#define IDT_ENTRY_NUM  256
+#define IDT_TABLE_SIZE IDT_ENTRY_SIZE * IDT_ENTRY_NUM
+
+#endif

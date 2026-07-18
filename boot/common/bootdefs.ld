@@ -1,3 +1,7 @@
+#include <libk/config/gdt.h>
+#include <libk/config/idt.h>
+#include <libk/config/mmap.h>
+
 BIOS_ADDR  = 0x0;
 BIOS_SIZE  = 0x500;
 MEM0_ADDR  = 0x500;
@@ -56,6 +60,12 @@ MEMORY {
 	upper(rx)  :   org = UPPR_ADDR,  len = UPPR_SIZE
 }
 
+PHDRS {
+	P_NOLOAD PT_NULL;
+	P_STAGE1 PT_LOAD;
+	P_STAGE2 PT_LOAD;
+}
+
 SECTIONS {
 	. = BIOS_ADDR;
 	__BIOS_START = .;
@@ -64,4 +74,69 @@ SECTIONS {
 
 	. = ENTR_ADDR;
 	__BOOT_ENTRY = .;
+
+	. = BOOT_ADDR;
+	__BOOT_ADDR = .;
+	__BOOTLOADER_START = .;
+#ifdef LD_BOOT_STAGE1
+	.boot : {
+		*(.boot)
+		*(.boot.util)
+		*(.boot.rodata)
+	} > boot : P_STAGE1
+	PROVIDE(__BOOT_SIZE = BOOT_ADDR - ENTR_ADDR);
+	. = MBR_ADDR;
+	.mbr : {
+		*(.mbr)
+	} > mbr : P_STAGE1
+
+	. = MEM1_ADDR;
+	.stage15 : {
+		__STAGE15_LOAD_ADDR = ABSOLUTE(.);
+		__STAGE15_LOAD_SEG = ABSOLUTE((__STAGE15_LOAD_ADDR >> 4) & 0xF000);
+		__STAGE15_LOAD_OFF = ABSOLUTE(__STAGE15_LOAD_ADDR & 0xFFFF);
+		*(.stage15)
+		*(.stage15.data)
+		*(.stage15.rodata)
+		*(.stage15.bss)
+	} > mem1 : P_NOLOAD
+
+	. = ST2_ADDR;
+	.stage2.bss (NOLOAD) : {
+		*(.stage2.bss)
+	} > stage2
+	.elf (NOLOAD) : {
+		*(.elf)
+	} > elf : P_NOLOAD
+#elif LD_BOOT_STAGE2 
+	.boot (NOLOAD) : {
+		*(.boot)
+		*(.boot.util)
+		*(.boot.rodata)
+	} > boot : P_NOLOAD
+	__BOOT_SIZE = BOOT_ADDR - ENTR_ADDR;
+	. = MBR_ADDR;
+	.mbr (NOLOAD) : {
+		*(.mbr)
+	} > mbr : P_NOLOAD
+
+	. = MEM1_ADDR;
+	.stage15 (NOLOAD) : {
+		__STAGE15_LOAD_ADDR = .;
+		*(.stage15)
+		*(.stage15.data)
+		*(.stage15.rodata)
+		*(.stage15.bss)
+	} > mem1 : P_NOLOAD
+
+	. = ST2_ADDR;
+	stage2.o = .;
+	._init : { *(._init) } > stage2 : P_STAGE2
+	.text : { *(.text) } > stage2 : P_STAGE2
+	.data : { *(.data) } > stage2 : P_STAGE2
+	.rodata : { *(.rodata) } > stage2 : P_STAGE2
+	.bss (NOLOAD) : { *(.bss) } > stage2 : P_STAGE2
+	.elf (NOLOAD) : { *(.elf) } > elf : P_NOLOAD
+#endif
+	__BOOTLOADER_END = .;
 }
