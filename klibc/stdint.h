@@ -22,8 +22,6 @@
 #ifndef STDINT_H
 #define STDINT_H
 
-#define NULL (void *)0
-
 #ifdef __i386__
 
 typedef signed char      int8_t;
@@ -37,7 +35,6 @@ typedef unsigned long      uint32_t;
 typedef unsigned long long uint64_t;
 
 typedef signed long   ssize_t;
-typedef unsigned long size_t;
 
 typedef signed short   ptr16_t;
 typedef unsigned short uptr16_t;

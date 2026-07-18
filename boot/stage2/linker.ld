@@ -41,7 +41,6 @@ SECTIONS {
 	.elf (NOLOAD) : { *(.elf) } > elf : P_NOLOAD
 	__BOOTLOADER_END = .;
 
-
 	. = GDTR_ADDR;
 	__GDTR_START = .;
 	.gdtr (NOLOAD) : {
