@@ -154,7 +154,7 @@ void putchar(char ch)
 	return;
 }
 
-void puthex(void *hex, size_t n)
+void puthex(void *hex, size_t n, uint8_t cut)
 {
 	char  *hex_array;
 	char   chars[2];
@@ -171,8 +171,10 @@ void puthex(void *hex, size_t n)
 		chars[0] += chars[0] >= 0x0A ? 'A' - 0x0A : '0';
 		chars[1] += chars[1] >= 0x0A ? 'A' - 0x0A : '0';
 
-		putchar(chars[0]);
-		putchar(chars[1]);
+		if(i <= 1 || !cut || chars[0] != '0' || chars[1] != '0') {
+			putchar(chars[0]);
+			putchar(chars[1]);
+		}
 	}
 
 	return;

@@ -36,7 +36,7 @@ void  *memmove(void *, const void *, size_t);
 int    memcmp(const void *, const void *, size_t);
 size_t strlen(const char *);
 void   putchar(char);
-void   puthex(void *, size_t);
+void   puthex(void *, size_t, uint8_t);
 void   puts(char *);
 
 #endif

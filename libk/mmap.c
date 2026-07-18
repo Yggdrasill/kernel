@@ -257,11 +257,11 @@ void mmap_print(struct e820_info *info)
 	size_t i;
 
 	for(i = 0; i < info->nr_entries; i++) {
-		puthex(&info->base[i].base, sizeof(info->base[i].base));
+		puthex(&info->base[i].base, sizeof(info->base[i].base), 0);
 		putchar(' ');
-		puthex(&info->base[i].size, sizeof(info->base[i].size));
+		puthex(&info->base[i].size, sizeof(info->base[i].size), 0);
 		putchar(' ');
-		puthex(&info->base[i].type, sizeof(info->base[i].type));
+		puthex(&info->base[i].type, sizeof(info->base[i].type), 0);
 		putchar('\n');
 	}
 
