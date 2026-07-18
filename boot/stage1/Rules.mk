@@ -2,7 +2,7 @@ LD_STAGE1=-T $(SRCDIR_STAGE1)/linker.lds
 AF_BOOT=-f elf32 -I $(SRCDIR_STAGE1)/
 
 $(SRCDIR_STAGE1)/linker.lds: $(SRCDIR_BOOT_COMMON)/bootdefs.lds.S
-	$(CC) $(INCLUDE_PATH) -DLD_BOOT_STAGE1 -E -P -x c -o $@ $^
+	$(CC) $(CF_DEP) $(INCLUDE_PATH) -DLD_BOOT_STAGE1 -E -P -x c -o $@ $^
 
 $(OBJDIR_STAGE1)/%.o: $(SRCDIR_STAGE1)/%.s
 	$(AS) $(AF_BOOT) -o $@ $^
