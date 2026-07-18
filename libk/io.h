@@ -22,7 +22,7 @@
 #ifndef IO_H
 #define IO_H
 
-#include "stdint.h"
+#include <stdint.h>
 
 unsigned char inb(uint16_t);
 void          outb(uint16_t, unsigned char);

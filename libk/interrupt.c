@@ -19,10 +19,10 @@
  *
  */
 
-#include "interrupt.h"
-#include "io.h"
-#include "irq.h"
-#include "string.h"
+#include <interrupt.h>
+#include <io.h>
+#include <irq.h>
+#include <string.h>
 
 struct interrupt_info {
 	uint32_t fs, gs, es, ds;

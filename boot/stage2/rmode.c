@@ -19,14 +19,14 @@
  *
  */
 
-#include "stdint.h"
-#include "string.h"
+#include <stdint.h>
+#include <string.h>
 
-#include "rmode.h"
+#include <rmode.h>
 
-#include "idt.h"
-#include "interrupt.h"
-#include "mmap.h"
+#include <idt.h>
+#include <interrupt.h>
+#include <mmap.h>
 
 /*
  * rmode_trampoline cannot directly return union because it invokes sret stack

@@ -19,9 +19,10 @@
  *
  */
 
-#include "heap.h"
-#include "stdint.h"
-#include "string.h"
+#include <heap.h>
+#include <stdint.h>
+#include <string.h>
+#include <stddef.h>
 
 #define INDEX(H, x) ((char *)H->tree + x * H->size)
 

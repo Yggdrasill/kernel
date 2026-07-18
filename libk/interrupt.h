@@ -22,8 +22,8 @@
 #ifndef INTERRUPT_H
 #define INTERRUPT_H
 
-#include "idt.h"
-#include "stdint.h"
+#include <idt.h>
+#include <stdint.h>
 
 struct interrupt_info;
 

@@ -19,9 +19,10 @@
  *
  */
 
-#include "gdt.h"
-#include "stdint.h"
-#include "string.h"
+#include <gdt.h>
+#include <stdint.h>
+#include <stddef.h>
+#include <string.h>
 
 #define GDT_MAX_ENTRIES 8192
 

@@ -20,8 +20,10 @@
  */
 
 #include <mmap.h>
+#include <mmap_types.h>
 #include <sort.h>
 #include <stdint.h>
+#include <stddef.h>
 #include <string.h>
 
 #define MMAP_MAX_ENTRIES 128

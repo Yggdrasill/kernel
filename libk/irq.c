@@ -19,9 +19,9 @@
  *
  */
 
-#include "irq.h"
-#include "io.h"
-#include "string.h"
+#include <irq.h>
+#include <io.h>
+#include <string.h>
 
 /*
  * Everything in this file is extremely specific to the PIC 8259A, so if you
