@@ -1,46 +1,7 @@
-INCLUDE bootdefs.ld
 OUTPUT_FORMAT(elf32-i386);
 ENTRY(__start);
 
-PHDRS {
-	P_NOLOAD PT_NULL;
-	P_STAGE2 PT_LOAD;
-}
-
 SECTIONS {
-	. = BOOT_ADDR;
-	__BOOT_ADDR = .;
-	__BOOTLOADER_START = .;
-	.boot (NOLOAD) : {
-		*(.boot)
-		*(.boot.util)
-		*(.boot.rodata)
-	} > boot : P_NOLOAD
-	__BOOT_SIZE = BOOT_ADDR - ENTR_ADDR;
-	. = MBR_ADDR;
-	.mbr (NOLOAD) : {
-		*(.mbr)
-	} > mbr : P_NOLOAD
-
-	. = MEM1_ADDR;
-	.stage15 (NOLOAD) : {
-		__STAGE15_LOAD_ADDR = .;
-		*(.stage15)
-		*(.stage15.data)
-		*(.stage15.rodata)
-		*(.stage15.bss)
-	} > mem1 : P_NOLOAD
-
-	. = ST2_ADDR;
-	stage2.o = .;
-	._init : { *(._init) } > stage2 : P_STAGE2
-	.text : { *(.text) } > stage2 : P_STAGE2
-	.data : { *(.data) } > stage2 : P_STAGE2
-	.rodata : { *(.rodata) } > stage2 : P_STAGE2
-	.bss (NOLOAD) : { *(.bss) } > stage2 : P_STAGE2
-	.elf (NOLOAD) : { *(.elf) } > elf : P_NOLOAD
-	__BOOTLOADER_END = .;
-
 	. = GDTR_ADDR;
 	__GDTR_START = .;
 	.gdtr (NOLOAD) : {
