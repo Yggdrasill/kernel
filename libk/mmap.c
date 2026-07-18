@@ -120,8 +120,8 @@ uint32_t mmap_compare_type(const uint32_t t1, const uint32_t t2)
 	return t1 > t2 ? t1 : t2;
 }
 
-struct e820_map __mmap_old_map[MMAP_MAX_ENTRIES];
-struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
+extern struct e820_map __mmap_old_map[MMAP_MAX_ENTRIES];
+extern struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
 
 static struct e820_map *const old_map = __mmap_old_map;
 static struct e820_map *const new_map = __mmap_new_map;
