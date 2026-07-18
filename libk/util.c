@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <string.h>
-#include <util.h>
+
+#include <libk/util.h>
 
 void stack_trace(void)
 {

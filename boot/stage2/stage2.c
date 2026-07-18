@@ -24,15 +24,16 @@
  * use the C standard's variable argument lists.
  */
 
-#include <gdt.h>
-#include <idt.h>
-#include <interrupt.h>
-#include <irq.h>
-#include <mmap.h>
-#include <mmap_types.h>
-#include <rmode.h>
 #include <string.h>
-#include <util.h>
+
+#include <rmode.h>
+
+#include <libk/gdt.h>
+#include <libk/idt.h>
+#include <libk/interrupt.h>
+#include <libk/irq.h>
+#include <libk/mmap.h>
+#include <libk/util.h>
 
 int main(void)
 {

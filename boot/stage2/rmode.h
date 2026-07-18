@@ -22,8 +22,9 @@
 #ifndef RMODE_H
 #define RMODE_H
 
-#include <mmap.h>
 #include <stdint.h>
+
+#include <libk/mmap.h>
 
 union rmode_ret_t {
 	void    *ptr;

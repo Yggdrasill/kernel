@@ -22,8 +22,8 @@
 #ifndef IRQ_H
 #define IRQ_H
 
-#include <idt.h>
-#include <interrupt.h>
+#include <libk/idt.h>
+#include <libk/interrupt.h>
 
 #define PIC0_CMD  0x20
 #define PIC0_DATA 0x21

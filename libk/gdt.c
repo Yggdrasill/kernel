@@ -19,10 +19,11 @@
  *
  */
 
-#include <gdt.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
+
+#include <libk/gdt.h>
 
 #define GDT_MAX_ENTRIES 8192
 

@@ -19,11 +19,12 @@
  *
  */
 
-#include <idt.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
+
+#include <libk/idt.h>
 
 #define IDT_ENTRY_NUM 256
 

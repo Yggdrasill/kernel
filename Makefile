@@ -21,11 +21,12 @@ OBJ_COMMON=$(patsubst %.s,%.o,$(patsubst $(SRCDIR_BOOT_COMMON)%,$(OBJDIR_STAGE1)
 AS=nasm
 MKDIR=mkdir -p
 
-INCLUDE_PATH=-I libk/ -I klibc/
+INCLUDE_PATH=-I ./ -I klibc/
 CF_ALL=-m32 -ffreestanding -fno-pic -nodefaultlibs -fno-exceptions \
 	   -fno-asynchronous-unwind-tables -masm=intel -Wall -Wpedantic \
 	   -fomit-frame-pointer -Os -std=c99
-LD_ALL=-m elf_i386 -z noexecstack --nmagic -L boot/
+LD_ALL=-m elf_i386 -z noexecstack --nmagic
+LD_BOOT=-L boot/common/
 CFLAGS=-Wall -Wextra -pedantic
 
 all: $(BINDIR) $(OBJDIR) $(BINDIR)/boot.bin $(BINDIR)/stage2.elf

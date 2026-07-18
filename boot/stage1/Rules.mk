@@ -8,4 +8,4 @@ $(OBJDIR_STAGE1)/%.o: $(SRCDIR_BOOT_COMMON)/%.s
 	$(AS) $(AF_BOOT) -o $@ $^
 
 $(BINDIR)/boot.bin: $(OBJ_STAGE1) $(OBJ_COMMON)
-	$(LD) $(LD_ALL) $(LD_STAGE1) -o $@ $^
+	$(LD) $(LD_ALL) $(LD_BOOT) $(LD_STAGE1) -o $@ $^

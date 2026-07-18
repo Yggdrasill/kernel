@@ -19,7 +19,7 @@
  *
  */
 
-#include <io.h>
+#include <libk/io.h>
 
 unsigned char inb(uint16_t port)
 {

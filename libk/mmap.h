@@ -23,6 +23,7 @@
 #define MMAP_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 struct e820_info;
 struct e820_map;

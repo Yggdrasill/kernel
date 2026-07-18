@@ -19,16 +19,14 @@
  *
  */
 
-#include <mmap.h>
-#include <mmap_types.h>
 #include <sort.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <string.h>
 
-#define MMAP_MAX_ENTRIES 128
+#include <libk/mmap.h>
+#include <libk/config/mmap.h>
 
-#define MMAP_TABLE_SIZE              sizeof(struct e820_map) * MMAP_MAX_ENTRIES
 #define MMAP_END_ADDR(x)             ((x)->base + (x)->size)
 #define MMAP_REGION_SIZE(start, end) ((uintptr_t)&end - (uintptr_t)&start)
 

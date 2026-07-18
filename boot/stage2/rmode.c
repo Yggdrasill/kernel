@@ -24,9 +24,9 @@
 
 #include <rmode.h>
 
-#include <idt.h>
-#include <interrupt.h>
-#include <mmap.h>
+#include <libk/idt.h>
+#include <libk/interrupt.h>
+#include <libk/mmap.h>
 
 /*
  * rmode_trampoline cannot directly return union because it invokes sret stack
