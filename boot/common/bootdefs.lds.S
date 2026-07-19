@@ -166,9 +166,9 @@ SECTIONS {
 	. = MMAP_ADDR;
 	.mmap (NOLOAD) : {
 		__mmap_old_map = .;
-		. += MMAP_TABLE_SIZE;
+		. += ABI_MMAP_TABLE_SIZE;
 		__mmap_new_map = .;
-		. += MMAP_TABLE_SIZE;
+		. += ABI_MMAP_TABLE_SIZE;
 	} > mmap : P_NOLOAD
 
 	. = IDT_ADDR;

@@ -1,21 +1,35 @@
-SRC_STAGE2:=$(filter-out $(SRCDIR_STAGE2)/mmap_gen.c $(SRCDIR_STAGE2)/linker_gen.c,$(wildcard $(SRCDIR_STAGE2)/*.c))
+SRC_STAGE2:=$(filter-out $(SRCDIR_STAGE2)/symbol_gen.c,$(wildcard $(SRCDIR_STAGE2)/*.c))
 SRC_STAGE2:=$(SRC_STAGE2) \
 			$(filter-out $(SRCDIR_STAGE2)/mmap_generated.s,$(wildcard $(SRCDIR_STAGE2)/*.s))
-OBJ_STAGE2=$(patsubst %.s,%.o,$(patsubst %.c,%.o,$(patsubst $(SRCDIR_STAGE2)%,$(OBJDIR_STAGE2)%,$(SRC_STAGE2))))
+OBJ_STAGE2=$(patsubst %.s,%.o,$(patsubst %.c,%.o,\
+		   $(patsubst $(SRCDIR_STAGE2)%,$(OBJDIR_STAGE2)%,$(SRC_STAGE2))))
 
 LD_STAGE2=-T $(OBJDIR_STAGE2)/linker.lds
 
-$(OBJDIR_GEN)/mmap_gen: $(SRCDIR_STAGE2)/mmap_gen.c | $(OBJDIR_GEN)
-	$(CC) $(CF_HOST) -MMD -MP -MF $@.d -MT $@ -I ./ -DCC_HOSTED -DGEN_ASM_STAGE2 -o $@ $<
+$(OBJDIR_GEN)/symbol_gen: $(SRCDIR_STAGE2)/symbol_gen.c | $(OBJDIR_GEN)
+	$(CC) $(CF_HOST) -no-pie -O0 -MMD -MP -MF $@.d -MT $@ \
+		-I ./ -o $@ $< -Wl,--no-gc-sections,-Ttext-segment=0
 
-$(OBJDIR_GEN)/mmap_generated.s: $(OBJDIR_GEN)/mmap_gen
-	$< > $@
+$(OBJDIR_GEN)/mmap_generated.s: $(OBJDIR_GEN)/symbol_gen
+	for sym in $$(readelf -Ws $< | grep "ABI_\(MMAP\|INFO\)" \
+		| awk -v OFS=',' '{ print $$2,$$8 };'); \
+	do \
+		name=$$(echo $$sym | cut -d , -f 2); \
+		offset=$$(echo $$sym | cut -d , -f 1); \
+		value=$$(xxd -l 4 -e -s "0x$${offset}" $< | awk '{ print $$2 }'); \
+		echo "$${name} equ 0x$${value}"; \
+	done > $@
 
-$(OBJDIR_GEN)/linker_gen: $(SRCDIR_STAGE2)/linker_gen.c | $(OBJDIR_GEN)
-	$(CC) $(CF_HOST) -MMD -MP -MF $@.d -MT $@ -I ./ -DCC_HOSTED -DGEN_LD_STAGE2 -o $@ $<
-
-$(OBJDIR_GEN)/mmap_generated.h: $(OBJDIR_GEN)/linker_gen
-	$< > $@
+$(OBJDIR_GEN)/mmap_generated.h: $(OBJDIR_GEN)/symbol_gen
+	for sym in $$(readelf -Ws $< | grep "ABI_\(MMAP\|INFO\)" \
+		| awk -v OFS=',' '{ print $$2,$$3,$$8 };'); \
+	do \
+		name=$$(echo $$sym | cut -d , -f 3); \
+		size=$$(echo $$sym | cut -d , -f 2); \
+		offset=$$(echo $$sym | cut -d , -f 1); \
+		value=$$(xxd -l $${size} -e -s "0x$${offset}" $< | awk '{ print $$2 }'); \
+		echo "#define $${name} 0x$${value}"; \
+	done > $@
 
 $(OBJDIR_STAGE2)/linker.lds: $(SRCDIR_BOOT_COMMON)/bootdefs.lds.S \
 							 $(OBJDIR_GEN)/mmap_generated.h | $(OBJDIR_STAGE2)

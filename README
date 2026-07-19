@@ -28,18 +28,14 @@ Requirements
 - GNU/LLVM ld
 - GCC/clang
 - nasm
-- x86(-64) host machine
+- binutils
+- awk
 
 Rationale:
 
 Unfortunately Assembly languages are not very portable between different
 assemblers, as any assembler can have their own dialect. This uses the Netwide
 Assembler, or nasm, and will likely use this assembler forever.
-
-Also an unfortunate fact at the moment: Compiler-generated values are necessary
-for both linker scripts and the E820 memory map function. This is a fixable
-problem theoretically, and I may solve it in the future, but for now the host
-machine must be instruction set compatible with a target 32-bit x86.
 
 While the project intends to be reasonably compiler-portable, is is currently
 not, and requires a linker that understands GNU ld's linkerscripts, depends on

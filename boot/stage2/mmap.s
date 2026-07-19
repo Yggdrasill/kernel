@@ -36,16 +36,16 @@ __bios_mmap:
 	shr   eax, 4
 	mov   ds, ax
 	and   edx, 0x0F
-	mov   eax, [edx + E820_INFO_BASE]
+	mov   eax, [edx + ABI_MMAP_INFO_BASE]
 	mov   edi, eax
 	shr   eax, 4
 	mov   es, ax
 	and   edi, 0x0F
-	mov   eax, [edx + E820_INFO_NR]
-	mul   eax, E820_ENTRY_SIZE
+	mov   eax, [edx + ABI_MMAP_INFO_NR]
+	mul   eax, ABI_MMAP_ENTRY_SIZE
 	add   edi, eax
-	mov   eax, [edx + E820_INFO_MAX]
-	mul   eax, E820_ENTRY_SIZE
+	mov   eax, [edx + ABI_MMAP_INFO_MAX]
+	mul   eax, ABI_MMAP_ENTRY_SIZE
 	mov   esi, eax
 	xor   ebx, ebx
 mmap_loop:
@@ -76,25 +76,25 @@ mmap_e820:
 	mov   ecx, -2
 	jmp   mmap_done
 check_size:
-	cmp   ecx, E820_ENTRY_SIZE - 4
+	cmp   ecx, ABI_MMAP_ENTRY_SIZE - 4
 	je    mmap_continue
-	cmp   ecx, E820_ENTRY_SIZE
+	cmp   ecx, ABI_MMAP_ENTRY_SIZE
 	je    mmap_continue
 	mov   ecx, -3
 	jmp   mmap_done
 mmap_continue:
-	add   edi, E820_ENTRY_SIZE
+	add   edi, ABI_MMAP_ENTRY_SIZE
 	cmp   ebx, 0x00
 	jnz   mmap_loop
 	xor   ecx, ecx
 mmap_done:
 	xor   edx, edx
 	mov   eax, edi
-	mov   ebx, E820_ENTRY_SIZE
+	mov   ebx, ABI_MMAP_ENTRY_SIZE
 	div   ebx
 	mov   edx, [bp + 6]
 	and   edx, 0x0F
-	mov   [edx + E820_INFO_NR], eax
+	mov   [edx + ABI_MMAP_INFO_NR], eax
 
 	mov   eax, ecx
 	pop   word ds
@@ -107,8 +107,8 @@ mmap_recover:
 	xor   ecx, ecx
 	mov   edx, [bp + 6]
 	and   edx, 0x0F
-	mov   eax, [edx + E820_INFO_NR]
-	mul   eax, E820_ENTRY_SIZE
+	mov   eax, [edx + ABI_MMAP_INFO_NR]
+	mul   eax, ABI_MMAP_ENTRY_SIZE
 	cmp   edi, eax
 	jne   mmap_done
 	; E820 not supported
