@@ -134,7 +134,7 @@ static struct e820_map *const new_map = __mmap_new_map;
 struct e820_info mmap_sanitize(
     struct e820_map *dst,
     struct e820_map *src,
-    const uint32_t   nr_entries,
+    uint32_t         nr_entries,
     const uint32_t   dst_max_entries)
 {
 	struct e820_point e820_points[2 * MMAP_MAX_ENTRIES];
@@ -161,7 +161,8 @@ struct e820_info mmap_sanitize(
 	    .max_nr_entries = MMAP_MAX_ENTRIES,
 	};
 
-	if(!nr_entries || dst_max_entries > MMAP_MAX_ENTRIES) return info;
+	if(!nr_entries || nr_entries > MMAP_MAX_ENTRIES) goto sanitize_end;
+	if(dst_max_entries > MMAP_MAX_ENTRIES) goto sanitize_end;
 
 	/*
 	 * Break down the E820 structure into a sorted list of points that can be
@@ -172,6 +173,10 @@ struct e820_info mmap_sanitize(
 	j = 0;
 	i = 0;
 	for(i = 0; i < nr_entries; i++) {
+		if(!src[i].size) {
+			*(src + i) = *(src + nr_entries - 1);
+			nr_entries--;
+		}
 		e820_points[j++] = (struct e820_point){src + i, src[i].base};
 		e820_points[j++] =
 		    (struct e820_point){src + i, src[i].base + src[i].size};
@@ -260,6 +265,7 @@ struct e820_info mmap_sanitize(
 	    .max_nr_entries = MMAP_MAX_ENTRIES,
 	};
 
+sanitize_end:
 	return info;
 }
 
