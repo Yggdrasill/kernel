@@ -1,5 +1,4 @@
-SRC_STAGE2:=$(filter-out $(SRCDIR_STAGE2/mmap_gen.c) \
-			$(SRCIDR_STAGE2)/ld_gen.c,$(wildcard $(SRCDIR_STAGE2)/*.c))
+SRC_STAGE2:=$(filter-out $(SRCDIR_STAGE2)/mmap_gen.c $(SRCDIR_STAGE2)/linker_gen.c,$(wildcard $(SRCDIR_STAGE2)/*.c))
 SRC_STAGE2:=$(SRC_STAGE2) \
 			$(filter-out $(SRCDIR_STAGE2)/mmap_generated.s,$(wildcard $(SRCDIR_STAGE2)/*.s))
 OBJ_STAGE2=$(patsubst %.s,%.o,$(patsubst %.c,%.o,$(patsubst $(SRCDIR_STAGE2)%,$(OBJDIR_STAGE2)%,$(SRC_STAGE2))))
