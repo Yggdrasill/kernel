@@ -20,14 +20,10 @@ extern __MMAP_BASE_ADDR
 global __bios_mmap
 extern __bios_error
 
+%include "mmap_generated.s"
+
 bits    16
 section .text
-
-; mmap.c: struct e820_info
-e820_info:
-E820_INFO_BASE equ 0
-E820_INFO_NR   equ 4
-E820_INFO_MAX  equ 8
 
 __bios_mmap:
 	push  dword ebp
@@ -46,10 +42,10 @@ __bios_mmap:
 	mov   es, ax
 	and   edi, 0x0F
 	mov   eax, [edx + E820_INFO_NR]
-	mul   eax, 0x18
+	mul   eax, E820_ENTRY_SIZE
 	add   edi, eax
 	mov   eax, [edx + E820_INFO_MAX]
-	mul   eax, 0x18
+	mul   eax, E820_ENTRY_SIZE
 	mov   esi, eax
 	xor   ebx, ebx
 mmap_loop:
@@ -80,21 +76,21 @@ mmap_e820:
 	mov   ecx, -2
 	jmp   mmap_done
 check_size:
-	cmp   ecx, 0x14
+	cmp   ecx, E820_ENTRY_SIZE - 4
 	je    mmap_continue
-	cmp   ecx, 0x18
+	cmp   ecx, E820_ENTRY_SIZE
 	je    mmap_continue
 	mov   ecx, -3
 	jmp   mmap_done
 mmap_continue:
-	add   edi, 0x18
+	add   edi, E820_ENTRY_SIZE
 	cmp   ebx, 0x00
 	jnz   mmap_loop
 	xor   ecx, ecx
 mmap_done:
 	xor   edx, edx
 	mov   eax, edi
-	mov   ebx, 0x18
+	mov   ebx, E820_ENTRY_SIZE
 	div   ebx
 	mov   edx, [bp + 6]
 	and   edx, 0x0F
@@ -107,10 +103,12 @@ mmap_done:
 	ret
 
 mmap_recover:
+	; Return value if successful
+	xor   ecx, ecx
 	mov   edx, [bp + 6]
 	and   edx, 0x0F
 	mov   eax, [edx + E820_INFO_NR]
-	mul   eax, 0x18
+	mul   eax, E820_ENTRY_SIZE
 	cmp   edi, eax
 	jne   mmap_done
 	; E820 not supported

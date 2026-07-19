@@ -25,27 +25,11 @@
 #include <string.h>
 
 #include <libk/config/mmap.h>
+#include <libk/internal/mmap.h>
 #include <libk/mmap.h>
 
 #define MMAP_END_ADDR(x)             ((x)->base + (x)->size)
 #define MMAP_REGION_SIZE(start, end) ((uintptr_t)&end - (uintptr_t)&start)
-
-enum MMAP_TYPES {
-	MMAP_USABLE = 1,
-	MMAP_RESERVED,
-	MMAP_ACPI_RECLAIMABLE,
-	MMAP_ACPI_NVS,
-	MMAP_BAD_MEMORY,
-	MMAP_BOOTLOADER_RECLAIMABLE,
-	MMAP_FRAMEBUFFER
-};
-
-struct e820_map {
-	uint64_t base;
-	uint64_t size;
-	uint32_t type;
-	uint32_t attrib;
-};
 
 struct e820_point {
 	struct e820_map *entry;
@@ -56,12 +40,6 @@ struct e820_point {
  * CAREFUL! Check boot/stage2/mmap.s.
  * BIOS E820 routine directly addresses byte offsets.
  */
-
-struct e820_info {
-	struct e820_map *base;
-	size_t           nr_entries;
-	size_t           max_nr_entries;
-};
 
 extern char __BIOS_START;
 extern char __BIOS_END;
@@ -79,14 +57,6 @@ extern char __STACK_END;
 
 extern char __UPPER_START;
 extern char __UPPER_END;
-
-const size_t __mmap_max_entries = MMAP_MAX_ENTRIES;
-const size_t __mmap_entry_size  = sizeof(struct e820_map);
-
-const size_t __mmap_base_offset = offsetof(struct e820_map, base);
-const size_t __mmap_size_offset = offsetof(struct e820_map, size);
-const size_t __mmap_type_offset = offsetof(struct e820_map, type);
-const size_t __mmap_attr_offset = offsetof(struct e820_map, attrib);
 
 int mmap_is_base(struct e820_point *p)
 {
