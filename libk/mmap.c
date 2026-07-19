@@ -145,6 +145,7 @@ struct e820_info mmap_sanitize(
 		if(!src[i].size) {
 			*(src + i) = *(src + nr_entries - 1);
 			nr_entries--;
+			continue;
 		}
 		e820_points[j++] = (struct e820_point){src + i, src[i].base};
 		e820_points[j++] =
