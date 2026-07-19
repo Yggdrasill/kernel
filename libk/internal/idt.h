@@ -1,5 +1,5 @@
-#ifndef IDT_CONFIG_H
-#define IDT_CONFIG_H
+#ifndef IDT_INTERNAL_H
+#define IDT_INTERNAL_H
 
 #define IDT_REG_SIZE   6
 #define IDT_ENTRY_SIZE 8

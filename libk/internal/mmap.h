@@ -1,10 +1,11 @@
 #ifndef MMAP_INTERNAL_H
 #define MMAP_INTERNAL_H
 
-#include <stddef.h>
-#include <stdint.h>
+#define MMAP_MAX_ENTRIES 128
 
-#include <libk/config/mmap.h>
+#if !defined(LD_BOOT_STAGE1) && !defined(LD_BOOT_STAGE2)
+	#include <stddef.h>
+	#include <stdint.h>
 
 enum MMAP_TYPES {
 	MMAP_USABLE = 1,
@@ -29,15 +30,16 @@ struct e820_info {
 	size_t           max_nr_entries;
 };
 
-#define MMAP_ENTRY_SIZE  (sizeof(struct e820_map))
-#define MMAP_TABLE_SIZE  (MMAP_MAX_ENTRIES * MMAP_ENTRY_SIZE)
-#define MMAP_BASE_OFFSET (offsetof(struct e820_map, base))
-#define MMAP_SIZE_OFFSET (offsetof(struct e820_map, size))
-#define MMAP_TYPE_OFFSET (offsetof(struct e820_map, type))
-#define MMAP_ATTR_OFFSET (offsetof(struct e820_map, attrib))
+	#define MMAP_ENTRY_SIZE  (sizeof(struct e820_map))
+	#define MMAP_TABLE_SIZE  (MMAP_MAX_ENTRIES * MMAP_ENTRY_SIZE)
+	#define MMAP_BASE_OFFSET (offsetof(struct e820_map, base))
+	#define MMAP_SIZE_OFFSET (offsetof(struct e820_map, size))
+	#define MMAP_TYPE_OFFSET (offsetof(struct e820_map, type))
+	#define MMAP_ATTR_OFFSET (offsetof(struct e820_map, attrib))
 
-#define INFO_BASE_OFFSET   (offsetof(struct e820_info, base))
-#define INFO_NR_ENT_OFFSET (offsetof(struct e820_info, nr_entries))
-#define INFO_MAX_NR_OFFSET (offsetof(struct e820_info, max_nr_entries))
+	#define INFO_BASE_OFFSET   (offsetof(struct e820_info, base))
+	#define INFO_NR_ENT_OFFSET (offsetof(struct e820_info, nr_entries))
+	#define INFO_MAX_NR_OFFSET (offsetof(struct e820_info, max_nr_entries))
+#endif
 
 #endif

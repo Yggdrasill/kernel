@@ -1,5 +1,5 @@
-#ifndef GDT_CONFIG_H
-#define GDT_CONFIG_H
+#ifndef GDT_INTERNAL_H
+#define GDT_INTERNAL_H
 
 #define GDT_REG_SIZE    6
 #define GDT_ENTRY_SIZE  8

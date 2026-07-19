@@ -23,8 +23,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <libk/config/gdt.h>
 #include <libk/gdt.h>
+#include <libk/internal/gdt.h>
 
 struct gdt_ptr {
 	uint8_t size_0;

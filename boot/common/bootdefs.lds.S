@@ -1,6 +1,6 @@
-#include <libk/config/gdt.h>
-#include <libk/config/idt.h>
-#include <libk/config/mmap.h>
+#include <libk/internal/gdt.h>
+#include <libk/internal/idt.h>
+#include <libk/internal/mmap.h>
 
 #ifdef LD_BOOT_STAGE1
 OUTPUT_FORMAT(binary);

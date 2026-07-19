@@ -24,7 +24,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <libk/config/mmap.h>
 #include <libk/internal/mmap.h>
 #include <libk/mmap.h>
 
