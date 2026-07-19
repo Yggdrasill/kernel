@@ -12,21 +12,24 @@ $(OBJDIR_GEN)/symbol_gen: $(SRCDIR_STAGE2)/symbol_gen.c | $(OBJDIR_GEN)
 
 $(OBJDIR_GEN)/mmap_generated.s: $(OBJDIR_GEN)/symbol_gen
 	for sym in $$(readelf -Ws $< | grep "ABI_\(MMAP\|INFO\)" \
-		| awk -v OFS=',' '{ print $$2,$$8 };'); \
+		| awk -v OFS=',' '{ print $$8,$$3,$$2 };'); \
 	do \
-		name=$$(echo $$sym | cut -d , -f 2); \
-		offset=$$(echo $$sym | cut -d , -f 1); \
-		value=$$(xxd -l 4 -e -s "0x$${offset}" $< | awk '{ print $$2 }'); \
+		name=$${sym%%,*}; \
+		tail=$${sym#*,}; \
+		size=$${tail%%,*}; \
+		offset=$${tail#*,}; \
+		value=$$(xxd -l $${size} -e -s "0x$${offset}" $< | awk '{ print $$2 }'); \
 		echo "$${name} equ 0x$${value}"; \
 	done > $@
 
 $(OBJDIR_GEN)/mmap_generated.h: $(OBJDIR_GEN)/symbol_gen
 	for sym in $$(readelf -Ws $< | grep "ABI_\(MMAP\|INFO\)" \
-		| awk -v OFS=',' '{ print $$2,$$3,$$8 };'); \
+		| awk -v OFS=',' '{ print $$8,$$3,$$2 };'); \
 	do \
-		name=$$(echo $$sym | cut -d , -f 3); \
-		size=$$(echo $$sym | cut -d , -f 2); \
-		offset=$$(echo $$sym | cut -d , -f 1); \
+		name=$${sym%%,*}; \
+		tail=$${sym#*,}; \
+		size=$${tail%%,*}; \
+		offset=$${tail#*,}; \
 		value=$$(xxd -l $${size} -e -s "0x$${offset}" $< | awk '{ print $$2 }'); \
 		echo "#define $${name} 0x$${value}"; \
 	done > $@
