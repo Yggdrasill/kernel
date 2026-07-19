@@ -11,23 +11,26 @@ OBJDIR_STAGE1=$(OBJDIR)/stage1
 OBJDIR_STAGE2=$(OBJDIR)/stage2
 OBJDIR_LIBK=$(OBJDIR)/libk
 OBJDIR_KLIBC=$(OBJDIR)/klibc
+OBJDIR_GEN=$(OBJDIR)/generated
 
-OBJDIRS=$(OBJDIR) \
+OBJDIRS=$(OBJDIR)        \
 		$(OBJDIR_STAGE1) \
 		$(OBJDIR_STAGE2) \
-		$(OBJDIR_LIBK) \
-		$(OBJDIR_KLIBC)
+		$(OBJDIR_LIBK)   \
+		$(OBJDIR_KLIBC)  \
+		$(OBJDIR_GEN)
 
 SRC_STAGE1=$(wildcard $(SRCDIR_STAGE1)/*.s)
 SRC_COMMON=$(wildcard $(SRCDIR_BOOT_COMMON)/*.s)
 
-OBJ_STAGE1=$(patsubst %.s,%.o,$(patsubst $(SRCDIR_STAGE1)%,$(OBJDIR_STAGE1)%,$(SRC_STAGE1) ) )
-OBJ_COMMON=$(patsubst %.s,%.o,$(patsubst $(SRCDIR_BOOT_COMMON)%,$(OBJDIR_STAGE1)%,$(SRC_COMMON) ) )
+OBJ_STAGE1=$(patsubst %.s,%.o,$(patsubst $(SRCDIR_STAGE1)%,$(OBJDIR_STAGE1)%,$(SRC_STAGE1)))
+OBJ_COMMON=$(patsubst %.s,%.o,$(patsubst $(SRCDIR_BOOT_COMMON)%,$(OBJDIR_STAGE1)%,$(SRC_COMMON)))
 
 DEPENDS=$(wildcard $(OBJDIR_STAGE1)/*.d) \
 		$(wildcard $(OBJDIR_STAGE2)/*.d) \
 		$(wildcard $(OBJDIR_LIBK)/*.d)   \
-		$(wildcard $(OBJDIR_KLIBC)/*.d)
+		$(wildcard $(OBJDIR_KLIBC)/*.d)  \
+		$(wildcard $(OBJDIR_GEN)/*.d)
 
 AS=nasm
 MKDIR=mkdir -p

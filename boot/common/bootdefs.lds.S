@@ -5,6 +5,7 @@
 #ifdef LD_BOOT_STAGE1
 OUTPUT_FORMAT(binary);
 #elif  LD_BOOT_STAGE2
+#include <build/generated/mmap_generated.h>
 OUTPUT_FORMAT(elf32-i386);
 ENTRY(__start);
 #endif
