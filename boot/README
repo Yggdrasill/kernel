@@ -3,204 +3,216 @@ a case-insensitive search.
 
 -- common/print.s
 
-    This file implements BIOS print interrupt calls, which is used for
-    displaying messages on the screen during real mode execution. This is a
-    practical consideration as it consumes far less space than writing to the
-    VGA framebuffer.
+	This file implements BIOS print interrupt calls, which is used for
+	displaying messages on the screen during real mode execution. This is a
+	practical consideration as it consumes far less space than writing to the
+	VGA framebuffer.
 
 -- common/mode_switch.s
 
-    This file implements CPU mode switching and all its prerequisites. That is,
-    it installs a basic GDT and a null IDT, masking all interrupts in the
-    process. What it does NOT do is enable the A20 gate, see stage1/a20.s for
-    that.
+	This file implements CPU mode switching and all its prerequisites. That is,
+	it installs a basic GDT and a null IDT, masking all interrupts in the
+	process. What it does NOT do is enable the A20 gate, see stage1/a20.s for
+	that.
 
-    This file also implements a real mode trampoline, which enables me to pass
-    arguments from 32-bit protected mode code to 16-bit real mode BIOS calls on
-    the stack. Most bootloaders do this by passing arguments in the registers,
-    but I think passing arguments on the stack is nicer. This does mean that
-    there are some very real limitations on where the stack can be located,
-    however. 
+	This file also implements a real mode trampoline, which enables me to pass
+	arguments from 32-bit protected mode code to 16-bit real mode BIOS calls on
+	the stack. Most bootloaders do this by passing arguments in the registers,
+	but I think passing arguments on the stack is nicer. This does mean that
+	there are some very real limitations however.
 
-    IMPORTANT: The stack ***MUST*** be located in low memory below 1MiB, as this
-    is the only memory that real mode code can use. This is a very real design
-    limitation that cannot be avoided while passing arguments on the stack. The
-    trampoline is NOT THREAD SAFE. It's designed for single-core execution ONLY.
+	IMPORTANT: READ ALL OF THIS. The stack ***MUST*** be located in low memory
+	below 1MiB, as this is the only memory that real mode code can use. The
+	stack base pointer CANNOT be on a 64K boundary. This is a very real design
+	limitation that cannot be avoided while passing arguments on the stack. The
+	trampoline is NOT RE-ENTRANT. The trampoline is NOT designed for nested
+	calls (e.g. from interrupts). The trampoline does NOT reprogram the PICs,
+	instead the IVT is aliased over the DOS-reserved region. There are a few
+	additional limitations, documented under stage2/rmode.c in this README.
 
-    These functions take care of actually putting the processor into 32-bit
-    protected mode. A requirement for this is to provide the processor with
-    a global descriptor table and an interrupt descriptor table. We provide
-    the processor with a GDT that describes a flat memory structure, 4GB long.
-    The GDT contains an eight byte long null descriptor, a code descriptor and
-    a data descriptor. The base address is 0, and the limit is 0xFFFFF. The
-    "granularity" bit is set, and so the limit is multiplied by 4096.
+	So long as the preconditions for the trampoline to be used hold true, it
+	will save all other machine state and restore it upon exit to the best of
+	its ability. This does not save you from a broken machine state before
+	entry. All callee-saved registers are handled within the trampoline.
 
-    0xFFFFF * 4096 = 4GiB
+	These functions take care of actually putting the processor into 32-bit
+	protected mode. A requirement for this is to provide the processor with
+	a global descriptor table and an interrupt descriptor table. We provide
+	the processor with a GDT that describes a flat memory structure, 4GB long.
+	The GDT contains an eight byte long null descriptor, a code descriptor and
+	a data descriptor. The base address is 0, and the limit is 0xFFFFF. The
+	"granularity" bit is set, and so the limit is multiplied by 4096.
 
-    A 16-bit real mode GDT entry is also provided for the purposes of
-    re-entering real mode. This is used in the aforementioned trampoline to
-    transition back to real mode, in order to execute BIOS calls from protected
-    mode in C.
+	0xFFFFF * 4096 = 4GiB
 
-    We also provide the processor with a completely bogus IDT, and so interrupts
-    ***MUST*** be disabled before we set the interrupt descriptor table, otherwise
-    we risk triple-faulting the processor by sending it to a completely invalid
-    interrupt handler. Interrupts should not be enabled from this point onwards,
-    until we set up a proper IDT.
+	A 16-bit real mode GDT entry is also provided for the purposes of
+	re-entering real mode. This is used in the aforementioned trampoline to
+	transition back to real mode, in order to execute BIOS calls from protected
+	mode in C.
 
-    The pmode_init function set's the protected mode bit in the CR0 register.
-    After this point, we are officially in protected mode.
+	We also provide the processor with a completely bogus IDT, and so interrupts
+	***MUST*** be disabled before we set the interrupt descriptor table, otherwise
+	we risk triple-faulting the processor by sending it to a completely invalid
+	interrupt handler. Interrupts should not be enabled from this point onwards,
+	until we set up a proper IDT.
 
+	The pmode_init function set's the protected mode bit in the CR0 register.
+	After this point, we are officially in protected mode.
 
 -- stage1/disk.s
 
-    These implement wrapper functions for BIOS disk I/O. The reset function uses
-    BIOS interrupt call int 0x13 ah=0x00 dl=drive to reset the disk drive, whether
-    it be a floppy or a hard drive, which forces the drive to place its head at the
-    first track, and makes the drive execute the next command as if it was in its
-    initial state. This is done before a read operation just to be sure.
+	These implement wrapper functions for BIOS disk I/O. The reset function uses
+	BIOS interrupt call int 0x13 ah=0x00 dl=drive to reset the disk drive, whether
+	it be a floppy or a hard drive, which forces the drive to place its head at the
+	first track, and makes the drive execute the next command as if it was in its
+	initial state. This is done before a read operation just to be sure.
 
-    The read function uses a relatively complex BIOS function call in which quite
-    a few registers have to be set. It uses the int 0x13 ah=0x02 dl=drive BIOS
-    interrupt call. For whatever reason, instead of the typical es:di combination
-    for a memory pointer, this particular call requires es:bx to be the buffer
-    pointer. The dh register tells the BIOS what head to read with, the al
-    register is the number of sectors to read into memory. The cx register
-    specifies where to read from, where ch is the track number and cl is the
-    sector number (both counting from zero of course).
+	The read function uses a relatively complex BIOS function call in which quite
+	a few registers have to be set. It uses the int 0x13 ah=0x02 dl=drive BIOS
+	interrupt call. For whatever reason, instead of the typical es:di combination
+	for a memory pointer, this particular call requires es:bx to be the buffer
+	pointer. The dh register tells the BIOS what head to read with, the al
+	register is the number of sectors to read into memory. The cx register
+	specifies where to read from, where ch is the track number and cl is the
+	sector number (where for whatever reason, sectors count from 1).
 
 -- stage1/a20.s
 
-    This is the code to enable the A20 gate. The A20 gate is a consequence of x86
-    backwards compatibility. Specifically, the original 8086 processor had two
-    16-bit registers to address memory, and instead of just putting both linearly
-    on the address bus, Intel decided that it'd be more desireable to shift the
-    segment register 4 bits left so they could instead address 2^20 bytes. The
-    offset register is *not* shifted, and with a segment register of 0xFFFF and
-    and offset register of 0xFFFF, you can actually address 64kiB - 15B past 1MiB.
+	This is the code to enable the A20 gate. The A20 gate is a consequence of x86
+	backwards compatibility. Specifically, the original 8086 processor had two
+	16-bit registers to address memory, and instead of just putting both linearly
+	on the address bus, Intel decided that it'd be more desireable to shift the
+	segment register 4 bits left so they could instead address 2^20 bytes. The
+	offset register is *not* shifted, and with a segment register of 0xFFFF and
+	and offset register of 0xFFFF, you can actually address 64kiB - 15B past 1MiB.
 
-    (0xFFFF << 4) + 0xFFFF = 0x10FFEF
+	(0xFFFF << 4) + 0xFFFF = 0x10FFEF
 
-    The 8086 actually had a 24 bit address bus, and so when addressing memory
-    limited to 20 bits, from the memory's point of view, the address bus would
-    wrap around to 0 when passing the 1MiB address. Some programmers actually
-    used this "feature", and since Intel are backwards compatibility fanatics
-    they kept it in every following processor since then and it has become a
-    permanent part of the x86 processor architecture.
+	The 80286 introduced a 24 bit address bus, and so to keep backwards
+	compatibility with earlier processors, they introduced the A20 gate. This
+	disabled the 21st bit of the memory bus, keeping the normal behaviour of the
+	8086 processors. When addressing above the maximum addressable memory, the
+	memory 20-bit address bus wraps around to 0. Since Intel are backwards
+	compatibility fanatics they kept it in every following processor since then
+	and it has become a permanent part of the x86 processor architecture. The
+	permanency of this has only recently started to change.
 
-    We can test the A20 gate by abusing the wraparound behavior. By testing what
-    would be the same address after wraparound, we can compare the two words, and
-    if they are the same, it's highly likely that that the A20 gate is not
-    enabled. We are testing the terminating two bytes of the MBR header, 0xAA55.
+	We can test the A20 gate by abusing the wraparound behavior. By testing what
+	would be the same address after wraparound, we can compare the two words, and
+	if they are the same, it's highly likely that that the A20 gate is not
+	enabled. We are testing the terminating two bytes of the MBR header, 0xAA55.
 
-    There are multiple ways to enable the A20 gate, and all implemented here need
-    to be tried, because all of them may not work. They are tried in this order:
+	There are multiple ways to enable the A20 gate, and all implemented here need
+	to be tried, because all of them may not work. They are tried in this order:
 
-    - Ask the BIOS to do it. Ignore the response and test the address bus again,
-      because the BIOS can lie about it.
-    - Intel saw that there was a spare pin on the PS/2 keyboard controller, so
-      they routed the A20 gate through there. Thus, this is one way to enable it.
-    - Try an access of I/O port 0xEE. This does not work in QEMU, so it is
-      untested, but it should work on a machine that supports it.
-    - Fast A20 Enable is a feature of some motherboards, but is not guaranteed to
-      work. Writing to this I/O port can have completely different effects or
-      crash the machine, so this should be tried last.
+	- Ask the BIOS to do it. Ignore the response and test the address bus again,
+	because the BIOS can lie about it.
+	- Intel saw that there was a spare pin on the PS/2 keyboard controller, so
+	they routed the A20 gate through there. Thus, this is one way to enable it.
+	- Try an access of I/O port 0xEE. This does not work in QEMU, so it is
+	untested, but it should work on a machine that supports it.
+	- Fast A20 Enable is a feature of some motherboards, but is not guaranteed to
+	work. Writing to this I/O port can have completely different effects or
+	crash the machine, so this should be tried last.
 
-    If none of the above work, we give up.
+	If none of the above work, we give up.
 
-    Note that QEMU needs a SeaBIOS binary without the "enable A20" option in order
-    to test this code, because if it is compiled with the "enable A20" option,
-    naturally there would be no need to enable it, or even try. If you do build a
-    SeaBIOS binary with the A20 gate disabled, you need to also run QEMU without
-    the -enable-kvm switch, because as far as I can tell, -enable-kvm implicitly
-    enables the A20 gate regardless of the SeaBIOS binary.
-
--- stage1/vga.s
-
-    This just sets up the VGA mode to an 80x25 text mode with colour. It also
-    makes the hardware cursor invisible.
+	Note that QEMU needs a SeaBIOS binary without the "enable A20" option in order
+	to test this code, because if it is compiled with the "enable A20" option,
+	naturally there would be no need to enable it, or even try. If you do build a
+	SeaBIOS binary with the A20 gate disabled, you need to also run QEMU without
+	the -enable-kvm switch, because as far as I can tell, -enable-kvm implicitly
+	enables the A20 gate regardless of the SeaBIOS binary.
 
 -- stage2/start.s
 
-    Implements a short entry point that sets up a clean stack frame and calls
-    the main() function in stage2/stage2.c.
+	Implements a short entry point that sets up a clean stack frame and calls
+	the main() function in stage2/stage2.c. It also detects the CPU mode and
+	refuses to enter stage 2 if in 16-bit mode.
 
 -- stage2/stage2.c
 
-    This is the entry point for stage 2. Do note that there should never, ever be
-    any function in this file except main(). The reason for this is that the
-    compiler may reorder functions at will, and forcing the linker to always keep
-    main() on top of the flat binary to ensure the correct entry point is used
-    has turned out to be either impossible or difficult without using
-    GCC-specific pragmas, which I don't want to do. The linker instead puts this
-    file on top of the text segment, which is very easy to make it do, and since
-    main() is the only function here it should always be the entry point.
+	This is called by _start and is the true entry point of stage 2. main()
+	should *never* return. There *is* a return pointer on the stack, but it
+	simply halts the machine. If execution needs to stop the programmer should
+	disable interrupts and use the hlt instruction.
 
-    main() should *never* return. There is no return pointer on the stack, and so
-    if it ever returns it could turn out to be very ugly. If execution needs to
-    stop the programmer should disable interrupts and use inline asm for the hlt
-    instruction.
+	Note that all __asm__ should be followed by the volatile keyword to prevent
+	the compiler from optimising it out of the code.
 
-    Note that all __asm__ should be followed by the volatile keyword to prevent
-    the compiler from optimising it out of the code.
+	System state at this point:
 
-    System state at this point:
+	- The A20 gate should be enabled before entering main()
+	- The IDT should be installed and it should be zero length at address zero
+	- The GDT should be installed and have a flat memory map, both the code and
+	data descriptor
+	- Protected mode should be enabled
+	- The EFLAGS register should be cleared
+	- The PIC should have all interrupts masked
+	- All non-maskable interrupts should be disabled, and a valid shadow port
+	  0x70 value should be in memory.
 
-    - The A20 gate should be enabled before entering main()
-    - The IDT should be installed and it should be zero length at address zero
-    - The GDT should be installed and have a flat memory map, both the code and
-      data descriptor
-    - Protected mode should be enabled
-    - The EFLAGS register should be cleared
-    - The PIC should have all interrupts masked
+	What should be done in stage 2:
 
-    What should be done in stage 2:
+	- The bootloader should set up a relatively usable IDT, although the kernel
+	will very likely want to replace it later. This is needed to get device
+	interrupts working, e.g. the keyboard.
+	- The bootloader should unmask some of the interrupts on the 8259 PICs, for
+	example the keyboard interrupt.
+	- It should find the boot partition (partition table should be in memory at
+	0x7DBE) and read the hard drive.
+	- The partition should be an ext2 partition and the bootloader should read
+	it, find a configuration file which will tell it what the kernel image is
+	called and what it should put on the kernel command line.
+	- It should be able to parse ELF executables, because that's likely what the
+	kernel will use.
 
-    - The bootloader should set up a relatively usable IDT, although the kernel
-      will very likely want to replace it later. This is needed to get device
-      interrupts working, e.g. the keyboard.
-    - The bootloader should unmask some of the interrupts on the 8259 PICs, for
-      example the keyboard interrupt.
-    - It should find the boot partition (partition table should be in memory at
-      0x7DBE) and read the hard drive.
-    - The partition should be an ext2 partition and the bootloader should read
-      it, find a configuration file which will tell it what the kernel image is
-      called and what it should put on the kernel command line.
-    - It should be able to parse ELF executables, because that's likely what the
-      kernel will use.
-    - It should not set video mode, nor should it ever enter v8086 mode.
-
-    Preferably, the code for the ATA driver and ext2 driver should be shared with
-    the kernel, although of course, it will be statically linked.
+	Preferably, the code for the ext2 driver should be shared with the kernel,
+	although of course, it will be statically linked.
 
 -- stage2/rmode.c
-    
-    This file implements the actual bridging between C and the real mode
-    trampoline found in common/mode_switch.s. It uses inline assembly to push
-    the arguments, target function pointer, and the return pointer with a call
-    instruction. It implements an ABI between the real mode trampoline that
-    allows one to transparently pass arguments to 16-bit real mode code, as if
-    one were using the SystemV ABI normally. Neither the caller or callee can
-    tell that the mode switch happened, nor that a transition from 32-bit to
-    16-bit execution (and back) happened.
+	
+	This file implements the actual bridging between C and the real mode
+	trampoline found in common/mode_switch.s. It uses inline assembly to push
+	the arguments, target function pointer, and the return pointer with a call
+	instruction. It implements an ABI between the real mode trampoline that
+	allows one to transparently pass arguments to 16-bit real mode code, as if
+	one were using the SystemV ABI normally. Neither the caller or callee can
+	tell that the mode switch happened, nor that a transition from 32-bit to
+	16-bit execution (and back) happened.
 
-    This behaves a little bit like va_list, but implemented manually, and with a
-    particular stack layout. The trampoline magic happens in rmode_trampoline,
-    which you can find in stage1/mode_switch.s. 
+	The trampoline itself I think is fairly original, as it passes arguments on
+	the stack, using the same stack between real and protected modes. Note that
+	this comes with some important constraints that are unproblematic for the
+	bootloader, but must be kept in mind:
+
+	- The stack base must not be on a 64K segment boundary.
+	- The stack must be located under 1MiB, as it is the maximum addressable
+	  memory of 16-bit x86.
+	- Any pointers passed on the stack must be located under 1MiB.
+	- Any executed code must be in cs segment 0x0000, limiting the target
+	  function address to the first 64K of memory.
+
+	So long as these preconditions are true, the trampoline looks mostly like a
+	regular SystemV ABI call. The only difference is that the target function
+	must pop dword off the stack, and perform segment:offset address
+	translation.
 
 -- stage2/mmap.s
 
-    The (rather long) function found here calls the BIOS to provide us with a
-    map of usable, reserved and unknown memory. This actually uses the
-    aforementioned real/protected mode trampoline. You can see the C code to
-    bridge the SysV ABI function call to the trampoline in stage2/rmode.c.
+	The (rather long) function found here calls the BIOS to provide us with a
+	map of usable, reserved and unknown memory. This actually uses the
+	aforementioned real/protected mode trampoline. You can see the C code to
+	bridge the SysV ABI function call to the trampoline in stage2/rmode.c.
 
-    The specific BIOS function called is interrupt 0x15 eax=0xE820. Specific
-    documentation for this particular BIOS call is widely available online.
+	The specific BIOS function called is interrupt 0x15 eax=0xE820. Specific
+	documentation for this particular BIOS call is widely available online.
 
-    Short description: The BIOS provides us with a memory map in es:di, and the di
-    register is not incremented. The BIOS keeps a "continuation value" in the ebx
-    register, and the way we determine the end of the memory map is when ebx == 0.
+	Short description: The BIOS provides us with a memory map in es:di, and the di
+	register is not incremented. The BIOS keeps a "continuation value" in the ebx
+	register, and the way we determine the end of the memory map is when ebx ==
+	0. Unfortunately some BIOSes don't indicate this way and set the carry flag,
+	so it must be tested.
 
 MBR disk usage
 --------------
@@ -223,12 +235,11 @@ head, as an example reading from:
 
 Cylinder = 1
 Head = 1
-Sector = 0
+Sector = 1
 
 This reads the first 512 bytes of track 1 on head 1. The cylinder addresses the
-track across *all* heads, and the head address determines exactly which track on
-cylinder 1 is being read. The sector address determines which offset into that
-track is read.
+across *all* heads, and the head address determines exactly which cylinder is
+being read. The sector address determines which offset at that cylinder is read.
 
 MS-DOS required that all partitions start on cylinder boundaries. Since the MBR
 boot sector is the first 512 bytes of the disk, this means that MS-DOS could not
@@ -245,5 +256,3 @@ clobber it. This leaves bootloaders with little choice but to reserve this
 space, which narrows the room for code even more. Therefore most bootloaders
 will use this 31.5KiB region for other boot code. Other software can also live
 here, for instance rootkits may use this space.
-
-

@@ -17,6 +17,9 @@ bits 16
 	call   __bios_error
 bits 32
 continue_32:
+	push  dword 0x02
+	popfd
+
 	mov   esp, __STACK_BASE_LOCATION
 	mov   ebp, __STACK_BASE_LOCATION
 	call  main

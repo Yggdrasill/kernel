@@ -5,6 +5,10 @@ A work-in-progress bootloader and kernel written in C and some x86 assembly. The
 goal is a bootloader and microkernel that runs on real hardware. I work on this
 project when I have time, between work and studying.
 
+The project currently runs on all the real x86 hardware that I have tested. The
+kernel remains unstarted, but I believe that the fundamental boot process is in
+a good place.
+
 The bootloader will load a Unix-clone microkernel from an ext2 partition. The
 microkernel will be split into modules, each having its own ELF binary on the
 boot partition. These modules should be able to be reloaded and replaced by
@@ -24,12 +28,18 @@ Requirements
 - GNU/LLVM ld
 - GCC/clang
 - nasm
+- x86(-64) host machine
 
 Rationale:
 
 Unfortunately Assembly languages are not very portable between different
 assemblers, as any assembler can have their own dialect. This uses the Netwide
 Assembler, or nasm, and will likely use this assembler forever.
+
+Also an unfortunate fact at the moment: Compiler-generated values are necessary
+for both linker scripts and the E820 memory map function. This is a fixable
+problem theoretically, and I may solve it in the future, but for now the host
+machine must be instruction set compatible with a target 32-bit x86.
 
 While the project intends to be reasonably compiler-portable, is is currently
 not, and requires a linker that understands GNU ld's linkerscripts, depends on
@@ -38,7 +48,6 @@ not use __attribute__((packed)) like many OS projects do. All the structs that
 operate with CPU data structures, such as the GDT and IDT, are manually aligned
 and packed. Therefore a compiler that understands GCC's __attribute__ are
 currently required.
-
 
 Building
 --------
@@ -102,12 +111,12 @@ sector in the first 512 bytes and stage 1.5 which are an additional 1536 bytes
 of code/data. This is a raw binary file of mixed 16-bit and 32-bit x86 machine
 code. It contains minimal amounts of code to:
 
-    - read the disk
-    - print out error messages
-    - set up a basic GDT and null IDT, mask all interrupts
-    - enter protected mode
-    - do very basic ELF executable loading
-    - trampoline switch between real/protected modes
+	- read the disk
+	- print out error messages
+	- set up a basic GDT and null IDT, mask all interrupts
+	- enter protected mode
+	- do a very basic ELF load of stage 2
+	- trampoline switch between real/protected modes
 
 bin/stage2.elf: Stage 2 of the bootloader, in an ELF executable file. This will
 live on an ext2 boot partition like /boot. Its location on disk and file size
@@ -123,21 +132,23 @@ soon.
 
 This is currently not complete, but the general plan is as follows:
 
-    - Perform real-mode calls for BIOS functions, for example the E820 memory
-      map, gather hardware information, configure VGA modes etc.
-    - Manage memory, allocate and deallocate buffers as needed.
-    - Share a limited set of drivers with the microkernel, e.g. the ATAPI disk
-      driver, ext2 filesystem (though in read-only mode), USB, keyboard etc.
-    - Load the kernel ELF image into memory and transfer control, passing all
-      required information on the stack.
+	- Perform real-mode calls for BIOS functions, for example the E820 memory
+	  map, gather hardware information, configure VGA modes etc.
+	- Manage memory, allocate and deallocate buffers as needed.
+	- Beyond the very basics like a PS/2 keyboard driver, the bootloader will
+	  not have any drivers of its own. It will rely on BIOS/UEFI for its needs.
+	- The drivers it does have will be shared by the kernel, though most likely
+	  only a minimal subset of them. An example of such a driver is ext2.
+	- Load the kernel ELF image into memory and transfer control, passing all
+	  required information on the stack.
 
 Notes
 -----
 
-On modern systems with UEFI and LBA disk addresses (flat address space)), it is
+On modern systems with UEFI and LBA disk addresses (flat address space), it is
 typically the case that partitions are aligned alongside 1 MiB boundaries. The
 reasons for this are actually quite varied, but almost all partitioning tools
-leave a gap of this size. 
+leave a gap of this size.
 
 A README documenting various x86 things can be found in boot/, and this README
 also includes a rather long section on the A20 gate and what the current goals
