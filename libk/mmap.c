@@ -80,13 +80,17 @@ extern char __STACK_END;
 extern char __UPPER_START;
 extern char __UPPER_END;
 
-const size_t __mmap_max_entries = MMAP_MAX_ENTRIES;
 const size_t __mmap_entry_size  = sizeof(struct e820_map);
+const size_t __mmap_max_entries = MMAP_MAX_ENTRIES;
 
 const size_t __mmap_base_offset = offsetof(struct e820_map, base);
 const size_t __mmap_size_offset = offsetof(struct e820_map, size);
 const size_t __mmap_type_offset = offsetof(struct e820_map, type);
 const size_t __mmap_attr_offset = offsetof(struct e820_map, attrib);
+
+const size_t __info_base_offset    = offsetof(struct e820_info, base);
+const size_t __info_nr_ent_offset  = offsetof(struct e820_info, nr_entries);
+const size_t __info_max_ent_offset = offsetof(struct e820_info, max_nr_entries);
 
 int mmap_is_base(struct e820_point *p)
 {

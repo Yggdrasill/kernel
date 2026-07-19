@@ -23,11 +23,10 @@ extern __bios_error
 bits    16
 section .text
 
-; mmap.c: struct e820_info
-e820_info:
-E820_INFO_BASE equ 0
-E820_INFO_NR   equ 4
-E820_INFO_MAX  equ 8
+extern __mmap_entry_size
+extern __info_base_offset
+extern __info_nr_ent_offset
+extern __info_max_ent_offset
 
 __bios_mmap:
 	push  dword ebp
@@ -40,16 +39,16 @@ __bios_mmap:
 	shr   eax, 4
 	mov   ds, ax
 	and   edx, 0x0F
-	mov   eax, [edx + E820_INFO_BASE]
+	mov   eax, [edx + __info_base_offset]
 	mov   edi, eax
 	shr   eax, 4
 	mov   es, ax
 	and   edi, 0x0F
-	mov   eax, [edx + E820_INFO_NR]
-	mul   eax, 0x18
+	mov   eax, [edx + __info_nr_ent_offset]
+	mul   eax, __mmap_entry_size
 	add   edi, eax
-	mov   eax, [edx + E820_INFO_MAX]
-	mul   eax, 0x18
+	mov   eax, [edx + __info_max_ent_offset]
+	mul   eax, __mmap_entry_size
 	mov   esi, eax
 	xor   ebx, ebx
 mmap_loop:
@@ -80,25 +79,25 @@ mmap_e820:
 	mov   ecx, -2
 	jmp   mmap_done
 check_size:
-	cmp   ecx, 0x14
+	cmp   ecx, __mmap_entry_size - 4
 	je    mmap_continue
-	cmp   ecx, 0x18
+	cmp   ecx, __mmap_entry_size
 	je    mmap_continue
 	mov   ecx, -3
 	jmp   mmap_done
 mmap_continue:
-	add   edi, 0x18
+	add   edi, __mmap_entry_size
 	cmp   ebx, 0x00
 	jnz   mmap_loop
 	xor   ecx, ecx
 mmap_done:
 	xor   edx, edx
 	mov   eax, edi
-	mov   ebx, 0x18
+	mov   ebx, __mmap_entry_size
 	div   ebx
 	mov   edx, [bp + 6]
 	and   edx, 0x0F
-	mov   [edx + E820_INFO_NR], eax
+	mov   [edx + __info_nr_ent_offset], eax
 
 	mov   eax, ecx
 	pop   word ds
@@ -107,10 +106,11 @@ mmap_done:
 	ret
 
 mmap_recover:
+	xor   ecx, ecx
 	mov   edx, [bp + 6]
 	and   edx, 0x0F
-	mov   eax, [edx + E820_INFO_NR]
-	mul   eax, 0x18
+	mov   eax, [edx + __info_nr_ent_offset]
+	mul   eax, __mmap_entry_size
 	cmp   edi, eax
 	jne   mmap_done
 	; E820 not supported
