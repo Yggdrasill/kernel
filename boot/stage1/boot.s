@@ -40,7 +40,7 @@ bits   16
 
 section .boot alloc exec progbits nowrite
 
-jmp   short $+__entry - $
+jmp short $+__entry - $
 times 3-($-$$) db 0x90
 name                  db    "fake.bpb"
 bytes_per_sector      dw    512
@@ -103,21 +103,21 @@ rep   movsb
 jmp   0x0000:boot
 
 boot:
-	mov   [drive], dl
-	push  dx
-	call  disk_geometry
-	pop   dx
-	call  reset
+    mov   [drive], dl
+    push  dx
+    call  disk_geometry
+    pop   dx
+    call  reset
 
-	push  word __STAGE15_LOAD_SEG
-	pop   es
-	mov   bx, __STAGE15_LOAD_OFF
-	mov   cx, 0x02
-	movzx dx, byte [drive]
-	mov   si, 0x3F
-	call  read
+    push  word __STAGE15_LOAD_SEG
+    pop   es
+    mov   bx, __STAGE15_LOAD_OFF
+    mov   cx, 0x02
+    movzx dx, byte [drive]
+    mov   si, 0x3F
+    call  read
 
-	jmp   stage15
+    jmp   stage15
 
 section .mbr alloc noexec progbits write
 part0     times 16 db 0
@@ -130,48 +130,48 @@ dw        0xAA55
 section .stage15 alloc exec progbits nowrite
 
 stage15:
-	push  dword 0x02
-	popfd
+    push  dword 0x02
+    popfd
 
-	; Set known PIC 8259A configuration,
-	; store the BIOS interrupt mask, and
-	; then mask all ints for transition
-	; to protected mode
+    ; Set known PIC 8259A configuration,
+    ; store the BIOS interrupt mask, and
+    ; then mask all ints for transition
+    ; to protected mode
 
-	call  a20_init
-	cli
-	call  store_bios_imr
-	call  mask_ints
-	call  init_nmi_disable
-	call  pmode_init
+    call  a20_init
+    cli
+    call  store_bios_imr
+    call  mask_ints
+    call  init_nmi_disable
+    call  pmode_init
 bits 32
-	; Start a fresh stack frame for 32-bit
-	; protected mode. Stack is aligned on
-	; 16-byte boundary to make various 
-	; compilers happy. 
+    ; Start a fresh stack frame for 32-bit
+    ; protected mode. Stack is aligned on
+    ; 16-byte boundary to make various 
+    ; compilers happy. 
 
-	mov   esp, 0x7FFF0
-	mov   ebp, 0x7FFF0
-	
-	call  read_elf
-	mov   dword edx, dword [elf_entry]
+    mov   esp, 0x7FFF0
+    mov   ebp, 0x7FFF0
+    
+    call  read_elf
+    mov   dword edx, dword [elf_entry]
 
-	; Clean up all registers
+    ; Clean up all registers
 
-	xor   eax, eax
-	xor   ebx, ebx
-	xor   ecx, ecx
+    xor   eax, eax
+    xor   ebx, ebx
+    xor   ecx, ecx
 
-	; push __start
+    ; push __start
 
-	push  edx
-	ret
+    push  edx
+    ret
 
 init_nmi_disable:
-	mov   al, 0x80
-	out   0x70, al
-	mov   [shadow_p70], al
-	ret
+    mov   al, 0x80
+    out   0x70, al
+    mov   [shadow_p70], al
+    ret
 
 %define         PT_LOAD_TYPE      0x01
 
@@ -189,158 +189,158 @@ init_nmi_disable:
 %define         SH_FILE_SIZE      0x14
 
 read_elf:
-	push        ebp
-	mov         ebp, esp
-	push        eax
-	push        ebx
-	push        ecx
-	push        edx
-	push        esi
-	push        edi
+    push        ebp
+    mov         ebp, esp
+    push        eax
+    push        ebx
+    push        ecx
+    push        edx
+    push        esi
+    push        edi
 
-	; Verify that the ELF bootloader is present
-	; by testing against magic header of the
-	; ELF format.
+    ; Verify that the ELF bootloader is present
+    ; by testing against magic header of the
+    ; ELF format.
 
-	mov   eax, [ei_mag]
-	cmp   eax, 0x464C457F
-	je    header_ok
+    mov   eax, [ei_mag]
+    cmp   eax, 0x464C457F
+    je    header_ok
 
-	push  dword elf_len
-	push  dword elf_err
-	push  __bios_error
-	call  rmode_trampoline
+    push  dword elf_len
+    push  dword elf_err
+    push  __bios_error
+    call  rmode_trampoline
 
 header_ok:
-	sub         esp,  0x10
-	mov         esi,  [e_phoff]
-	mov         edi,  [e_shoff]
-	lea         eax,  [esi + ei_mag]
-	lea         ebx,  [esi + _elf_header]
-	lea         ecx,  [edi + ei_mag]
-	lea         edx,  [edi + _elf_header]
+    sub         esp,  0x10
+    mov         esi,  [e_phoff]
+    mov         edi,  [e_shoff]
+    lea         eax,  [esi + ei_mag]
+    lea         ebx,  [esi + _elf_header]
+    lea         ecx,  [edi + ei_mag]
+    lea         edx,  [edi + _elf_header]
 
-	mov         [ebp - 0x1C], eax
-	mov         [ebp - 0x20], ebx
-	mov         [ebp - 0x24], ecx
-	mov         [ebp - 0x28], edx
+    mov         [ebp - 0x1C], eax
+    mov         [ebp - 0x20], ebx
+    mov         [ebp - 0x24], ecx
+    mov         [ebp - 0x28], edx
 
-	; Before relocating PT_LOAD segments, we
-	; must ensure that the ELF headers are all
-	; relocated to a preserved region.
+    ; Before relocating PT_LOAD segments, we
+    ; must ensure that the ELF headers are all
+    ; relocated to a preserved region.
 
-	mov         esi,  ei_mag
-	mov         edi,  _elf_header 
-	movzx       ecx,  word [e_ehsize]
-	rep         movsb
+    mov         esi,  ei_mag
+    mov         edi,  _elf_header 
+    movzx       ecx,  word [e_ehsize]
+    rep         movsb
 
-	mov         esi,  [ebp - 0x1C]
-	mov         edi,  [ebp - 0x20]
-	movzx       eax,  word [e_phnum]
-	movzx       ecx,  word [e_phentsize]
-	imul        ecx,  eax
-	rep         movsb
+    mov         esi,  [ebp - 0x1C]
+    mov         edi,  [ebp - 0x20]
+    movzx       eax,  word [e_phnum]
+    movzx       ecx,  word [e_phentsize]
+    imul        ecx,  eax
+    rep         movsb
 
-	mov         esi,  [ebp - 0x24]
-	mov         edi,  [ebp - 0x28]
-	movzx       eax,  word [e_shnum]
-	movzx       ecx,  word [e_shentsize]
-	imul        ecx,  eax
-	rep         movsb
+    mov         esi,  [ebp - 0x24]
+    mov         edi,  [ebp - 0x28]
+    movzx       eax,  word [e_shnum]
+    movzx       ecx,  word [e_shentsize]
+    imul        ecx,  eax
+    rep         movsb
 
-	; Find e_shstrndx section
+    ; Find e_shstrndx section
 
-	movzx       eax,  word [e_shstrndx]
-	movzx       ebx,  word [e_shentsize]
-	imul        ebx,  eax
-	add         ebx,  [ebp - 0x24]
-	add         ebx,  SH_FILE_OFFSET
-	mov         ebx,  [ebx]
-	add         ebx,  ei_mag
+    movzx       eax,  word [e_shstrndx]
+    movzx       ebx,  word [e_shentsize]
+    imul        ebx,  eax
+    add         ebx,  [ebp - 0x24]
+    add         ebx,  SH_FILE_OFFSET
+    mov         ebx,  [ebx]
+    add         ebx,  ei_mag
 
-	mov         eax,  [ebp - 0x24]
-	movzx       edx,  word [e_shnum]
+    mov         eax,  [ebp - 0x24]
+    movzx       edx,  word [e_shnum]
 sh_reloc:
-	cmp   word  [eax + SH_TYPE_OFFSET], SH_NOBITS_TYPE ; Skip SHT_NOBITS
-	je          shr_cont
-	mov         ecx,  [eax + SH_FILE_SIZE]
-	mov         esi,  [eax + SH_FILE_OFFSET]
-	add         esi,  ei_mag
-	mov         edi,  [eax + SH_FILE_OFFSET]
-	add         edi,  _elf_header
-	rep         movsb
-	
-	; Skip if ._init section found.
+    cmp   word  [eax + SH_TYPE_OFFSET], SH_NOBITS_TYPE ; Skip SHT_NOBITS
+    je          shr_cont
+    mov         ecx,  [eax + SH_FILE_SIZE]
+    mov         esi,  [eax + SH_FILE_OFFSET]
+    add         esi,  ei_mag
+    mov         edi,  [eax + SH_FILE_OFFSET]
+    add         edi,  _elf_header
+    rep         movsb
+    
+    ; Skip if ._init section found.
 
-	cmp         byte [init_found], byte 0x1
-	je          shr_cont
-	
-	; String match section name with ._init.
+    cmp         byte [init_found], byte 0x1
+    je          shr_cont
+    
+    ; String match section name with ._init.
 
-	lea         esi,  [ebx]
-	add         esi,  [eax]
-	mov         edi,  init_str
-	mov         ecx,  init_slen
-	rep         cmpsb
-	jne         shr_cont
-	mov         byte [init_found], byte 0x1
+    lea         esi,  [ebx]
+    add         esi,  [eax]
+    mov         edi,  init_str
+    mov         ecx,  init_slen
+    rep         cmpsb
+    jne         shr_cont
+    mov         byte [init_found], byte 0x1
 shr_cont:
-	movzx       ecx,  word [e_shentsize]
-	add         eax,  ecx
-	dec         edx
-	jnz         sh_reloc
+    movzx       ecx,  word [e_shentsize]
+    add         eax,  ecx
+    dec         edx
+    jnz         sh_reloc
 
-	; Now read the program headers and relocate
-	; to the address specified by p_vaddr. Since
-	; this most definitely clobbers the ELF structure
-	; we have to do this after moving the ELF to a
-	; safe location.
+    ; Now read the program headers and relocate
+    ; to the address specified by p_vaddr. Since
+    ; this most definitely clobbers the ELF structure
+    ; we have to do this after moving the ELF to a
+    ; safe location.
 
-	mov         ebx,  _elf_header
-	add         ebx,  [elf_phoff]
-	movzx       edx,  word [elf_phnum]
+    mov         ebx,  _elf_header
+    add         ebx,  [elf_phoff]
+    movzx       edx,  word [elf_phnum]
 
-	; Check if ._init was found, and error if it wasn't.
+    ; Check if ._init was found, and error if it wasn't.
 
-	cmp         byte [init_found], byte 0x1
-	je          ph_loop
+    cmp         byte [init_found], byte 0x1
+    je          ph_loop
 
-	push        dword init_elen
-	push        dword init_err
-	push        __bios_error
-	call        rmode_trampoline
+    push        dword init_elen
+    push        dword init_err
+    push        __bios_error
+    call        rmode_trampoline
 
 ph_loop:
-	cmp         dword [ebx], dword PT_LOAD_TYPE ; Only PT_LOAD
-	jne         phlp_next
-	mov   dword ecx,  [ebx + PH_FILE_SIZE]
-	mov         esi,  _elf_header
-	add         esi,  [ebx + PH_FILE_OFFSET]
-	mov         edi,  [ebx + PH_VIRT_ADDR]
-	rep         movsb
+    cmp         dword [ebx], dword PT_LOAD_TYPE ; Only PT_LOAD
+    jne         phlp_next
+    mov   dword ecx,  [ebx + PH_FILE_SIZE]
+    mov         esi,  _elf_header
+    add         esi,  [ebx + PH_FILE_OFFSET]
+    mov         edi,  [ebx + PH_VIRT_ADDR]
+    rep         movsb
 
-	; Zero BSS etc.
+    ; Zero BSS etc.
 
-	xor         eax,  eax
-	mov         ecx,  [ebx + PH_MEM_SIZE]
-	sub         ecx,  [ebx + PH_FILE_SIZE]
-	jc          phlp_next
-	rep         stosb
+    xor         eax,  eax
+    mov         ecx,  [ebx + PH_MEM_SIZE]
+    sub         ecx,  [ebx + PH_FILE_SIZE]
+    jc          phlp_next
+    rep         stosb
 phlp_next:
-	movzx       eax, word [elf_phentsize]
-	add         ebx, eax
-	dec         edx
-	jnz         ph_loop
+    movzx       eax, word [elf_phentsize]
+    add         ebx, eax
+    dec         edx
+    jnz         ph_loop
 phlp_exit:
-	add         esp, 0x10
-	pop         edi
-	pop         esi
-	pop         edx
-	pop         ecx
-	pop         ebx
-	pop         eax
-	pop         ebp
-	ret
+    add         esp, 0x10
+    pop         edi
+    pop         esi
+    pop         edx
+    pop         ecx
+    pop         ebx
+    pop         eax
+    pop         ebp
+    ret
 
 section     .stage15.rodata
 init_str    db "._init",0x00

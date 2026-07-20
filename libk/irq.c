@@ -48,57 +48,57 @@
 
 void irq_ivt_alias(uint8_t pic0_base, uint8_t pic1_base)
 {
-	uint32_t *pic0_vectors;
-	uint32_t *pic1_vectors;
-	uint32_t *pic0_shadow;
-	uint32_t *pic1_shadow;
-	pic0_vectors = (uint32_t *)(IVT_VECTOR_SIZE * IRQ0_BASE_RM);
-	pic1_vectors = (uint32_t *)(IVT_VECTOR_SIZE * IRQ1_BASE_RM);
-	pic0_shadow  = (uint32_t *)(IVT_VECTOR_SIZE * pic0_base);
-	pic1_shadow  = (uint32_t *)(IVT_VECTOR_SIZE * pic1_base);
-	memcpy(pic0_shadow, pic0_vectors, IVT_VECTOR_SIZE * NR_PIC_IRQS);
-	memcpy(pic1_shadow, pic1_vectors, IVT_VECTOR_SIZE * NR_PIC_IRQS);
-	return;
+    uint32_t *pic0_vectors;
+    uint32_t *pic1_vectors;
+    uint32_t *pic0_shadow;
+    uint32_t *pic1_shadow;
+    pic0_vectors = (uint32_t *)(IVT_VECTOR_SIZE * IRQ0_BASE_RM);
+    pic1_vectors = (uint32_t *)(IVT_VECTOR_SIZE * IRQ1_BASE_RM);
+    pic0_shadow  = (uint32_t *)(IVT_VECTOR_SIZE * pic0_base);
+    pic1_shadow  = (uint32_t *)(IVT_VECTOR_SIZE * pic1_base);
+    memcpy(pic0_shadow, pic0_vectors, IVT_VECTOR_SIZE * NR_PIC_IRQS);
+    memcpy(pic1_shadow, pic1_vectors, IVT_VECTOR_SIZE * NR_PIC_IRQS);
+    return;
 }
 
 void irq_init(void)
 {
-	const struct pic_state_table state = {
-	    .pic0_icw1 = ICW1_INIT | ICW1_IC4,
-	    .pic1_icw1 = ICW1_INIT | ICW1_IC4,
-	    .pic0_icw2 = IRQ0_BASE_PM,
-	    .pic1_icw2 = IRQ1_BASE_PM,
-	    .pic0_icw3 = IRQ_CASCADE << 1,
-	    .pic1_icw3 = IRQ_CASCADE,
-	    .pic0_icw4 = ICW4_MODE,
-	    .pic1_icw4 = ICW4_MODE,
-	};
+    const struct pic_state_table state = {
+        .pic0_icw1 = ICW1_INIT | ICW1_IC4,
+        .pic1_icw1 = ICW1_INIT | ICW1_IC4,
+        .pic0_icw2 = IRQ0_BASE_PM,
+        .pic1_icw2 = IRQ1_BASE_PM,
+        .pic0_icw3 = IRQ_CASCADE << 1,
+        .pic1_icw3 = IRQ_CASCADE,
+        .pic0_icw4 = ICW4_MODE,
+        .pic1_icw4 = ICW4_MODE,
+    };
 
-	/* ICW1 */
-	outb(PIC0_CMD, state.pic0_icw1);
-	outb(PIC1_CMD, state.pic1_icw1);
+    /* ICW1 */
+    outb(PIC0_CMD, state.pic0_icw1);
+    outb(PIC1_CMD, state.pic1_icw1);
 
-	/*
-	 * ICW2 - remap IRQs
-	 * In protected mode the interval [0x00, 0x20) is reserved
-	 */
-	outb(PIC0_DATA, state.pic0_icw2);
-	outb(PIC1_DATA, state.pic1_icw2);
+    /*
+     * ICW2 - remap IRQs
+     * In protected mode the interval [0x00, 0x20) is reserved
+     */
+    outb(PIC0_DATA, state.pic0_icw2);
+    outb(PIC1_DATA, state.pic1_icw2);
 
-	/* ICW3, tell the PIC 8259 chips to use master/slave mode */
+    /* ICW3, tell the PIC 8259 chips to use master/slave mode */
 
-	outb(PIC0_DATA, state.pic0_icw3);
-	outb(PIC1_DATA, state.pic1_icw3);
+    outb(PIC0_DATA, state.pic0_icw3);
+    outb(PIC1_DATA, state.pic1_icw3);
 
-	/* ICW4, set to 8086 mode */
+    /* ICW4, set to 8086 mode */
 
-	outb(PIC0_DATA, state.pic0_icw4);
-	outb(PIC1_DATA, state.pic1_icw4);
+    outb(PIC0_DATA, state.pic0_icw4);
+    outb(PIC1_DATA, state.pic1_icw4);
 
-	/* Write initialised PIC state to tables. */
-	irq_ivt_alias(IRQ0_BASE_PM, IRQ1_BASE_PM);
+    /* Write initialised PIC state to tables. */
+    irq_ivt_alias(IRQ0_BASE_PM, IRQ1_BASE_PM);
 
-	return;
+    return;
 }
 
 /*
@@ -108,7 +108,7 @@ void irq_init(void)
 
 uint16_t irq_read_imr(void)
 {
-	return (inb(0xA1) << 8) | inb(0x21);
+    return (inb(0xA1) << 8) | inb(0x21);
 }
 
 /*
@@ -123,55 +123,55 @@ uint16_t irq_read_imr(void)
 
 uint16_t irq_read_reg(unsigned char reg)
 {
-	outb(0x20, 0x08 | reg);
-	outb(0xA0, 0x08 | reg);
-	return (inb(0xA0) << 8) | inb(0x20);
+    outb(0x20, 0x08 | reg);
+    outb(0xA0, 0x08 | reg);
+    return (inb(0xA0) << 8) | inb(0x20);
 }
 
 void irq_mask(unsigned char irq)
 {
-	uint16_t      port;
-	unsigned char mask;
+    uint16_t      port;
+    unsigned char mask;
 
-	if(irq > 0x0F) return;
+    if(irq > 0x0F) return;
 
-	port = irq < 0x08 ? 0x21 : 0xA1;
-	irq  = irq < 0x08 ? irq : irq - 0x08;
+    port = irq < 0x08 ? 0x21 : 0xA1;
+    irq  = irq < 0x08 ? irq : irq - 0x08;
 
-	mask = inb(port);
-	mask = mask | (1 << irq);
-	outb(port, mask);
+    mask = inb(port);
+    mask = mask | (1 << irq);
+    outb(port, mask);
 
-	return;
+    return;
 }
 
 void irq_unmask(unsigned char irq)
 {
-	uint16_t      port;
-	unsigned char mask;
+    uint16_t      port;
+    unsigned char mask;
 
-	if(irq > 0x0F) return;
+    if(irq > 0x0F) return;
 
-	port = irq < 8 ? 0x21 : 0xA1;
-	irq  = irq < 8 ? irq : irq - 8;
+    port = irq < 8 ? 0x21 : 0xA1;
+    irq  = irq < 8 ? irq : irq - 8;
 
-	mask = inb(port);
-	mask = mask & ~(1 << irq);
-	outb(port, mask);
+    mask = inb(port);
+    mask = mask & ~(1 << irq);
+    outb(port, mask);
 
-	return;
+    return;
 }
 
 void irq_mask_all(void)
 {
-	outb(0x21, 0xFF);
-	outb(0xA1, 0xFF);
+    outb(0x21, 0xFF);
+    outb(0xA1, 0xFF);
 }
 
 void irq_unmask_all(void)
 {
-	outb(0x21, 0x00);
-	outb(0xA1, 0x00);
+    outb(0x21, 0x00);
+    outb(0xA1, 0x00);
 
-	return;
+    return;
 }

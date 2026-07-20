@@ -27,9 +27,9 @@
 #include <libk/mmap.h>
 
 union rmode_ret_t {
-	void    *ptr;
-	int32_t  i32;
-	uint32_t u32;
+    void    *ptr;
+    int32_t  i32;
+    uint32_t u32;
 };
 
 int32_t bios_mmap(struct e820_info *);

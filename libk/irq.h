@@ -41,22 +41,22 @@
 #define IRQ_CASCADE     0x02
 
 enum IRQ_NUMS {
-	IRQ_NUM_PIT = 0,
-	IRQ_NUM_KBD = 1,
-	IRQ_NUM_CASC,
-	IRQ_NUM_COM2,
-	IRQ_NUM_COM1,
-	IRQ_NUM_LPT2,
-	IRQ_NUM_FLOP,
-	IRQ_NUM_LPT1,
-	IRQ_NUM_CMOS,
-	IRQ_NUM_RES1,
-	IRQ_NUM_RES2,
-	IRQ_NUM_RES3,
-	IRQ_NUM_PS2M,
-	IRQ_NUM_FPU,
-	IRQ_NUM_ATA1,
-	IRQ_NUM_ATA2,
+    IRQ_NUM_PIT = 0,
+    IRQ_NUM_KBD = 1,
+    IRQ_NUM_CASC,
+    IRQ_NUM_COM2,
+    IRQ_NUM_COM1,
+    IRQ_NUM_LPT2,
+    IRQ_NUM_FLOP,
+    IRQ_NUM_LPT1,
+    IRQ_NUM_CMOS,
+    IRQ_NUM_RES1,
+    IRQ_NUM_RES2,
+    IRQ_NUM_RES3,
+    IRQ_NUM_PS2M,
+    IRQ_NUM_FPU,
+    IRQ_NUM_ATA1,
+    IRQ_NUM_ATA2,
 };
 
 /*
@@ -76,14 +76,14 @@ enum IRQ_NUMS {
  */
 
 enum PIC_8259A_ICW1_BITS {
-	ICW1_IC4  = 1,
-	ICW1_SNGL = 1 << 1,
-	ICW1_ADI  = 1 << 2,
-	ICW1_LTIM = 1 << 3,
-	ICW1_INIT = 1 << 4,
-	ICW1_RES0 = 0 << 5,
-	ICW1_RES1 = 0 << 6,
-	ICW1_RES2 = 0 << 7,
+    ICW1_IC4  = 1,
+    ICW1_SNGL = 1 << 1,
+    ICW1_ADI  = 1 << 2,
+    ICW1_LTIM = 1 << 3,
+    ICW1_INIT = 1 << 4,
+    ICW1_RES0 = 0 << 5,
+    ICW1_RES1 = 0 << 6,
+    ICW1_RES2 = 0 << 7,
 };
 
 /*
@@ -103,25 +103,25 @@ enum PIC_8259A_ICW1_BITS {
  */
 
 enum PIC_8259A_ICW4_BITS {
-	ICW4_MODE = 1,
-	ICW4_AEOI = 1 << 1,
-	ICW4_BUFS = 1 << 2,
-	ICW4_BUF  = 1 << 3,
-	ICW4_SFNM = 1 << 4,
-	ICW4_RES0 = 0 << 5,
-	ICW4_RES1 = 0 << 6,
-	ICW4_RES2 = 0 << 7,
+    ICW4_MODE = 1,
+    ICW4_AEOI = 1 << 1,
+    ICW4_BUFS = 1 << 2,
+    ICW4_BUF  = 1 << 3,
+    ICW4_SFNM = 1 << 4,
+    ICW4_RES0 = 0 << 5,
+    ICW4_RES1 = 0 << 6,
+    ICW4_RES2 = 0 << 7,
 };
 
 struct pic_state_table {
-	uint8_t pic0_icw1;
-	uint8_t pic1_icw1;
-	uint8_t pic0_icw2;
-	uint8_t pic1_icw2;
-	uint8_t pic0_icw3;
-	uint8_t pic1_icw3;
-	uint8_t pic0_icw4;
-	uint8_t pic1_icw4;
+    uint8_t pic0_icw1;
+    uint8_t pic1_icw1;
+    uint8_t pic0_icw2;
+    uint8_t pic1_icw2;
+    uint8_t pic0_icw3;
+    uint8_t pic1_icw3;
+    uint8_t pic0_icw4;
+    uint8_t pic1_icw4;
 };
 
 void     irq_init(void);

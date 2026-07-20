@@ -16,5 +16,5 @@ volatile const uint32_t ABI_MMAP_INFO_MAX   = INFO_MAX_NR_OFFSET;
 
 int main(void)
 {
-	return 0;
+    return 0;
 }

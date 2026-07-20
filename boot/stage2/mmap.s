@@ -26,91 +26,91 @@ bits    16
 section .text
 
 __bios_mmap:
-	push  dword ebp
-	mov   ebp, esp 
-	push  word es
-	push  word ds
+    push  dword ebp
+    mov   ebp, esp 
+    push  word es
+    push  word ds
 
-	mov   edx, [bp + 6]
-	mov   eax, edx
-	shr   eax, 4
-	mov   ds, ax
-	and   edx, 0x0F
-	mov   eax, [edx + ABI_MMAP_INFO_BASE]
-	mov   edi, eax
-	shr   eax, 4
-	mov   es, ax
-	and   edi, 0x0F
-	mov   eax, [edx + ABI_MMAP_INFO_NR]
-	mul   eax, ABI_MMAP_ENTRY_SIZE
-	add   edi, eax
-	mov   eax, [edx + ABI_MMAP_INFO_MAX]
-	mul   eax, ABI_MMAP_ENTRY_SIZE
-	mov   esi, eax
-	xor   ebx, ebx
+    mov   edx, [bp + 6]
+    mov   eax, edx
+    shr   eax, 4
+    mov   ds, ax
+    and   edx, 0x0F
+    mov   eax, [edx + ABI_MMAP_INFO_BASE]
+    mov   edi, eax
+    shr   eax, 4
+    mov   es, ax
+    and   edi, 0x0F
+    mov   eax, [edx + ABI_MMAP_INFO_NR]
+    mul   eax, ABI_MMAP_ENTRY_SIZE
+    add   edi, eax
+    mov   eax, [edx + ABI_MMAP_INFO_MAX]
+    mul   eax, ABI_MMAP_ENTRY_SIZE
+    mov   esi, eax
+    xor   ebx, ebx
 mmap_loop:
-	mov   eax, edi
-	sub   eax, esi
-	js    mmap_e820
-	mov   ecx, -4
-	jmp   mmap_done
+    mov   eax, edi
+    sub   eax, esi
+    js    mmap_e820
+    mov   ecx, -4
+    jmp   mmap_done
 mmap_e820:
-	; clear ACPI 3.0 attribute field if BIOS doesn't fill in
-	mov   dword [es:edi+0x14], 0x00 
-	mov   eax, 0x0000E820
-	mov   ecx, 0x00000018
-	mov   edx, 0x534D4150
-	push  edi
-	push  esi
-	push  es
-	push  ds
-	int   0x15
-	pop   ds
-	pop   es
-	pop   esi
-	pop   edi
-	jc    mmap_recover
+    ; clear ACPI 3.0 attribute field if BIOS doesn't fill in
+    mov   dword [es:edi+0x14], 0x00 
+    mov   eax, 0x0000E820
+    mov   ecx, 0x00000018
+    mov   edx, 0x534D4150
+    push  edi
+    push  esi
+    push  es
+    push  ds
+    int   0x15
+    pop   ds
+    pop   es
+    pop   esi
+    pop   edi
+    jc    mmap_recover
 
-	cmp   eax, 0x534D4150
-	je    check_size
-	mov   ecx, -2
-	jmp   mmap_done
+    cmp   eax, 0x534D4150
+    je    check_size
+    mov   ecx, -2
+    jmp   mmap_done
 check_size:
-	cmp   ecx, ABI_MMAP_ENTRY_SIZE - 4
-	je    mmap_continue
-	cmp   ecx, ABI_MMAP_ENTRY_SIZE
-	je    mmap_continue
-	mov   ecx, -3
-	jmp   mmap_done
+    cmp   ecx, ABI_MMAP_ENTRY_SIZE - 4
+    je    mmap_continue
+    cmp   ecx, ABI_MMAP_ENTRY_SIZE
+    je    mmap_continue
+    mov   ecx, -3
+    jmp   mmap_done
 mmap_continue:
-	add   edi, ABI_MMAP_ENTRY_SIZE
-	cmp   ebx, 0x00
-	jnz   mmap_loop
-	xor   ecx, ecx
+    add   edi, ABI_MMAP_ENTRY_SIZE
+    cmp   ebx, 0x00
+    jnz   mmap_loop
+    xor   ecx, ecx
 mmap_done:
-	xor   edx, edx
-	mov   eax, edi
-	mov   ebx, ABI_MMAP_ENTRY_SIZE
-	div   ebx
-	mov   edx, [bp + 6]
-	and   edx, 0x0F
-	mov   [edx + ABI_MMAP_INFO_NR], eax
+    xor   edx, edx
+    mov   eax, edi
+    mov   ebx, ABI_MMAP_ENTRY_SIZE
+    div   ebx
+    mov   edx, [bp + 6]
+    and   edx, 0x0F
+    mov   [edx + ABI_MMAP_INFO_NR], eax
 
-	mov   eax, ecx
-	pop   word ds
-	pop   word es
-	pop   dword ebp
-	ret
+    mov   eax, ecx
+    pop   word ds
+    pop   word es
+    pop   dword ebp
+    ret
 
 mmap_recover:
-	; Return value if successful
-	xor   ecx, ecx
-	mov   edx, [bp + 6]
-	and   edx, 0x0F
-	mov   eax, [edx + ABI_MMAP_INFO_NR]
-	mul   eax, ABI_MMAP_ENTRY_SIZE
-	cmp   edi, eax
-	jne   mmap_done
-	; E820 not supported
-	mov   ecx, -1
-	jmp   mmap_done
+    ; Return value if successful
+    xor   ecx, ecx
+    mov   edx, [bp + 6]
+    and   edx, 0x0F
+    mov   eax, [edx + ABI_MMAP_INFO_NR]
+    mul   eax, ABI_MMAP_ENTRY_SIZE
+    cmp   edi, eax
+    jne   mmap_done
+    ; E820 not supported
+    mov   ecx, -1
+    jmp   mmap_done

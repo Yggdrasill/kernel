@@ -28,12 +28,12 @@
 #define DEFAULT_HEAP_SIZE 8192
 
 typedef struct heap {
-	int     (*compare)(void *, void *);
-	int     (*equals)(void *, void *);
-	void   *tree;
-	size_t  size;
-	ssize_t cap;
-	ssize_t nmemb;
+    int     (*compare)(void *, void *);
+    int     (*equals)(void *, void *);
+    void   *tree;
+    size_t  size;
+    ssize_t cap;
+    ssize_t nmemb;
 } Heap;
 
 Heap *heap_create(

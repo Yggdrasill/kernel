@@ -51,7 +51,7 @@ __bios_print:
 
 bios_error:
 __bios_error:
-	add	  sp, 2
+    add      sp, 2
     call  bios_print
     cli
     hlt

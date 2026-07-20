@@ -41,7 +41,6 @@ Cpp11BracedListStyle: true
 BreakBeforeInlineASMColon: Always
 ColumnLimit: 80
 IndentPPDirectives: BeforeHash
-IndentWidth: 4
 SortIncludes: true
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
@@ -49,5 +48,6 @@ SpaceBeforeParens: Never
 SpaceBeforeRangeBasedForLoopColon: false
 SpaceInEmptyParentheses: false
 SpacesInCStyleCastParentheses: false
+IndentWidth: 4
 TabWidth: 4
-UseTab: ForIndentation
+UseTab: Never

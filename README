@@ -107,12 +107,12 @@ sector in the first 512 bytes and stage 1.5 which are an additional 1536 bytes
 of code/data. This is a raw binary file of mixed 16-bit and 32-bit x86 machine
 code. It contains minimal amounts of code to:
 
-	- read the disk
-	- print out error messages
-	- set up a basic GDT and null IDT, mask all interrupts
-	- enter protected mode
-	- do a very basic ELF load of stage 2
-	- trampoline switch between real/protected modes
+    - read the disk
+    - print out error messages
+    - set up a basic GDT and null IDT, mask all interrupts
+    - enter protected mode
+    - do a very basic ELF load of stage 2
+    - trampoline switch between real/protected modes
 
 bin/stage2.elf: Stage 2 of the bootloader, in an ELF executable file. This will
 live on an ext2 boot partition like /boot. Its location on disk and file size
@@ -128,15 +128,15 @@ soon.
 
 This is currently not complete, but the general plan is as follows:
 
-	- Perform real-mode calls for BIOS functions, for example the E820 memory
-	  map, gather hardware information, configure VGA modes etc.
-	- Manage memory, allocate and deallocate buffers as needed.
-	- Beyond the very basics like a PS/2 keyboard driver, the bootloader will
-	  not have any drivers of its own. It will rely on BIOS/UEFI for its needs.
-	- The drivers it does have will be shared by the kernel, though most likely
-	  only a minimal subset of them. An example of such a driver is ext2.
-	- Load the kernel ELF image into memory and transfer control, passing all
-	  required information on the stack.
+    - Perform real-mode calls for BIOS functions, for example the E820 memory
+      map, gather hardware information, configure VGA modes etc.
+    - Manage memory, allocate and deallocate buffers as needed.
+    - Beyond the very basics like a PS/2 keyboard driver, the bootloader will
+      not have any drivers of its own. It will rely on BIOS/UEFI for its needs.
+    - The drivers it does have will be shared by the kernel, though most likely
+      only a minimal subset of them. An example of such a driver is ext2.
+    - Load the kernel ELF image into memory and transfer control, passing all
+      required information on the stack.
 
 Notes
 -----

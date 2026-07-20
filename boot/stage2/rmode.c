@@ -55,13 +55,13 @@ extern uint32_t rmode_trampoline(void (*)(void), ...);
 
 int32_t bios_mmap(struct e820_info *mmap)
 {
-	union rmode_ret_t rv;
-	rv.i32 = rmode_trampoline((void (*)(void))__bios_mmap, mmap);
-	return rv.i32;
+    union rmode_ret_t rv;
+    rv.i32 = rmode_trampoline((void (*)(void))__bios_mmap, mmap);
+    return rv.i32;
 }
 
 void bios_print(char *str, size_t len)
 {
-	rmode_trampoline((void (*)(void))__bios_print, str, len);
-	return;
+    rmode_trampoline((void (*)(void))__bios_print, str, len);
+    return;
 }

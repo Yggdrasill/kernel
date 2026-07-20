@@ -31,8 +31,8 @@
 #define MMAP_REGION_SIZE(start, end) ((uintptr_t)&end - (uintptr_t)&start)
 
 struct e820_point {
-	struct e820_map *entry;
-	uint64_t         addr;
+    struct e820_map *entry;
+    uint64_t         addr;
 };
 
 /*
@@ -61,33 +61,33 @@ ISORT_IMPLEMENT(mmap, struct e820_point)
 
 int mmap_is_base(const struct e820_point *p)
 {
-	return p->addr == p->entry->base;
+    return p->addr == p->entry->base;
 }
 
 int mmap_cmp(const struct e820_point *p1, const struct e820_point *p2)
 {
-	if(p1->addr == p2->addr) {
-		if(mmap_is_base(p1) && mmap_is_base(p2)) return 0;
-		else return mmap_is_base(p1) ? -1 : 1;
-	}
-	return (p1->addr > p2->addr) - (p1->addr < p2->addr);
+    if(p1->addr == p2->addr) {
+        if(mmap_is_base(p1) && mmap_is_base(p2)) return 0;
+        else return mmap_is_base(p1) ? -1 : 1;
+    }
+    return (p1->addr > p2->addr) - (p1->addr < p2->addr);
 }
 
 int mmap_bad_type(uint32_t type)
 {
-	switch(type) {
-		case MMAP_USABLE:
-		case MMAP_ACPI_RECLAIMABLE:
-		case MMAP_BOOTLOADER_RECLAIMABLE: return 0;
-		default: return 1;
-	}
+    switch(type) {
+        case MMAP_USABLE:
+        case MMAP_ACPI_RECLAIMABLE:
+        case MMAP_BOOTLOADER_RECLAIMABLE: return 0;
+        default: return 1;
+    }
 }
 
 uint32_t mmap_compare_type(const uint32_t t1, const uint32_t t2)
 {
-	if(!mmap_bad_type(t1) && mmap_bad_type(t2)) return t2;
-	if(mmap_bad_type(t1) && !mmap_bad_type(t2)) return t1;
-	return t1 > t2 ? t1 : t2;
+    if(!mmap_bad_type(t1) && mmap_bad_type(t2)) return t2;
+    if(mmap_bad_type(t1) && !mmap_bad_type(t2)) return t1;
+    return t1 > t2 ? t1 : t2;
 }
 
 extern struct e820_map __mmap_old_map[MMAP_MAX_ENTRIES];
@@ -107,226 +107,226 @@ struct e820_info mmap_sanitize(
     uint32_t         nr_entries,
     const uint32_t   dst_max_entries)
 {
-	struct e820_point e820_points[2 * MMAP_MAX_ENTRIES];
-	struct e820_info  info;
+    struct e820_point e820_points[2 * MMAP_MAX_ENTRIES];
+    struct e820_info  info;
 
-	struct e820_map *overlap_map[MMAP_MAX_ENTRIES];
+    struct e820_map *overlap_map[MMAP_MAX_ENTRIES];
 
-	struct e820_point *prev_point;
+    struct e820_point *prev_point;
 
-	size_t new_nr_entries;
-	size_t nr_overlaps;
-	size_t i, j;
+    size_t new_nr_entries;
+    size_t nr_overlaps;
+    size_t i, j;
 
-	uint32_t type;
-	uint32_t prev_type;
-	uint32_t attrib;
-	uint32_t prev_attrib;
+    uint32_t type;
+    uint32_t prev_type;
+    uint32_t attrib;
+    uint32_t prev_attrib;
 
-	info = (struct e820_info){
-	    .base           = dst,
-	    .nr_entries     = 0,
-	    .max_nr_entries = MMAP_MAX_ENTRIES,
-	};
+    info = (struct e820_info){
+        .base           = dst,
+        .nr_entries     = 0,
+        .max_nr_entries = MMAP_MAX_ENTRIES,
+    };
 
-	if(!nr_entries || nr_entries > MMAP_MAX_ENTRIES) goto sanitize_end;
-	if(dst_max_entries > MMAP_MAX_ENTRIES) goto sanitize_end;
+    if(!nr_entries || nr_entries > MMAP_MAX_ENTRIES) goto sanitize_end;
+    if(dst_max_entries > MMAP_MAX_ENTRIES) goto sanitize_end;
 
-	/*
-	 * Break down the E820 structure into a sorted list of points that can be
-	 * traversed. From these points the memory map will be rebuilt from scratch,
-	 * since it can be messy when the BIOS provides it.
-	 */
+    /*
+     * Break down the E820 structure into a sorted list of points that can be
+     * traversed. From these points the memory map will be rebuilt from scratch,
+     * since it can be messy when the BIOS provides it.
+     */
 
-	j = 0;
-	i = 0;
-	for(i = 0; i < nr_entries; i++) {
-		if(!src[i].size) {
-			*(src + i) = *(src + nr_entries - 1);
-			nr_entries--;
-			continue;
-		}
-		e820_points[j++] = (struct e820_point){src + i, src[i].base};
-		e820_points[j++] =
-		    (struct e820_point){src + i, src[i].base + src[i].size};
-	}
+    j = 0;
+    i = 0;
+    for(i = 0; i < nr_entries; i++) {
+        if(!src[i].size) {
+            *(src + i) = *(src + nr_entries - 1);
+            nr_entries--;
+            continue;
+        }
+        e820_points[j++] = (struct e820_point){src + i, src[i].base};
+        e820_points[j++] =
+            (struct e820_point){src + i, src[i].base + src[i].size};
+    }
 
-	const size_t NR_POINTS = 2 * nr_entries;
-	isort_mmap(e820_points, NR_POINTS, mmap_cmp);
+    const size_t NR_POINTS = 2 * nr_entries;
+    isort_mmap(e820_points, NR_POINTS, mmap_cmp);
 
-	new_nr_entries             = 0;
-	nr_overlaps                = 0;
-	prev_point                 = e820_points;
-	prev_type                  = prev_point->entry->type;
-	prev_attrib                = prev_point->entry->attrib;
-	overlap_map[nr_overlaps++] = prev_point->entry;
+    new_nr_entries             = 0;
+    nr_overlaps                = 0;
+    prev_point                 = e820_points;
+    prev_type                  = prev_point->entry->type;
+    prev_attrib                = prev_point->entry->attrib;
+    overlap_map[nr_overlaps++] = prev_point->entry;
 
-	for(i = 1; i < NR_POINTS && new_nr_entries < dst_max_entries; i++) {
+    for(i = 1; i < NR_POINTS && new_nr_entries < dst_max_entries; i++) {
 
-		/*
-		 * Build a map of possibly overlapping entries. If the point is a base
-		 * address entry, add it to the overlap map. If not, remove it.
-		 */
+        /*
+         * Build a map of possibly overlapping entries. If the point is a base
+         * address entry, add it to the overlap map. If not, remove it.
+         */
 
-		if(mmap_is_base(e820_points + i)) {
-			overlap_map[nr_overlaps++] = e820_points[i].entry;
-		} else {
-			for(j = 0; j < nr_overlaps; j++) {
-				if(overlap_map[j] == e820_points[i].entry) {
-					overlap_map[j] = overlap_map[--nr_overlaps];
-					break;
-				}
-			}
-		}
+        if(mmap_is_base(e820_points + i)) {
+            overlap_map[nr_overlaps++] = e820_points[i].entry;
+        } else {
+            for(j = 0; j < nr_overlaps; j++) {
+                if(overlap_map[j] == e820_points[i].entry) {
+                    overlap_map[j] = overlap_map[--nr_overlaps];
+                    break;
+                }
+            }
+        }
 
-		/*
-		 * Compare type precedence and pick the worst type. It is roughly in the
-		 * order of greatest type. the possible types are:
-		 *
-		 * MMAP_USABLE = 1
-		 * MMAP_RESERVED = 2
-		 * MMAP_ACPI_RECLAIMABLE = 3
-		 * MMAP_ACPI_NVS = 4 (non-volatile storage)
-		 * MMAP_BAD_MEMORY = 5
-		 *
-		 * There are also a few custom types:
-		 *
-		 * MMAP_BOOTLOADER_RECLAIMABLE = 6
-		 * MMAP_FRAMEBUFFER = 7
-		 *
-		 * Type 2-5 inclusive, and type 7, are all considered unusable memory
-		 * and should not be touched. All the usable types have precedence of
-		 * the greatest type, so the type precedence is ultimately:
-		 *
-		 * 7 > 5 > 4 > 2 > 6 > 3 > 1
-		 *
-		 * It may not be desired to always reclaim usable memory, hence why they
-		 * have greater precedence than type 1.
-		 */
+        /*
+         * Compare type precedence and pick the worst type. It is roughly in the
+         * order of greatest type. the possible types are:
+         *
+         * MMAP_USABLE = 1
+         * MMAP_RESERVED = 2
+         * MMAP_ACPI_RECLAIMABLE = 3
+         * MMAP_ACPI_NVS = 4 (non-volatile storage)
+         * MMAP_BAD_MEMORY = 5
+         *
+         * There are also a few custom types:
+         *
+         * MMAP_BOOTLOADER_RECLAIMABLE = 6
+         * MMAP_FRAMEBUFFER = 7
+         *
+         * Type 2-5 inclusive, and type 7, are all considered unusable memory
+         * and should not be touched. All the usable types have precedence of
+         * the greatest type, so the type precedence is ultimately:
+         *
+         * 7 > 5 > 4 > 2 > 6 > 3 > 1
+         *
+         * It may not be desired to always reclaim usable memory, hence why they
+         * have greater precedence than type 1.
+         */
 
-		type   = nr_overlaps > 0 ? overlap_map[0]->type : MMAP_RESERVED;
-		attrib = nr_overlaps > 0 ? overlap_map[0]->attrib : 0;
-		for(j = 1; j < nr_overlaps; j++) {
-			type = mmap_compare_type(overlap_map[j]->type, type);
-			if(type == overlap_map[j]->type) attrib = overlap_map[j]->attrib;
-		}
+        type   = nr_overlaps > 0 ? overlap_map[0]->type : MMAP_RESERVED;
+        attrib = nr_overlaps > 0 ? overlap_map[0]->attrib : 0;
+        for(j = 1; j < nr_overlaps; j++) {
+            type = mmap_compare_type(overlap_map[j]->type, type);
+            if(type == overlap_map[j]->type) attrib = overlap_map[j]->attrib;
+        }
 
-		/*
-		 * Reconstruct the map from the previous entry if type changes, or if we
-		 * are at the last element of the array.
-		 */
+        /*
+         * Reconstruct the map from the previous entry if type changes, or if we
+         * are at the last element of the array.
+         */
 
-		if(type != prev_type || attrib != prev_attrib || i == NR_POINTS - 1) {
-			dst[new_nr_entries] = (struct e820_map){
-			    prev_point->addr,
-			    e820_points[i].addr - prev_point->addr,
-			    prev_type,
-			    prev_attrib,
-			};
-			prev_point  = e820_points + i;
-			prev_type   = type;
-			prev_attrib = attrib;
-			new_nr_entries += dst[new_nr_entries].size > 0;
-		}
-	}
+        if(type != prev_type || attrib != prev_attrib || i == NR_POINTS - 1) {
+            dst[new_nr_entries] = (struct e820_map){
+                prev_point->addr,
+                e820_points[i].addr - prev_point->addr,
+                prev_type,
+                prev_attrib,
+            };
+            prev_point  = e820_points + i;
+            prev_type   = type;
+            prev_attrib = attrib;
+            new_nr_entries += dst[new_nr_entries].size > 0;
+        }
+    }
 
-	info = (struct e820_info){
-	    .base           = dst,
-	    .nr_entries     = new_nr_entries,
-	    .max_nr_entries = MMAP_MAX_ENTRIES,
-	};
+    info = (struct e820_info){
+        .base           = dst,
+        .nr_entries     = new_nr_entries,
+        .max_nr_entries = MMAP_MAX_ENTRIES,
+    };
 
 sanitize_end:
-	return info;
+    return info;
 }
 
 void mmap_print(struct e820_info *info)
 {
-	size_t i;
+    size_t i;
 
-	for(i = 0; i < info->nr_entries; i++) {
-		puthex(&info->base[i].base, sizeof(info->base[i].base), 0);
-		putchar(' ');
-		puthex(&info->base[i].size, sizeof(info->base[i].size), 0);
-		putchar(' ');
-		puthex(&info->base[i].type, sizeof(info->base[i].type), 0);
-		putchar('\n');
-	}
+    for(i = 0; i < info->nr_entries; i++) {
+        puthex(&info->base[i].base, sizeof(info->base[i].base), 0);
+        putchar(' ');
+        puthex(&info->base[i].size, sizeof(info->base[i].size), 0);
+        putchar(' ');
+        puthex(&info->base[i].type, sizeof(info->base[i].type), 0);
+        putchar('\n');
+    }
 
-	return;
+    return;
 }
 
 int mmap_clobber(struct e820_info *info)
 {
-	struct e820_map *mmap;
-	size_t           nr_entries;
+    struct e820_map *mmap;
+    size_t           nr_entries;
 
-	mmap       = info->base;
-	nr_entries = info->nr_entries;
+    mmap       = info->base;
+    nr_entries = info->nr_entries;
 
-	mmap[nr_entries++] = (struct e820_map){
-	    .base   = (uintptr_t)&__BIOS_START,
-	    .size   = (uintptr_t)&__BIOS_END - (uintptr_t)&__BIOS_START,
-	    .type   = MMAP_RESERVED,
-	    .attrib = 0,
-	};
-	mmap[nr_entries++] = (struct e820_map){
-	    .base   = (uintptr_t)&__BOOTLOADER_START,
-	    .size   = (uintptr_t)&__BOOTLOADER_END - (uintptr_t)&__BOOTLOADER_START,
-	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-	    .attrib = 0,
-	};
-	mmap[nr_entries++] = (struct e820_map){
-	    .base   = (uintptr_t)&__GDTR_START,
-	    .size   = MMAP_REGION_SIZE(__GDTR_START, __GDTR_END),
-	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-	    .attrib = 0,
-	};
-	mmap[nr_entries++] = (struct e820_map){
-	    .base   = (uintptr_t)&__GDT_START,
-	    .size   = MMAP_REGION_SIZE(__GDT_START, __GDT_END),
-	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-	    .attrib = 0,
-	};
-	mmap[nr_entries++] = (struct e820_map){
-	    .base   = (uintptr_t)old_map,
-	    .size   = MMAP_TABLE_SIZE,
-	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-	    .attrib = 0,
-	};
-	mmap[nr_entries++] = (struct e820_map){
-	    .base   = (uintptr_t)new_map,
-	    .size   = MMAP_TABLE_SIZE,
-	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-	    .attrib = 0,
-	};
-	mmap[nr_entries++] = (struct e820_map){
-	    .base   = (uintptr_t)&__IDT_START,
-	    .size   = MMAP_REGION_SIZE(__IDT_START, __IDT_END),
-	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-	    .attrib = 0,
-	};
-	mmap[nr_entries++] = (struct e820_map){
-	    .base   = (uintptr_t)&__STACK_START,
-	    .size   = MMAP_REGION_SIZE(__STACK_START, __STACK_END),
-	    .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-	    .attrib = 0,
-	};
-	mmap[nr_entries++] = (struct e820_map){
-	    .base   = (uintptr_t)&FB_ADDR,
-	    .size   = (uintptr_t)&FB_END - (uintptr_t)&FB_ADDR,
-	    .type   = MMAP_FRAMEBUFFER,
-	    .attrib = 0,
-	};
-	mmap[nr_entries++] = (struct e820_map){
-	    .base   = (uintptr_t)&__UPPER_START,
-	    .size   = (uintptr_t)&__UPPER_END - (uintptr_t)&__UPPER_START,
-	    .type   = MMAP_RESERVED,
-	    .attrib = 0,
-	};
+    mmap[nr_entries++] = (struct e820_map){
+        .base   = (uintptr_t)&__BIOS_START,
+        .size   = (uintptr_t)&__BIOS_END - (uintptr_t)&__BIOS_START,
+        .type   = MMAP_RESERVED,
+        .attrib = 0,
+    };
+    mmap[nr_entries++] = (struct e820_map){
+        .base   = (uintptr_t)&__BOOTLOADER_START,
+        .size   = (uintptr_t)&__BOOTLOADER_END - (uintptr_t)&__BOOTLOADER_START,
+        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
+        .attrib = 0,
+    };
+    mmap[nr_entries++] = (struct e820_map){
+        .base   = (uintptr_t)&__GDTR_START,
+        .size   = MMAP_REGION_SIZE(__GDTR_START, __GDTR_END),
+        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
+        .attrib = 0,
+    };
+    mmap[nr_entries++] = (struct e820_map){
+        .base   = (uintptr_t)&__GDT_START,
+        .size   = MMAP_REGION_SIZE(__GDT_START, __GDT_END),
+        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
+        .attrib = 0,
+    };
+    mmap[nr_entries++] = (struct e820_map){
+        .base   = (uintptr_t)old_map,
+        .size   = MMAP_TABLE_SIZE,
+        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
+        .attrib = 0,
+    };
+    mmap[nr_entries++] = (struct e820_map){
+        .base   = (uintptr_t)new_map,
+        .size   = MMAP_TABLE_SIZE,
+        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
+        .attrib = 0,
+    };
+    mmap[nr_entries++] = (struct e820_map){
+        .base   = (uintptr_t)&__IDT_START,
+        .size   = MMAP_REGION_SIZE(__IDT_START, __IDT_END),
+        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
+        .attrib = 0,
+    };
+    mmap[nr_entries++] = (struct e820_map){
+        .base   = (uintptr_t)&__STACK_START,
+        .size   = MMAP_REGION_SIZE(__STACK_START, __STACK_END),
+        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
+        .attrib = 0,
+    };
+    mmap[nr_entries++] = (struct e820_map){
+        .base   = (uintptr_t)&FB_ADDR,
+        .size   = (uintptr_t)&FB_END - (uintptr_t)&FB_ADDR,
+        .type   = MMAP_FRAMEBUFFER,
+        .attrib = 0,
+    };
+    mmap[nr_entries++] = (struct e820_map){
+        .base   = (uintptr_t)&__UPPER_START,
+        .size   = (uintptr_t)&__UPPER_END - (uintptr_t)&__UPPER_START,
+        .type   = MMAP_RESERVED,
+        .attrib = 0,
+    };
 
-	info->nr_entries = nr_entries;
-	return nr_entries;
+    info->nr_entries = nr_entries;
+    return nr_entries;
 }
 
 /*
@@ -337,33 +337,33 @@ static struct e820_info mmap_info;
 
 struct e820_info *mmap_info_init(void)
 {
-	struct e820_info *info;
+    struct e820_info *info;
 
-	info = &mmap_info;
+    info = &mmap_info;
 
-	*info = (struct e820_info){
-	    .base = old_map, .nr_entries = 0, .max_nr_entries = MMAP_MAX_ENTRIES};
+    *info = (struct e820_info){
+        .base = old_map, .nr_entries = 0, .max_nr_entries = MMAP_MAX_ENTRIES};
 
-	return info;
+    return info;
 }
 
 struct e820_info *mmap_init(void)
 {
-	struct e820_info *info;
+    struct e820_info *info;
 
-	info = mmap_info_init();
-	mmap_clobber(info);
+    info = mmap_info_init();
+    mmap_clobber(info);
 
-	return info;
+    return info;
 }
 
 struct e820_info *mmap_setup(struct e820_info *info)
 {
-	struct e820_info new_info;
-	struct e820_map *old;
-	old      = info->base;
-	new_info = mmap_sanitize(new_map, old, info->nr_entries, MMAP_MAX_ENTRIES);
-	memcpy(info, &new_info, sizeof(*info));
-	mmap_print(info);
-	return info;
+    struct e820_info new_info;
+    struct e820_map *old;
+    old      = info->base;
+    new_info = mmap_sanitize(new_map, old, info->nr_entries, MMAP_MAX_ENTRIES);
+    memcpy(info, &new_info, sizeof(*info));
+    mmap_print(info);
+    return info;
 }

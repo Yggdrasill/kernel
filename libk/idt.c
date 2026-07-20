@@ -38,31 +38,31 @@
  */
 
 struct idt_ptr {
-	unsigned char limit_0;
-	unsigned char limit_8;
-	unsigned char base_0;
-	unsigned char base_8;
-	unsigned char base_16;
-	unsigned char base_24;
+    unsigned char limit_0;
+    unsigned char limit_8;
+    unsigned char base_0;
+    unsigned char base_8;
+    unsigned char base_16;
+    unsigned char base_24;
 };
 
 struct idt_entry {
-	unsigned char offset_0;
-	unsigned char offset_8;
-	unsigned char selector_0;
-	unsigned char selector_8;
-	unsigned char zero;
-	unsigned char flags;
-	unsigned char offset_16;
-	unsigned char offset_24;
+    unsigned char offset_0;
+    unsigned char offset_8;
+    unsigned char selector_0;
+    unsigned char selector_8;
+    unsigned char zero;
+    unsigned char flags;
+    unsigned char offset_16;
+    unsigned char offset_24;
 };
 
 struct idt_info {
-	struct idt_ptr   *idtr;
-	struct idt_entry *entries;
-	size_t            max_nr_entries;
-	size_t            nr_entries;
-	uint32_t          present[IDT_BITMAP_NR(uint32_t)];
+    struct idt_ptr   *idtr;
+    struct idt_entry *entries;
+    size_t            max_nr_entries;
+    size_t            nr_entries;
+    uint32_t          present[IDT_BITMAP_NR(uint32_t)];
 };
 
 /*
@@ -76,56 +76,56 @@ static struct idt_info  idt_info;
 
 struct idt_info *idt_info_init(void)
 {
-	idt_info = (struct idt_info){
-	    .idtr           = &__IDT_PTR_LOCATION,
-	    .entries        = &__IDT_BASE_LOCATION,
-	    .max_nr_entries = IDT_ENTRY_NUM,
-	    .nr_entries     = 0,
-	};
-	return &idt_info;
+    idt_info = (struct idt_info){
+        .idtr           = &__IDT_PTR_LOCATION,
+        .entries        = &__IDT_BASE_LOCATION,
+        .max_nr_entries = IDT_ENTRY_NUM,
+        .nr_entries     = 0,
+    };
+    return &idt_info;
 }
 
 struct idt_info *idt_init(void)
 {
-	struct idt_ptr   *idtr;
-	struct idt_entry *base;
-	struct idt_info  *info;
-	unsigned char    *arr_limit;
-	unsigned char    *arr_base;
+    struct idt_ptr   *idtr;
+    struct idt_entry *base;
+    struct idt_info  *info;
+    unsigned char    *arr_limit;
+    unsigned char    *arr_base;
 
-	uint16_t limit;
+    uint16_t limit;
 
-	info = idt_info_init();
+    info = idt_info_init();
 
-	idtr  = info->idtr;
-	limit = sizeof(struct idt_entry) * IDT_ENTRY_NUM - 1;
-	base  = info->entries;
+    idtr  = info->idtr;
+    limit = sizeof(struct idt_entry) * IDT_ENTRY_NUM - 1;
+    base  = info->entries;
 
-	arr_limit = (unsigned char *)&limit;
-	arr_base  = (unsigned char *)&base;
+    arr_limit = (unsigned char *)&limit;
+    arr_base  = (unsigned char *)&base;
 
-	idtr->limit_0 = arr_limit[0];
-	idtr->limit_8 = arr_limit[1];
+    idtr->limit_0 = arr_limit[0];
+    idtr->limit_8 = arr_limit[1];
 
-	idtr->base_0  = arr_base[0];
-	idtr->base_8  = arr_base[1];
-	idtr->base_16 = arr_base[2];
-	idtr->base_24 = arr_base[3];
+    idtr->base_0  = arr_base[0];
+    idtr->base_8  = arr_base[1];
+    idtr->base_16 = arr_base[2];
+    idtr->base_24 = arr_base[3];
 
-	memset(info->present, 0, sizeof(info->present));
-	idt_install(info);
+    memset(info->present, 0, sizeof(info->present));
+    idt_install(info);
 
-	return info;
+    return info;
 }
 
 size_t idt_entries_nr(struct idt_info *info)
 {
-	return info->nr_entries;
+    return info->nr_entries;
 }
 
 size_t idt_entries_max(struct idt_info *info)
 {
-	return info->max_nr_entries;
+    return info->max_nr_entries;
 }
 
 size_t idt_entry_set(
@@ -135,43 +135,43 @@ size_t idt_entry_set(
     uint8_t          flags,
     uint8_t          at_offset)
 {
-	struct idt_entry *entry;
-	unsigned char    *offset;
-	unsigned char    *selector;
-	intptr_t          raw_ptr;
-	size_t            nr_entries;
-	uint32_t          bitmap;
-	uint8_t           index;
-	uint8_t           bit;
+    struct idt_entry *entry;
+    unsigned char    *offset;
+    unsigned char    *selector;
+    intptr_t          raw_ptr;
+    size_t            nr_entries;
+    uint32_t          bitmap;
+    uint8_t           index;
+    uint8_t           bit;
 
-	nr_entries = info->nr_entries;
-	index      = at_offset / (sizeof(info->present[0]) * CHAR_BIT);
-	bit        = at_offset % (sizeof(info->present[0]) * CHAR_BIT);
-	bitmap     = info->present[index] & (1U << bit);
+    nr_entries = info->nr_entries;
+    index      = at_offset / (sizeof(info->present[0]) * CHAR_BIT);
+    bit        = at_offset % (sizeof(info->present[0]) * CHAR_BIT);
+    bitmap     = info->present[index] & (1U << bit);
 
-	if(!bitmap) nr_entries++;
-	if(nr_entries > IDT_ENTRY_NUM) goto idt_set_exit;
-	info->present[index] |= 1U << bit;
+    if(!bitmap) nr_entries++;
+    if(nr_entries > IDT_ENTRY_NUM) goto idt_set_exit;
+    info->present[index] |= 1U << bit;
 
-	entry    = info->entries + at_offset;
-	raw_ptr  = (intptr_t)idt_handler;
-	offset   = (unsigned char *)&raw_ptr;
-	selector = (unsigned char *)&select;
+    entry    = info->entries + at_offset;
+    raw_ptr  = (intptr_t)idt_handler;
+    offset   = (unsigned char *)&raw_ptr;
+    selector = (unsigned char *)&select;
 
-	entry->offset_0  = offset[0];
-	entry->offset_8  = offset[1];
-	entry->offset_16 = offset[2];
-	entry->offset_24 = offset[3];
+    entry->offset_0  = offset[0];
+    entry->offset_8  = offset[1];
+    entry->offset_16 = offset[2];
+    entry->offset_24 = offset[3];
 
-	entry->selector_0 = selector[0];
-	entry->selector_8 = selector[1];
+    entry->selector_0 = selector[0];
+    entry->selector_8 = selector[1];
 
-	entry->zero  = 0;
-	entry->flags = flags;
+    entry->zero  = 0;
+    entry->flags = flags;
 
-	info->nr_entries = nr_entries;
+    info->nr_entries = nr_entries;
 idt_set_exit:
-	return info->nr_entries;
+    return info->nr_entries;
 }
 
 size_t idt_entry_add(
@@ -180,17 +180,17 @@ size_t idt_entry_add(
     uint16_t         select,
     uint8_t          flags)
 {
-	return idt_entry_set(info, idt_handler, select, flags, info->nr_entries);
+    return idt_entry_set(info, idt_handler, select, flags, info->nr_entries);
 }
 
 void idt_install(struct idt_info *info)
 {
-	struct idt_ptr *idtr;
-	idtr = info->idtr;
-	__asm__ volatile("mov  eax, %0;"
-	                 "lidt [eax];"
-	                 :
-	                 : "m"(idtr));
+    struct idt_ptr *idtr;
+    idtr = info->idtr;
+    __asm__ volatile("mov  eax, %0;"
+                     "lidt [eax];"
+                     :
+                     : "m"(idtr));
 
-	return;
+    return;
 }

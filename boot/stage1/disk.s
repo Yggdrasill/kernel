@@ -27,108 +27,108 @@ bits    16
 section .boot.util alloc exec progbits nowrite
 
 disk_geometry:
-	mov   ah, 0x08
-	push  ds
-	int   0x13
-	pop   ds
-	jnc   geometry_done
+    mov   ah, 0x08
+    push  ds
+    int   0x13
+    pop   ds
+    jnc   geometry_done
 geometry_e:
-	push  dword de3_len
-	push  dword disk_err3
-	call  __bios_error
+    push  dword de3_len
+    push  dword disk_err3
+    call  __bios_error
 geometry_done:
-	mov   al, ch
-	mov   ah, cl
-	shr   ah, 6
-	and   cx, 0x3F
-	mov   [disk_cylinders], ax
-	mov   [disk_sectors],   cl
-	mov   [disk_heads],     dh
-	ret
+    mov   al, ch
+    mov   ah, cl
+    shr   ah, 6
+    and   cx, 0x3F
+    mov   [disk_cylinders], ax
+    mov   [disk_sectors],   cl
+    mov   [disk_heads],     dh
+    ret
 
 reset:
-	pusha
-	mov   cx, 0x05
+    pusha
+    mov   cx, 0x05
 resetlp:
-	xor   ax, ax
-	push  es
-	push  ds
-	pusha
-	int   0x13
-	popa
-	pop   ds
-	pop   es
-	jnc   reset_done
-	loop  resetlp
+    xor   ax, ax
+    push  es
+    push  ds
+    pusha
+    int   0x13
+    popa
+    pop   ds
+    pop   es
+    jnc   reset_done
+    loop  resetlp
 reset_e:
-	push  dword de1_len
-	push  dword disk_err1
-	call  __bios_error
+    push  dword de1_len
+    push  dword disk_err1
+    call  __bios_error
 reset_done:
-	popa
-	ret
+    popa
+    ret
 
 read:
-	or    si, si
-	jz    read_done
+    or    si, si
+    jz    read_done
 read_sector:
-	xor   di, di
+    xor   di, di
 read_try:
-	push  es
-	push  ds
-	pusha
-	mov   ax, 0x0201
-	int   0x13
-	popa
-	pop   ds
-	pop   es
-	jc    read_recover
+    push  es
+    push  ds
+    pusha
+    mov   ax, 0x0201
+    int   0x13
+    popa
+    pop   ds
+    pop   es
+    jc    read_recover
 read_success:
-	add   bx, 0x200
-	dec   si
-	jz    read_done
-	mov   al, cl
-	and   al, 0x3F
-	and   cl, 0xC0
-	inc   al
-	cmp   al, [disk_sectors]
-	ja    read_next_head
-	or    cl, al
-	jmp   read_sector
+    add   bx, 0x200
+    dec   si
+    jz    read_done
+    mov   al, cl
+    and   al, 0x3F
+    and   cl, 0xC0
+    inc   al
+    cmp   al, [disk_sectors]
+    ja    read_next_head
+    or    cl, al
+    jmp   read_sector
 read_next_head:
-	inc   cl
-	cmp   dh, [disk_heads]
-	je    read_next_cylinder
-	inc   dh
-	jmp   read_sector
+    inc   cl
+    cmp   dh, [disk_heads]
+    je    read_next_cylinder
+    inc   dh
+    jmp   read_sector
 read_next_cylinder:
-	xor   dh, dh
-	mov   al, ch
-	mov   ah, cl
-	shr   ah, 6
-	inc   ax
-	mov   ch, al
-	mov   cl, ah
-	shl   cl, 6
-	inc   cl
-	cmp   ax, [disk_cylinders]
-	ja    read_e
-	jmp   read_sector
+    xor   dh, dh
+    mov   al, ch
+    mov   ah, cl
+    shr   ah, 6
+    inc   ax
+    mov   ch, al
+    mov   cl, ah
+    shl   cl, 6
+    inc   cl
+    cmp   ax, [disk_cylinders]
+    ja    read_e
+    jmp   read_sector
 read_recover:
-	call  reset
-	inc   di
-	cmp   di, 0x05
-	jl    read_try
+    call  reset
+    inc   di
+    cmp   di, 0x05
+    jl    read_try
 read_e:
-	push  dword de2_len
-	push  dword disk_err2
-	call  __bios_error
+    push  dword de2_len
+    push  dword disk_err2
+    call  __bios_error
 read_done:
-	ret
+    ret
 
-disk_cylinders		dw 0
-disk_sectors		db 0
-disk_heads			db 0
+disk_cylinders        dw 0
+disk_sectors        db 0
+disk_heads            db 0
 drive               db 0
 
 section .boot.rodata alloc noexec progbits nowrite

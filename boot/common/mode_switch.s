@@ -28,39 +28,39 @@ section .stage15 alloc exec progbits nowrite
 
 ; Must NEVER be called in 32-bit mode.
 store_bios_imr:
-	push  ax
+    push  ax
 
-	in    al, 0x21
-	mov   [bios_imr0], al
-	in    al, 0xA1
-	mov   [bios_imr1], al
+    in    al, 0x21
+    mov   [bios_imr0], al
+    in    al, 0xA1
+    mov   [bios_imr1], al
 
-	pop   ax
-	ret
+    pop   ax
+    ret
 
 load_bios_imr:
-	push  ax
+    push  ax
 
-	mov   al, [bios_imr0]
-	out   0x21, al
-	mov   al, [bios_imr1]
-	out   0xA1, al
+    mov   al, [bios_imr0]
+    out   0x21, al
+    mov   al, [bios_imr1]
+    out   0xA1, al
 
-	pop   ax
-	ret
+    pop   ax
+    ret
 
 ; Mixed-mode functions. CAREFUL!
 ; Instructions must mean the same thing
 ; in both 16-bit and 32-bit execution!
 mask_ints:
-	push  ax
+    push  ax
 
-	mov   al, 0xFF
-	out   0x21, al
-	out   0xA1, al
+    mov   al, 0xFF
+    out   0x21, al
+    out   0xA1, al
 
-	pop   ax
-	ret
+    pop   ax
+    ret
 
 ; mode_switch functions do not write
 ; port 0x70 shadow state.
@@ -69,41 +69,41 @@ mask_ints:
 
 ; Mixed execution dual decoding magic
 get_shadow_p70:
-	xor   cx, cx
-	push  strict word shadow_p70
-	; Unholy sacrificial instruction
-	dec   cl
-	pop   cx
-	jns   short fix_shadow_p70+1
+    xor   cx, cx
+    push  strict word shadow_p70
+    ; Unholy sacrificial instruction
+    dec   cl
+    pop   cx
+    jns   short fix_shadow_p70+1
 fix_shadow_p70:
-	movzx ecx, cx
-	jns   short load_shadow_p70+1
+    movzx ecx, cx
+    jns   short load_shadow_p70+1
 load_shadow_p70:
-	mov   al, [ecx]
-	sahf
-	jnc   short ms_nmi_disable_ret
-	jmp   short restore_p70_ret
+    mov   al, [ecx]
+    sahf
+    jnc   short ms_nmi_disable_ret
+    jmp   short restore_p70_ret
 
 ms_nmi_disable:
-	push  ax
-	clc
-	lahf
-	jmp   short get_shadow_p70
+    push  ax
+    clc
+    lahf
+    jmp   short get_shadow_p70
 ms_nmi_disable_ret:
-	or    al, 0x80
-	out   0x70, al
-	pop   ax
-	ret
+    or    al, 0x80
+    out   0x70, al
+    pop   ax
+    ret
 
 restore_p70:
-	push  ax
-	stc
-	lahf
-	jmp   short get_shadow_p70
+    push  ax
+    stc
+    lahf
+    jmp   short get_shadow_p70
 restore_p70_ret:
-	out   0x70, al
-	pop   ax
-	ret
+    out   0x70, al
+    pop   ax
+    ret
 
 ; Explanation of the above:
 ; ms_nmi_disable and restore_p70 use flag CF
@@ -151,250 +151,250 @@ restore_p70_ret:
 ; End mixed-mode functions
 
 pmode_init:
-	; Fix stack high bytes and reserve
-	; space for return pointer.
-	and   ebp, 0xFFFF
-	and   esp, 0xFFFF
-	sub   esp, 2
+    ; Fix stack high bytes and reserve
+    ; space for return pointer.
+    and   ebp, 0xFFFF
+    and   esp, 0xFFFF
+    sub   esp, 2
 
-	push  ebp
-	mov   bp, sp
-	push  eax
+    push  ebp
+    mov   bp, sp
+    push  eax
 
-	lgdt  [gdt_info]
-	lidt  [idt_info]
+    lgdt  [gdt_info]
+    lidt  [idt_info]
 
-	; Fix the stack pointers by converting a
-	; linear address.
+    ; Fix the stack pointers by converting a
+    ; linear address.
 
-	xor   eax, eax
-	mov   eax, ss
-	mov   [stack_seg], ax
-	shl   eax, 4
-	add   eax, esp
-	mov   esp, eax
+    xor   eax, eax
+    mov   eax, ss
+    mov   [stack_seg], ax
+    shl   eax, 4
+    add   eax, esp
+    mov   esp, eax
 
-	; Set the protected mode bit.
+    ; Set the protected mode bit.
 
-	mov   eax, cr0
-	or    eax, 1
-	mov   cr0, eax
+    mov   eax, cr0
+    or    eax, 1
+    mov   cr0, eax
 
-	; Initialise code segment to use the GDT.
-	; After this jmp we are in 32-bit pmode.
+    ; Initialise code segment to use the GDT.
+    ; After this jmp we are in 32-bit pmode.
 
-	jmp   0x0008:pmode32
+    jmp   0x0008:pmode32
 bits 32
 pmode32:
 
-	; Initialize segment registers to use the GDT.
+    ; Initialize segment registers to use the GDT.
 
-	mov   ax, 0x0010
-	mov   ss, ax
-	mov   es, ax
-	mov   ds, ax
-	mov   gs, ax
-	mov   fs, ax
+    mov   ax, 0x0010
+    mov   ss, ax
+    mov   es, ax
+    mov   ds, ax
+    mov   gs, ax
+    mov   fs, ax
 
-	pop   eax
-	pop   ebp
+    pop   eax
+    pop   ebp
 
-	; ebp needs to be fixed the same way that
-	; esp was earlier.
+    ; ebp needs to be fixed the same way that
+    ; esp was earlier.
 
-	push  eax
-	movzx eax, word [stack_seg]
-	shl   eax, 4
-	add   eax, ebp
-	mov   ebp, eax
+    push  eax
+    movzx eax, word [stack_seg]
+    shl   eax, 4
+    add   eax, ebp
+    mov   ebp, eax
 
-	; The return pointer was pushed as a 2-byte
-	; value, since we were called from 16-bit
-	; code. We have preallocated space for the
-	; return pointer at the beginning of this
-	; function, and now need to push it as 4 bytes.
+    ; The return pointer was pushed as a 2-byte
+    ; value, since we were called from 16-bit
+    ; code. We have preallocated space for the
+    ; return pointer at the beginning of this
+    ; function, and now need to push it as 4 bytes.
 
-	; Read from esp + 6 to account for extra 2 bytes
-	; reserved, and the eax push.
-	
-	movzx eax, word [esp + 6]
-	mov   [return], eax
-	pop   eax
-	; Overwrite old value
-	add   esp, 4
-	push  dword [return]
+    ; Read from esp + 6 to account for extra 2 bytes
+    ; reserved, and the eax push.
+    
+    movzx eax, word [esp + 6]
+    mov   [return], eax
+    pop   eax
+    ; Overwrite old value
+    add   esp, 4
+    push  dword [return]
 
-	ret
+    ret
 
 pmode_exit:
-	push  ebp
-	mov   ebp, esp
-	push  eax
-	push  edi
+    push  ebp
+    mov   ebp, esp
+    push  eax
+    push  edi
 
-	lgdt  [gdt_info]
+    lgdt  [gdt_info]
 
-	jmp   0x0018:pmode16
+    jmp   0x0018:pmode16
 bits 16
 pmode16:
 
-	mov   ax, 0x20
-	mov   ss, ax
-	mov   es, ax
-	mov   ds, ax
-	mov   gs, ax
-	mov   fs, ax
+    mov   ax, 0x20
+    mov   ss, ax
+    mov   es, ax
+    mov   ds, ax
+    mov   gs, ax
+    mov   fs, ax
 
-	mov   eax, cr0 
-	and   eax, ~1
-	mov   cr0, eax
+    mov   eax, cr0 
+    and   eax, ~1
+    mov   cr0, eax
 
-	jmp   0x0000:rmode
+    jmp   0x0000:rmode
 rmode:
 
-	; Initialize segment registers for real mode.
-	xor   ax, ax
-	mov   es, ax
-	mov   ds, ax
-	mov   gs, ax
-	mov   fs, ax
+    ; Initialize segment registers for real mode.
+    xor   ax, ax
+    mov   es, ax
+    mov   ds, ax
+    mov   gs, ax
+    mov   fs, ax
 
-	; This calculates a valid stack segment below
-	; 1MiB, but ebp stack base CANNOT BE 64K ALIGNED.
-	; With this precondition in mind, the stack can
-	; otherwise live within any part of low memory.
-	; That is the memory that real mode is limited
-	; to anyway, so it is of course otherwise
-	; impossible to use the same stack.
-	mov   eax, ebp
-	shr   eax, 4
-	and   eax, 0xF000
-	mov   ss, ax
+    ; This calculates a valid stack segment below
+    ; 1MiB, but ebp stack base CANNOT BE 64K ALIGNED.
+    ; With this precondition in mind, the stack can
+    ; otherwise live within any part of low memory.
+    ; That is the memory that real mode is limited
+    ; to anyway, so it is of course otherwise
+    ; impossible to use the same stack.
+    mov   eax, ebp
+    shr   eax, 4
+    and   eax, 0xF000
+    mov   ss, ax
 
-	lidt  [idt_rmode]
+    lidt  [idt_rmode]
 
-	; Clean up higher bits in esp, as they can mess up
-	; the stack. This is because i386 has 32-bit
-	; register extensions.
-	and   esp, 0xFFFF
+    ; Clean up higher bits in esp, as they can mess up
+    ; the stack. This is because i386 has 32-bit
+    ; register extensions.
+    and   esp, 0xFFFF
 
-	pop   edi
-	pop   eax
+    pop   edi
+    pop   eax
 
-	;Clean up ebp in the same way, and for the same reason.
-	pop   ebp
-	and   ebp, 0xFFFF
+    ;Clean up ebp in the same way, and for the same reason.
+    pop   ebp
+    and   ebp, 0xFFFF
 
-	; Now fix the return pointer on the stack and realign,
-	; since this function was entered with a 4-byte return
-	; pointer and will exit with a 2-byte one.
-	push  eax
-	mov   eax, dword [esp + 4]
-	mov   [return], eax
-	pop   eax
-	add   esp, 4
-	push  word [return]
+    ; Now fix the return pointer on the stack and realign,
+    ; since this function was entered with a 4-byte return
+    ; pointer and will exit with a 2-byte one.
+    push  eax
+    mov   eax, dword [esp + 4]
+    mov   [return], eax
+    pop   eax
+    add   esp, 4
+    push  word [return]
 
-	ret
+    ret
 
 segment_fix:
-	; BIOS anti-clobber
-	xor   cx, cx
-	mov   es, cx
-	mov   ds, cx
-	mov   fs, cx
-	mov   gs, cx
-	ret
+    ; BIOS anti-clobber
+    xor   cx, cx
+    mov   es, cx
+    mov   ds, cx
+    mov   fs, cx
+    mov   gs, cx
+    ret
 
 bits 32
 save_state:
-	push  eax
-	in    al, 0x21
-	mov   [imr0_shadow], al
-	in    al, 0xA1
-	mov   [imr1_shadow], al
-	mov   [saved_ebx], ebx
-	mov   [saved_esi], esi
-	mov   [saved_edi], edi
-	mov   [saved_ebp], ebp
-	mov   [saved_ss], ss
-	mov   [saved_es], es
-	mov   [saved_ds], ds
-	mov   [saved_fs], fs
-	mov   [saved_gs], gs
-	sgdt  [shadow_gdtr]
-	sidt  [idt_info]
-	pop   eax
-	ret
+    push  eax
+    in    al, 0x21
+    mov   [imr0_shadow], al
+    in    al, 0xA1
+    mov   [imr1_shadow], al
+    mov   [saved_ebx], ebx
+    mov   [saved_esi], esi
+    mov   [saved_edi], edi
+    mov   [saved_ebp], ebp
+    mov   [saved_ss], ss
+    mov   [saved_es], es
+    mov   [saved_ds], ds
+    mov   [saved_fs], fs
+    mov   [saved_gs], gs
+    sgdt  [shadow_gdtr]
+    sidt  [idt_info]
+    pop   eax
+    ret
 
 restore_state:
-	push  eax
-	lgdt  [shadow_gdtr]
-	lidt  [idt_info]
-	mov   gs, [saved_gs]
-	mov   fs, [saved_fs]
-	mov   ds, [saved_ds]
-	mov   es, [saved_es]
-	mov   ss, [saved_ss]
-	mov   ebp, [saved_ebp]
-	mov   edi, [saved_edi]
-	mov   esi, [saved_esi]
-	mov   ebx, [saved_ebx]
-	mov   al, [imr1_shadow]
-	out   0xA1, al
-	mov   al, [imr0_shadow]
-	out   0x21, al
-	pop   eax
-	ret
+    push  eax
+    lgdt  [shadow_gdtr]
+    lidt  [idt_info]
+    mov   gs, [saved_gs]
+    mov   fs, [saved_fs]
+    mov   ds, [saved_ds]
+    mov   es, [saved_es]
+    mov   ss, [saved_ss]
+    mov   ebp, [saved_ebp]
+    mov   edi, [saved_edi]
+    mov   esi, [saved_esi]
+    mov   ebx, [saved_ebx]
+    mov   al, [imr1_shadow]
+    out   0xA1, al
+    mov   al, [imr0_shadow]
+    out   0x21, al
+    pop   eax
+    ret
 
 rmode_trampoline:
-	; Save flags, cs, and clear DF/IF
-	pushfd
-	push   cs
-	cli
-	cld
-	pop    dword [saved_cs]
-	pop    dword [saved_eflags]
-	; Save machine state, mask all interrupts,
-	; disable NMI, then exit protected mode
-	call   save_state
-	call   mask_ints
-	call   ms_nmi_disable
-	call   pmode_exit
+    ; Save flags, cs, and clear DF/IF
+    pushfd
+    push   cs
+    cli
+    cld
+    pop    dword [saved_cs]
+    pop    dword [saved_eflags]
+    ; Save machine state, mask all interrupts,
+    ; disable NMI, then exit protected mode
+    call   save_state
+    call   mask_ints
+    call   ms_nmi_disable
+    call   pmode_exit
 bits 16
-	call   load_bios_imr
-	call   restore_p70
-	; This may look a bit unconventional, but 
-	; popping the return address from the stack
-	; allows us to pass arguments as if calling
-	; from real mode. The return address will be
-	; pushed later.
-	pop    dword [resume]
-	; Pop 32-bit callee address and push as 16-bit
-	; address, then call it with a tail call.
-	pop    dword [callee]
-	; Push return pointer, ret into 16-bit callee
-	push   rmode_return
-	push   word [callee]
-	sti
-	ret
+    call   load_bios_imr
+    call   restore_p70
+    ; This may look a bit unconventional, but 
+    ; popping the return address from the stack
+    ; allows us to pass arguments as if calling
+    ; from real mode. The return address will be
+    ; pushed later.
+    pop    dword [resume]
+    ; Pop 32-bit callee address and push as 16-bit
+    ; address, then call it with a tail call.
+    pop    dword [callee]
+    ; Push return pointer, ret into 16-bit callee
+    push   rmode_return
+    push   word [callee]
+    sti
+    ret
 rmode_return:
-	; Restore machine state, enter protected mode
-	cli
-	call   segment_fix
-	call   ms_nmi_disable
-	call   mask_ints
-	call   pmode_init
+    ; Restore machine state, enter protected mode
+    cli
+    call   segment_fix
+    call   ms_nmi_disable
+    call   mask_ints
+    call   pmode_init
 bits 32
-	call   restore_state
-	call   restore_p70
-	; Allocate space for 32-bit return pointer.
-	sub    esp, 4
-	; Push return path
-	push   dword [saved_eflags]
-	push   dword [saved_cs]
-	push   dword [resume]
-	iretd
+    call   restore_state
+    call   restore_p70
+    ; Allocate space for 32-bit return pointer.
+    sub    esp, 4
+    ; Push return path
+    push   dword [saved_eflags]
+    push   dword [saved_cs]
+    push   dword [resume]
+    iretd
 
 section .stage15.data
 
