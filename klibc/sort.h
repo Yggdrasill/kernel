@@ -33,7 +33,7 @@ void isort(
 
 #define ISORT_DECLARE(name, type)                                              \
     void isort_##name(                                                         \
-        type *base, size_t nmemb, int (*compar)(const type, const type));
+        type *base, size_t nmemb, int (*compar)(const type *, const type *));
 
 #define ISORT_IMPLEMENT(name, type)                                            \
     void isort_##name(                                                         \

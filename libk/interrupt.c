@@ -35,47 +35,6 @@ struct interrupt_info {
     uint32_t eip, cs, eflags, prev_esp, ss;
 };
 
-extern void exception_unknown(void);
-extern void exception_0x00(void);
-extern void exception_0x01(void);
-extern void exception_0x02(void);
-extern void exception_0x03(void);
-extern void exception_0x04(void);
-extern void exception_0x05(void);
-extern void exception_0x06(void);
-extern void exception_0x07(void);
-extern void exception_0x08(void);
-extern void exception_0x09(void);
-extern void exception_0x0A(void);
-extern void exception_0x0B(void);
-extern void exception_0x0C(void);
-extern void exception_0x0D(void);
-extern void exception_0x0E(void);
-extern void exception_0x10(void);
-extern void exception_0x11(void);
-extern void exception_0x12(void);
-extern void exception_0x13(void);
-extern void exception_0x14(void);
-extern void exception_0x15(void);
-
-extern void irq_0x00(void);
-extern void irq_0x01(void);
-extern void irq_0x02(void);
-extern void irq_0x03(void);
-extern void irq_0x04(void);
-extern void irq_0x05(void);
-extern void irq_0x06(void);
-extern void irq_0x07(void);
-extern void irq_0x08(void);
-extern void irq_0x09(void);
-extern void irq_0x0A(void);
-extern void irq_0x0B(void);
-extern void irq_0x0C(void);
-extern void irq_0x0D(void);
-extern void irq_0x0E(void);
-extern void irq_0x0F(void);
-extern void irq_wrapper(void);
-
 extern uint8_t shadow_p70;
 
 char *exceptions[] = {
@@ -121,65 +80,6 @@ char *irq_interrupts[] = {
     "Hard disk",
     "IRQ 15",
 };
-
-/* This is disgusting, I know, but also necessary */
-
-void exception_idt_init(struct idt_info *info)
-{
-    size_t entries;
-
-    idt_entry_set(info, &exception_0x00, 0x08, 0x8E, 0x00);
-    idt_entry_set(info, &exception_0x01, 0x08, 0x8E, 0x01);
-    idt_entry_set(info, &exception_0x02, 0x08, 0x8E, 0x02);
-    idt_entry_set(info, &exception_0x03, 0x08, 0x8E, 0x03);
-    idt_entry_set(info, &exception_0x04, 0x08, 0x8E, 0x04);
-    idt_entry_set(info, &exception_0x05, 0x08, 0x8E, 0x05);
-    idt_entry_set(info, &exception_0x06, 0x08, 0x8E, 0x06);
-    idt_entry_set(info, &exception_0x07, 0x08, 0x8E, 0x07);
-    idt_entry_set(info, &exception_0x08, 0x08, 0x8E, 0x08);
-    idt_entry_set(info, &exception_0x09, 0x08, 0x8E, 0x09);
-    idt_entry_set(info, &exception_0x0A, 0x08, 0x8E, 0x0A);
-    idt_entry_set(info, &exception_0x0B, 0x08, 0x8E, 0x0B);
-    idt_entry_set(info, &exception_0x0C, 0x08, 0x8E, 0x0C);
-    idt_entry_set(info, &exception_0x0D, 0x08, 0x8E, 0x0D);
-    idt_entry_set(info, &exception_0x0E, 0x08, 0x8E, 0x0E);
-    idt_entry_set(info, &exception_unknown, 0x08, 0x8E, 0x0F);
-    idt_entry_set(info, &exception_0x10, 0x08, 0x8E, 0x10);
-    idt_entry_set(info, &exception_0x11, 0x08, 0x8E, 0x11);
-    idt_entry_set(info, &exception_0x12, 0x08, 0x8E, 0x12);
-    idt_entry_set(info, &exception_0x13, 0x08, 0x8E, 0x13);
-    idt_entry_set(info, &exception_0x14, 0x08, 0x8E, 0x14);
-    idt_entry_set(info, &exception_0x15, 0x08, 0x8E, 0x15);
-
-    do {
-        entries = idt_entry_add(info, &exception_unknown, 0x08, 0x8E);
-    } while(entries < idt_entries_max(info));
-
-    return;
-}
-
-void irq_idt_init(struct idt_info *info)
-{
-    idt_entry_set(info, &irq_0x00, 0x08, 0x8E, IRQ0_BASE_PM);
-    idt_entry_set(info, &irq_0x01, 0x08, 0x8E, IRQ0_BASE_PM + 0x1);
-    idt_entry_set(info, &irq_0x02, 0x08, 0x8E, IRQ0_BASE_PM + 0x2);
-    idt_entry_set(info, &irq_0x03, 0x08, 0x8E, IRQ0_BASE_PM + 0x3);
-    idt_entry_set(info, &irq_0x04, 0x08, 0x8E, IRQ0_BASE_PM + 0x4);
-    idt_entry_set(info, &irq_0x05, 0x08, 0x8E, IRQ0_BASE_PM + 0x5);
-    idt_entry_set(info, &irq_0x06, 0x08, 0x8E, IRQ0_BASE_PM + 0x6);
-    idt_entry_set(info, &irq_0x07, 0x08, 0x8E, IRQ0_BASE_PM + 0x7);
-
-    idt_entry_set(info, &irq_0x08, 0x08, 0x8E, IRQ1_BASE_PM);
-    idt_entry_set(info, &irq_0x09, 0x08, 0x8E, IRQ1_BASE_PM + 0x1);
-    idt_entry_set(info, &irq_0x0A, 0x08, 0x8E, IRQ1_BASE_PM + 0x2);
-    idt_entry_set(info, &irq_0x0B, 0x08, 0x8E, IRQ1_BASE_PM + 0x3);
-    idt_entry_set(info, &irq_0x0C, 0x08, 0x8E, IRQ1_BASE_PM + 0x4);
-    idt_entry_set(info, &irq_0x0D, 0x08, 0x8E, IRQ1_BASE_PM + 0x5);
-    idt_entry_set(info, &irq_0x0E, 0x08, 0x8E, IRQ1_BASE_PM + 0x6);
-    idt_entry_set(info, &irq_0x0F, 0x08, 0x8E, IRQ1_BASE_PM + 0x7);
-
-    return;
-}
 
 void exception_handler(struct interrupt_info *info)
 {

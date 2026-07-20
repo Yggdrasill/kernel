@@ -79,8 +79,8 @@ int main(void)
 
     irq_init();
     irq_mask_all();
-    nmi_enable();
     irq_unmask(IRQ_NUM_KBD);
+    nmi_enable();
     ints_flag_set();
 
 #ifndef TEST_MMAP

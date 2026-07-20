@@ -33,9 +33,6 @@ extern void nmi_enable(void);
 extern void ints_flag_clear(void);
 extern void ints_flag_set(void);
 
-void exception_idt_init(struct idt_info *entries);
-void irq_idt_init(struct idt_info *entries);
-
 void exception_handler(struct interrupt_info *info);
 void irq_handler(struct interrupt_info *info);
 

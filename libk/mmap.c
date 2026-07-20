@@ -35,11 +35,6 @@ struct e820_point {
     uint64_t         addr;
 };
 
-/*
- * CAREFUL! Check boot/stage2/mmap.s.
- * BIOS E820 routine directly addresses byte offsets.
- */
-
 extern char __BIOS_START;
 extern char __BIOS_END;
 extern char __BOOTLOADER_START;
@@ -67,7 +62,7 @@ int mmap_is_base(const struct e820_point *p)
 int mmap_cmp(const struct e820_point *p1, const struct e820_point *p2)
 {
     if(p1->addr == p2->addr) {
-        if(mmap_is_base(p1) && mmap_is_base(p2)) return 0;
+        if(mmap_is_base(p1) == mmap_is_base(p2)) return 0;
         else return mmap_is_base(p1) ? -1 : 1;
     }
     return (p1->addr > p2->addr) - (p1->addr < p2->addr);

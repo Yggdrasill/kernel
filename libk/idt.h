@@ -40,4 +40,7 @@ size_t
 idt_entry_set(struct idt_info *, void (*)(void), uint16_t, uint8_t, uint8_t);
 size_t idt_entry_add(struct idt_info *, void (*)(void), uint16_t, uint8_t);
 
+void exception_idt_init(struct idt_info *entries);
+void irq_idt_init(struct idt_info *entries);
+
 #endif
