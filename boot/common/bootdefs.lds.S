@@ -151,7 +151,9 @@ SECTIONS {
 
     . = MEM1_ADDR;
     .stage15 (NOLOAD) : {
-        __STAGE15_LOAD_ADDR = .;
+        __STAGE15_LOAD_ADDR = ABSOLUTE(.);
+        __STAGE15_LOAD_SEG = ABSOLUTE((__STAGE15_LOAD_ADDR >> 4) & 0xF000);
+        __STAGE15_LOAD_OFF = ABSOLUTE(__STAGE15_LOAD_ADDR & 0xFFFF);
         *(.stage15)
         *(.stage15.data)
         *(.stage15.rodata)
