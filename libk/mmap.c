@@ -140,7 +140,7 @@ struct e820_info mmap_sanitize(
 
     j = 0;
     i = 0;
-    for(i = 0; i < nr_entries; i++) {
+    while(i < nr_entries) {
         if(!src[i].size) {
             *(src + i) = *(src + nr_entries - 1);
             nr_entries--;
@@ -149,6 +149,7 @@ struct e820_info mmap_sanitize(
         e820_points[j++] = (struct e820_point){src + i, src[i].base};
         e820_points[j++] =
             (struct e820_point){src + i, src[i].base + src[i].size};
+        i++;
     }
 
     const size_t NR_POINTS = 2 * nr_entries;
