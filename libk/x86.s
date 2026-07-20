@@ -22,6 +22,13 @@ global port_io_write
 global port_io_read
 global nmi_enable
 global nmi_disable
+global gdt_install
+global idt_install
+global get_stack_base
+global hcf
+global halt
+global ints_flag_clear
+global ints_flag_set
 
 extern shadow_p70
 
@@ -82,23 +89,56 @@ port_io_return:
 nmi_enable:
     push ebp
     mov  ebp, esp
-    push eax
     mov  al, [shadow_p70]
     and  al, 0x7F
     out  0x70, al
     mov  [shadow_p70], al
-    pop  eax
     pop  ebp
     ret
 
 nmi_disable:
     push ebp
     mov  ebp, esp
-    push eax
     mov  al, [shadow_p70]
     or   al, 0x80
     out  0x70, al
     mov  [shadow_p70], al
-    pop  eax
     pop  ebp
+    ret
+
+gdt_install:
+    push ebp
+    mov  ebp, esp
+    mov  eax, [ebp + 0x8]
+    mov  eax, [eax]
+    lgdt [eax]
+    pop  ebp
+    ret
+
+idt_install:
+    push ebp
+    mov  ebp, esp
+    mov  eax, [ebp + 0x8]
+    mov  eax, [eax]
+    lidt [eax]
+    pop  ebp
+    ret
+
+get_stack_base:
+    mov  eax, ebp
+    ret
+
+; halt and catch fire
+hcf:
+    cli
+halt:
+    hlt
+    jmp short halt
+
+ints_flag_clear:
+    cli
+    ret
+
+ints_flag_set:
+    sti
     ret

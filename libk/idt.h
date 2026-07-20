@@ -29,6 +29,8 @@ struct idt_ptr;
 struct idt_entry;
 struct idt_info;
 
+extern void idt_install(struct idt_info *);
+
 struct idt_info *idt_init(void);
 
 size_t idt_entries_nr(struct idt_info *);
@@ -37,7 +39,5 @@ size_t idt_entries_max(struct idt_info *);
 size_t
 idt_entry_set(struct idt_info *, void (*)(void), uint16_t, uint8_t, uint8_t);
 size_t idt_entry_add(struct idt_info *, void (*)(void), uint16_t, uint8_t);
-
-void idt_install(struct idt_info *);
 
 #endif

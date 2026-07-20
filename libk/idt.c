@@ -182,15 +182,3 @@ size_t idt_entry_add(
 {
     return idt_entry_set(info, idt_handler, select, flags, info->nr_entries);
 }
-
-void idt_install(struct idt_info *info)
-{
-    struct idt_ptr *idtr;
-    idtr = info->idtr;
-    __asm__ volatile("mov  eax, %0;"
-                     "lidt [eax];"
-                     :
-                     : "m"(idtr));
-
-    return;
-}

@@ -25,6 +25,7 @@
 #include <libk/interrupt.h>
 #include <libk/io.h>
 #include <libk/irq.h>
+#include <libk/util.h>
 
 struct interrupt_info {
     uint32_t fs, gs, es, ds;
@@ -187,7 +188,7 @@ void exception_handler(struct interrupt_info *info)
     if(info->intno == 0x1F) puts("Unhandled exception!");
     else puts(exceptions[info->intno]);
 
-    __asm__ volatile("hlt;");
+    hcf();
 }
 
 void irq_handler(struct interrupt_info *info)
@@ -209,20 +210,6 @@ void irq_handler(struct interrupt_info *info)
 eoi:
     if(!spurious && info->intno >= 0x08) port_write_byte(0xA0, 0x20);
     if(!spurious || info->intno >= 0x08) port_write_byte(0x20, 0x20);
-
-    return;
-}
-
-void ints_flag_clear(void)
-{
-    __asm__ volatile("cli;");
-
-    return;
-}
-
-void ints_flag_set(void)
-{
-    __asm__ volatile("sti;");
 
     return;
 }

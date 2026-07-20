@@ -93,10 +93,8 @@ int main(void)
 #endif
     bios_print("test string", strlen("test string"));
 
-    for(;;) {
-        __asm__ volatile("hlt;");
-    }
+    halt();
+    hcf();
 
-    __asm__ volatile("cli;"
-                     "hlt;");
+    return 0;
 }

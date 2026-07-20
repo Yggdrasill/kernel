@@ -155,15 +155,3 @@ struct gdt_info *gdt_init(void)
 
     return info;
 }
-
-void gdt_install(struct gdt_info *info)
-{
-    struct gdt_ptr *gdtr;
-    gdtr = info->gdtr;
-    __asm__ volatile("mov  eax, %0;"
-                     "lgdt [eax];"
-                     :
-                     : "m"(gdtr));
-
-    return;
-}

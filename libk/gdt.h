@@ -49,9 +49,9 @@ struct gdt_ptr;
 struct gdt_entry;
 struct gdt_info;
 
+extern void gdt_install(struct gdt_info *);
+
 struct gdt_info *gdt_init(void);
 void gdt_entry_add(struct gdt_info *, void *, uint32_t, uint8_t, uint8_t);
-
-void gdt_install(struct gdt_info *);
 
 #endif
