@@ -28,14 +28,24 @@ extern size_t *get_stack_base(void);
 
 void stack_trace(void)
 {
-    size_t *bp;
+    uintptr_t *ebp;
+    uintptr_t *eip;
+    uintptr_t  addr;
 
-    bp = get_stack_base();
+    ebp = get_stack_base();
     puts("stack trace:");
-    puthex((bp + 1), sizeof(bp), 0);
-    putchar('\n');
-    while((bp = (size_t *)*bp)) {
-        puthex((bp + 1), sizeof(bp), 0);
+    do {
+        eip = (ebp + 1);
+        puthex(eip, sizeof(eip), 0);
+        /* Educated guess */
+        if(*(uint8_t *)((*eip) - 5) == 0xE8) {
+            addr = (*eip) - 5;
+            putchar(' ');
+            putchar('[');
+            puthex(&addr, sizeof(eip), 0);
+            putchar(']');
+        }
         putchar('\n');
-    };
+
+    } while((ebp = (uintptr_t *)*(ebp)));
 }

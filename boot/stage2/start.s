@@ -37,8 +37,8 @@ continue_32:
     push  dword 0x02
     popfd
 
+    xor   ebp, ebp
     mov   esp, __STACK_BASE_LOCATION
-    mov   ebp, __STACK_BASE_LOCATION
     call  main
     ; if we ever get to this point, 
     ; just give up, something went
