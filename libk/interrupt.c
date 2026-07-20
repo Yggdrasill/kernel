@@ -197,7 +197,7 @@ void irq_handler(struct interrupt_info *info)
     if(spurious) goto eoi;
 
     switch(info->intno) {
-        case IRQ_NUM_KBD: inb(0x60);
+        case IRQ_NUM_KBD: port_read_byte(0x60);
     }
 
     puts(irq_interrupts[info->intno]);
@@ -207,8 +207,8 @@ void irq_handler(struct interrupt_info *info)
      * Filter out spurious interrupts from EOI.
      */
 eoi:
-    if(!spurious && info->intno >= 0x08) outb(0xA0, 0x20);
-    if(!spurious || info->intno >= 0x08) outb(0x20, 0x20);
+    if(!spurious && info->intno >= 0x08) port_write_byte(0xA0, 0x20);
+    if(!spurious || info->intno >= 0x08) port_write_byte(0x20, 0x20);
 
     return;
 }

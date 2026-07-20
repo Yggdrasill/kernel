@@ -18,10 +18,66 @@
 bits 32
 section .text
 
+global port_io_write
+global port_io_read
 global nmi_enable
 global nmi_disable
 
 extern shadow_p70
+
+port_write_byte:
+    out  dx, al
+    jmp  short port_io_return
+
+port_write_word:
+    out  dx, ax
+    jmp  short port_io_return
+
+port_write_dword:
+    out  dx, eax
+    jmp  short port_io_return
+
+port_read_byte:
+    in   al, dx
+    jmp  short port_io_return
+
+port_read_word:
+    in   ax, dx
+    jmp  short port_io_return
+
+port_read_dword:
+    in   eax, dx
+    jmp  short port_io_return
+
+port_write_trampoline:
+    mov  eax, [ebp + 0x10]
+    bt   ebx, 2
+    jc   short port_write_dword
+    bt   ebx, 1
+    jc   short port_write_word
+    jmp  short port_write_byte
+
+port_read_trampoline:
+    bt   ebx, 2
+    jc   short port_read_dword
+    bt   ebx, 1
+    jc   short port_read_word
+    jmp  short port_read_byte
+
+port_io_write:
+port_io_read:
+    push ebp
+    mov  ebp, esp
+    push ebx
+    mov  ebx, [ebp + 0x8]
+    mov  edx, [ebp + 0xC]
+    bt   ebx, 3
+    jc   short port_write_trampoline
+    jnc  short port_read_trampoline
+port_io_return:
+    pop  ebx
+    pop  ebp
+    ret
 
 nmi_enable:
     push ebp

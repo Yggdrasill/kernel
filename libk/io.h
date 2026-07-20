@@ -24,7 +24,11 @@
 
 #include <stdint.h>
 
-unsigned char inb(uint16_t);
-void          outb(uint16_t, unsigned char);
+uint8_t  port_read_byte(uint16_t);
+uint16_t port_read_word(uint16_t);
+uint32_t port_read_dword(uint16_t);
+uint8_t  port_write_byte(uint16_t, uint8_t);
+uint16_t port_write_word(uint16_t, uint16_t);
+uint32_t port_write_dword(uint16_t, uint32_t);
 
 #endif

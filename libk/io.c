@@ -20,25 +20,58 @@
  */
 
 #include <libk/io.h>
+#include <stdint.h>
 
-unsigned char inb(uint16_t port)
+/*
+ * The file defines a standard interface for port I/O. NO OTHER source file
+ * should have external linkage to port_io_write/port_io_read.
+ */
+
+extern uint32_t port_io_write(uint32_t, uint32_t, uint32_t);
+extern uint32_t port_io_read(uint32_t, uint32_t);
+
+enum PORT_IO {
+    PORT_IO_BYTE  = 1,
+    PORT_IO_WORD  = 1 << 1,
+    PORT_IO_DWORD = 1 << 2,
+    PORT_IO_WRITE = 1 << 3,
+};
+
+uint8_t port_read_byte(uint16_t port)
 {
-    unsigned char data;
-
-    data = 0;
-
-    __asm__ volatile("inb  %0, %1;"
-                     : "=r"(data)
-                     : "Nd"(port));
-
+    uint8_t data;
+    data = (uint8_t)port_io_read(PORT_IO_BYTE, port);
     return data;
 }
 
-void outb(uint16_t port, unsigned char data)
+uint16_t port_read_word(uint16_t port)
 {
-    __asm__ volatile("outb %0, %1;"
-                     :
-                     : "dx"(port), "eax"(data));
+    uint16_t data;
+    data = (uint16_t)port_io_read(PORT_IO_WORD, port);
+    return data;
+}
 
-    return;
+uint32_t port_read_dword(uint16_t port)
+{
+    uint32_t data;
+    data = port_io_read(PORT_IO_DWORD, port);
+    return data;
+}
+
+uint8_t port_write_byte(uint16_t port, uint8_t data)
+{
+    data = (uint8_t)port_io_write(PORT_IO_WRITE | PORT_IO_BYTE, port, data);
+    return data;
+}
+
+uint16_t port_write_word(uint16_t port, uint16_t data)
+{
+    data = (uint16_t)port_io_write(PORT_IO_WRITE | PORT_IO_WORD, port, data);
+    return data;
+}
+
+uint32_t port_write_dword(uint16_t port, uint32_t data)
+{
+    data = port_io_write(PORT_IO_WRITE | PORT_IO_DWORD, port, data);
+    return data;
 }
