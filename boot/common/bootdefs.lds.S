@@ -90,7 +90,6 @@ MEMORY {
 }
 
 PHDRS {
-    P_NOLOAD PT_NULL;
     P_STAGE1 PT_LOAD;
     P_STAGE2 PT_LOAD;
 }
@@ -128,7 +127,7 @@ SECTIONS {
         *(.stage15.data)
         *(.stage15.rodata)
         *(.stage15.bss)
-    } > mem1 : P_NOLOAD
+    } > mem1 : NONE
 
     . = ST2_ADDR;
     .stage2.bss (NOLOAD) : {
@@ -136,18 +135,18 @@ SECTIONS {
     } > stage2
     .elf (NOLOAD) : {
         *(.elf)
-    } > elf : P_NOLOAD
+    } > elf : NONE
 #elif LD_BOOT_STAGE2 
     .boot (NOLOAD) : {
         *(.boot)
         *(.boot.util)
         *(.boot.rodata)
-    } > boot : P_NOLOAD
+    } > boot : NONE
     __BOOT_SIZE = BOOT_ADDR - ENTR_ADDR;
     . = MBR_ADDR;
     .mbr (NOLOAD) : {
         *(.mbr)
-    } > mbr : P_NOLOAD
+    } > mbr : NONE
 
     . = MEM1_ADDR;
     .stage15 (NOLOAD) : {
@@ -158,16 +157,32 @@ SECTIONS {
         *(.stage15.data)
         *(.stage15.rodata)
         *(.stage15.bss)
-    } > mem1 : P_NOLOAD
+    } > mem1 : NONE
 
     . = ST2_ADDR;
     stage2.o = .;
-    ._init : { *(._init) } > stage2 : P_STAGE2
-    .text : { *(.text) } > stage2 : P_STAGE2
-    .data : { *(.data) } > stage2 : P_STAGE2
-    .rodata : { *(.rodata) } > stage2 : P_STAGE2
-    .bss (NOLOAD) : { *(.bss) } > stage2 : P_STAGE2
-    .elf (NOLOAD) : { *(.elf) } > elf : P_NOLOAD
+    ._init : {
+        *(._init)
+    } > stage2 : P_STAGE2
+    .text : {
+        *(.text)
+        *(.text.*)
+    } > stage2 : P_STAGE2
+    .data : {
+        *(.data)
+        *(.data.*)
+    } > stage2 : P_STAGE2
+    .rodata : {
+        *(.rodata)
+        *(.rodata.*)
+    } > stage2 : P_STAGE2
+    .bss (NOLOAD) : {
+        *(.bss)
+        *(.bss.*)
+    } > stage2 : P_STAGE2
+    .elf (NOLOAD) : {
+        *(.elf)
+    } > elf : NONE
 #endif
     __BOOTLOADER_END = .;
 #if LD_BOOT_STAGE2
@@ -176,14 +191,14 @@ SECTIONS {
     .gdtr (NOLOAD) : {
         __GDT_PTR_LOCATION = .;
         KEEP(*(.gdtr) )
-    } > gdtr : P_NOLOAD
+    } > gdtr : NONE
     __GDTR_END = GDTR_ADDR + GDTR_SIZE;
     . = GDT_ADDR;
     __GDT_START = .;
     .gdt (NOLOAD) : {
         __GDT_BASE_LOCATION = .;
         KEEP(*(.gdt) )
-    } > gdt : P_NOLOAD
+    } > gdt : NONE
     __GDT_END = GDT_ADDR + GDT_SIZE;
 
     . = MMAP_ADDR;
@@ -192,7 +207,7 @@ SECTIONS {
         . += ABI_MMAP_TABLE_SIZE;
         __mmap_new_map = .;
         . += ABI_MMAP_TABLE_SIZE;
-    } > mmap : P_NOLOAD
+    } > mmap : NONE
 
     . = IDT_ADDR;
     __IDT_START = .;
@@ -200,33 +215,33 @@ SECTIONS {
         __IDT_PTR_LOCATION = .;
         __IDT_BASE_LOCATION = . + 8;
         KEEP(*(.idt) )
-    } > idt : P_NOLOAD
+    } > idt : NONE
     __IDT_END = IDT_ADDR + IDT_SIZE;
 
     . = MEM2_ADDR;
     .pmm (NOLOAD) : {
         __MMAP_HEAP_LOCATION = .;
         KEEP(*(.pmm) )
-    } > mem2 : P_NOLOAD
+    } > mem2 : NONE
 
     . = STACK_ADDR;
     __STACK_START = .;
     .stack (NOLOAD) : {
         __STACK_BASE_LOCATION = (. + 64K - 0x10);
-    } > stack : P_NOLOAD
+    } > stack : NONE
     __STACK_END = STACK_ADDR + STACK_SIZE;
 
     . = FBR_ADDR;
     .fbr (NOLOAD) : {
         __FB_ADDR = .;
         KEEP(*(.fbr) )
-    } > fbr : P_NOLOAD
+    } > fbr : NONE
     . = FBR_ADDR + FBR_SIZE;
     __FB_END = .;
     .upper (NOLOAD) : {
         __UPPER_START = .;
         KEEP(*(.fbr) )
-    } > upper : P_NOLOAD
+    } > upper : NONE
     . = UPPR_ADDR + UPPR_SIZE;
     __UPPER_END = .;
 #endif
