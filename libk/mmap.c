@@ -68,7 +68,10 @@ int mmap_cmp(const void *p1, const void *p2)
 	struct e820_point *pp2;
 	pp1 = (struct e820_point *)p1;
 	pp2 = (struct e820_point *)p2;
-	if(pp1->addr == pp2->addr) return mmap_is_base(pp1) ? -1 : 1;
+	if(pp1->addr == pp2->addr) {
+		if(mmap_is_base(pp1) && mmap_is_base(pp2)) return 0;
+		else return mmap_is_base(pp1) ? -1 : 1;
+	}
 	return (pp1->addr > pp2->addr) - (pp1->addr < pp2->addr);
 }
 
@@ -113,16 +116,14 @@ struct e820_info mmap_sanitize(
 
 	struct e820_point *prev_point;
 
+	size_t new_nr_entries;
+	size_t nr_overlaps;
+	size_t i, j;
+
 	uint32_t type;
 	uint32_t prev_type;
 	uint32_t attrib;
 	uint32_t prev_attrib;
-
-	const size_t NR_POINTS = 2 * nr_entries;
-
-	size_t new_nr_entries;
-	size_t nr_overlaps;
-	size_t i, j;
 
 	info = (struct e820_info){
 	    .base           = dst,
@@ -151,6 +152,8 @@ struct e820_info mmap_sanitize(
 		e820_points[j++] =
 		    (struct e820_point){src + i, src[i].base + src[i].size};
 	}
+
+	const size_t NR_POINTS = 2 * nr_entries;
 	isort(e820_points, NR_POINTS, sizeof(*e820_points), mmap_cmp);
 
 	new_nr_entries             = 0;
