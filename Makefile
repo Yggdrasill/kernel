@@ -36,9 +36,9 @@ AS=nasm
 MKDIR=mkdir -p
 
 INCLUDE_PATH=-I ./ -I klibc/
-CF_HOST=-m32 -std=c99
+CF_HOST=-m32 -std=c99 -Wall -Wextra -Wpedantic
 CF_ALL=$(CF_HOST) -ffreestanding -fno-pic -nodefaultlibs -fno-exceptions \
-	   -fno-asynchronous-unwind-tables -masm=intel -Wall -Wpedantic -Os
+	   -fno-asynchronous-unwind-tables -masm=intel -Os
 CF_DEP=-MMD -MP -MF $(@:.o=.d) -MT $@
 LD_ALL=-m elf_i386 -z noexecstack --nmagic
 LD_BOOT=-L boot/common/
