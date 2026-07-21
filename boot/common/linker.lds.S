@@ -24,9 +24,17 @@
 #include <libk/internal/mmap.h>
 
 #ifdef LD_BOOT_STAGE1
+#define STAGE1_PHDR   P_STAGE1
+#define STAGE2_PHDR   NONE
+#define STAGE1_NOLOAD
+#define STAGE2_NOLOAD (NOLOAD)
 OUTPUT_FORMAT(binary);
 #elif  LD_BOOT_STAGE2
 #include <build/generated/mmap_generated.h>
+#define STAGE1_PHDR   NONE
+#define STAGE2_PHDR   P_STAGE2
+#define STAGE1_NOLOAD (NOLOAD)
+#define STAGE2_NOLOAD
 OUTPUT_FORMAT(elf32-i386);
 ENTRY(__start);
 #endif
@@ -106,20 +114,19 @@ SECTIONS {
     . = BOOT_ADDR;
     __BOOT_ADDR = .;
     __BOOTLOADER_START = .;
-#ifdef LD_BOOT_STAGE1
-    .boot : {
+    .boot STAGE1_NOLOAD : {
         *(.boot)
         *(.boot.util)
         *(.boot.rodata)
-    } > boot : P_STAGE1
+    } > boot : STAGE1_PHDR
     PROVIDE(__BOOT_SIZE = BOOT_ADDR - ENTR_ADDR);
     . = MBR_ADDR;
-    .mbr : {
+    .mbr STAGE1_NOLOAD : {
         *(.mbr)
-    } > mbr : P_STAGE1
+    } > mbr : STAGE1_PHDR
 
     . = MEM1_ADDR;
-    .stage15 : {
+    .stage15 STAGE1_NOLOAD : {
         __STAGE15_LOAD_ADDR = ABSOLUTE(.);
         __STAGE15_LOAD_SEG = ABSOLUTE((__STAGE15_LOAD_ADDR >> 4) & 0xF000);
         __STAGE15_LOAD_OFF = ABSOLUTE(__STAGE15_LOAD_ADDR & 0xFFFF);
@@ -127,77 +134,47 @@ SECTIONS {
         *(.stage15.data)
         *(.stage15.rodata)
         *(.stage15.bss)
-    } > mem1 : NONE
+    } > mem1 : STAGE1_PHDR
 
     . = ST2_ADDR;
-    .stage2.bss (NOLOAD) : {
-        *(.stage2.bss)
-    } > stage2
-    .elf (NOLOAD) : {
-        *(.elf)
-    } > elf : NONE
-#elif LD_BOOT_STAGE2 
-    .boot (NOLOAD) : {
-        *(.boot)
-        *(.boot.util)
-        *(.boot.rodata)
-    } > boot : NONE
-    __BOOT_SIZE = BOOT_ADDR - ENTR_ADDR;
-    . = MBR_ADDR;
-    .mbr (NOLOAD) : {
-        *(.mbr)
-    } > mbr : NONE
-
-    . = MEM1_ADDR;
-    .stage15 (NOLOAD) : {
-        __STAGE15_LOAD_ADDR = ABSOLUTE(.);
-        __STAGE15_LOAD_SEG = ABSOLUTE((__STAGE15_LOAD_ADDR >> 4) & 0xF000);
-        __STAGE15_LOAD_OFF = ABSOLUTE(__STAGE15_LOAD_ADDR & 0xFFFF);
-        *(.stage15)
-        *(.stage15.data)
-        *(.stage15.rodata)
-        *(.stage15.bss)
-    } > mem1 : NONE
-
-    . = ST2_ADDR;
+#ifdef LD_BOOT_STAGE2
     stage2.o = .;
-    ._init : {
+#endif
+    ._init STAGE2_NOLOAD : {
         *(._init)
-    } > stage2 : P_STAGE2
-    .text : {
+    } > stage2 : STAGE2_PHDR
+    .text STAGE2_NOLOAD : {
         *(.text)
         *(.text.*)
-    } > stage2 : P_STAGE2
-    .data : {
+    } > stage2 : STAGE2_PHDR
+    .data STAGE2_NOLOAD : {
         *(.data)
         *(.data.*)
-    } > stage2 : P_STAGE2
-    .rodata : {
+    } > stage2 : STAGE2_PHDR
+    .rodata STAGE2_NOLOAD : {
         *(.rodata)
         *(.rodata.*)
-    } > stage2 : P_STAGE2
+    } > stage2 : STAGE2_PHDR
     .bss (NOLOAD) : {
         *(.bss)
         *(.bss.*)
-    } > stage2 : P_STAGE2
+    } > stage2 : STAGE2_PHDR
+    . = ELF_ADDR;
     .elf (NOLOAD) : {
         *(.elf)
     } > elf : NONE
-#endif
     __BOOTLOADER_END = .;
-#if LD_BOOT_STAGE2
+#ifdef LD_BOOT_STAGE2
     . = GDTR_ADDR;
     __GDTR_START = .;
     .gdtr (NOLOAD) : {
         __GDT_PTR_LOCATION = .;
-        KEEP(*(.gdtr) )
     } > gdtr : NONE
     __GDTR_END = GDTR_ADDR + GDTR_SIZE;
     . = GDT_ADDR;
     __GDT_START = .;
     .gdt (NOLOAD) : {
         __GDT_BASE_LOCATION = .;
-        KEEP(*(.gdt) )
     } > gdt : NONE
     __GDT_END = GDT_ADDR + GDT_SIZE;
 
@@ -214,14 +191,12 @@ SECTIONS {
     .idt (NOLOAD) : {
         __IDT_PTR_LOCATION = .;
         __IDT_BASE_LOCATION = . + 8;
-        KEEP(*(.idt) )
     } > idt : NONE
     __IDT_END = IDT_ADDR + IDT_SIZE;
 
     . = MEM2_ADDR;
     .pmm (NOLOAD) : {
         __MMAP_HEAP_LOCATION = .;
-        KEEP(*(.pmm) )
     } > mem2 : NONE
 
     . = STACK_ADDR;
@@ -234,13 +209,11 @@ SECTIONS {
     . = FBR_ADDR;
     .fbr (NOLOAD) : {
         __FB_ADDR = .;
-        KEEP(*(.fbr) )
     } > fbr : NONE
     . = FBR_ADDR + FBR_SIZE;
     __FB_END = .;
     .upper (NOLOAD) : {
         __UPPER_START = .;
-        KEEP(*(.fbr) )
     } > upper : NONE
     . = UPPR_ADDR + UPPR_SIZE;
     __UPPER_END = .;

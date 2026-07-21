@@ -34,7 +34,7 @@ $(OBJDIR_GEN)/mmap_generated.h: $(OBJDIR_GEN)/symbol_gen
 		echo "#define $${name} 0x$${value}"; \
 	done > $@
 
-$(OBJDIR_STAGE2)/linker.lds: $(SRCDIR_BOOT_COMMON)/bootdefs.lds.S \
+$(OBJDIR_STAGE2)/linker.lds: $(SRCDIR_BOOT_COMMON)/linker.lds.S \
 							 $(OBJDIR_GEN)/mmap_generated.h | $(OBJDIR_STAGE2)
 	$(CC) -MMD -MP -MF $@.d -MT $@ $(INCLUDE_PATH) -DLD_BOOT_STAGE2 -E -P -x c -o $@ $<
 
