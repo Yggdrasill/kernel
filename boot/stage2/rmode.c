@@ -27,6 +27,7 @@
 #include <libk/idt.h>
 #include <libk/interrupt.h>
 #include <libk/mmap.h>
+#include <libk/util.h>
 
 /*
  * rmode_trampoline cannot directly return union because it invokes sret stack
@@ -53,10 +54,19 @@ extern uint32_t rmode_trampoline(void (*)(void), ...);
  * - if return < -1, these are panic conditions, memory map cannot be trusted
  */
 
+/* TODO: Implement other memory map functions, for now panic. */
 int32_t bios_mmap(struct e820_info *mmap)
 {
     union rmode_ret_t rv;
     rv.i32 = rmode_trampoline((void (*)(void))__bios_mmap, mmap);
+    switch(rv.i32) {
+        case 0: break;
+        case -1: panic("E820 unsupported!"); break;
+        case -2: panic("E820 malformed response"); break;
+        case -3: panic("E820 malformed entry size"); break;
+        case -4: panic("E820 map exhausted"); break;
+        default: panic("E820 unknown error!");
+    }
     return rv.i32;
 }
 

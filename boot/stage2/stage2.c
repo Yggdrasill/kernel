@@ -70,7 +70,6 @@ int main(void)
     gdt = gdt_init();
 
     memsetw((int16_t *)&FB_ADDR, 0x0720, 0x7D0);
-
     puts("Hello world!");
 
     idt = idt_init();
@@ -85,6 +84,7 @@ int main(void)
 
 #ifndef TEST_MMAP
     mmap = mmap_init();
+    /* Panics if error */
     bios_mmap(mmap);
     mmap = mmap_setup(mmap);
 #else
