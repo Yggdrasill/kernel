@@ -28,5 +28,6 @@ extern void hcf(void);
 extern void halt(void);
 
 void stack_trace(void);
+void panic(char *);
 
 #endif

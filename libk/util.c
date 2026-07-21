@@ -49,3 +49,10 @@ void stack_trace(void)
 
     } while((ebp = (uintptr_t *)*(ebp)));
 }
+
+void panic(char *s)
+{
+    puts(s);
+    stack_trace();
+    hcf();
+}
