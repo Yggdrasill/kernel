@@ -23,6 +23,7 @@ global port_io_read
 global nmi_enable
 global nmi_disable
 global gdt_install
+global gdt_segment_select
 global idt_install
 global get_stack_base
 global hcf
@@ -114,6 +115,24 @@ gdt_install:
     lgdt [eax]
     pop  ebp
     ret
+
+gdt_segment_select:
+    push ebp
+    mov  ebp, esp
+    mov  eax, [ebp + 0x04]
+    mov  ecx, [ebp + 0x08]
+    mov  edx, [ebp + 0x0C]
+    mov  ds, dx
+    mov  es, dx
+    mov  fs, dx
+    mov  gs, dx
+    mov  ss, dx
+    pop  ebp
+    add  esp, 4
+    pushfd
+    push ecx
+    push eax
+    iretd
 
 idt_install:
     push ebp

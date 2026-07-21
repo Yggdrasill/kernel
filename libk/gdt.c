@@ -26,6 +26,9 @@
 #include <libk/gdt.h>
 #include <libk/internal/gdt.h>
 
+#define GDT_DEFAULT_CODE 0x08
+#define GDT_DEFAULT_DATA 0x010
+
 struct gdt_ptr {
     uint8_t size_0;
     uint8_t size_8;
@@ -52,6 +55,8 @@ struct gdt_info {
     size_t            nr_entries;
     size_t            max_nr_entries;
 };
+
+extern void gdt_segment_select(uint16_t code, uint16_t data);
 
 extern struct gdt_ptr   __GDT_PTR_LOCATION;
 extern struct gdt_entry __GDT_BASE_LOCATION;
@@ -158,6 +163,7 @@ struct gdt_info *gdt_init(void)
     memset(base, 0, sizeof(*base));
     gdt_default_entries_add(info);
     gdt_install(info);
+    gdt_segment_select(GDT_DEFAULT_CODE, GDT_DEFAULT_DATA);
 
     return info;
 }
