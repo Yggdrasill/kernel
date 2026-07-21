@@ -26,6 +26,7 @@
 
 #include <libk/internal/mmap.h>
 #include <libk/mmap.h>
+#include <libk/util.h>
 
 #define MMAP_END_ADDR(x)             ((x)->base + (x)->size)
 #define MMAP_REGION_SIZE(start, end) ((uintptr_t)&end - (uintptr_t)&start)
@@ -99,7 +100,7 @@ static struct e820_map *const new_map = __mmap_new_map;
 struct e820_info mmap_sanitize(
     struct e820_map *dst,
     struct e820_map *src,
-    uint32_t         nr_entries,
+    const uint32_t   nr_entries,
     const uint32_t   dst_max_entries)
 {
     struct e820_point e820_points[2 * MMAP_MAX_ENTRIES];
@@ -121,11 +122,13 @@ struct e820_info mmap_sanitize(
     info = (struct e820_info){
         .base           = dst,
         .nr_entries     = 0,
-        .max_nr_entries = MMAP_MAX_ENTRIES,
+        .max_nr_entries = dst_max_entries,
     };
 
-    if(!nr_entries || nr_entries > MMAP_MAX_ENTRIES) goto sanitize_end;
-    if(dst_max_entries > MMAP_MAX_ENTRIES) goto sanitize_end;
+    if(!nr_entries) panic("E820: zero entries!");
+    if(nr_entries > dst_max_entries || dst_max_entries > MMAP_MAX_ENTRIES) {
+        panic("E820: too many entries!");
+    }
 
     /*
      * Break down the E820 structure into a sorted list of points that can be
@@ -134,20 +137,15 @@ struct e820_info mmap_sanitize(
      */
 
     j = 0;
-    i = 0;
-    while(i < nr_entries) {
-        if(!src[i].size) {
-            *(src + i) = *(src + nr_entries - 1);
-            nr_entries--;
-            continue;
-        }
+    for(i = 0; i < nr_entries; i++) {
+        if(!src[i].size) continue;
         e820_points[j++] = (struct e820_point){src + i, src[i].base};
         e820_points[j++] =
             (struct e820_point){src + i, src[i].base + src[i].size};
-        i++;
     }
 
-    const size_t NR_POINTS = 2 * nr_entries;
+    const size_t NR_POINTS = j;
+    if(!NR_POINTS) panic("E820: no entries left to process!");
     isort_mmap(e820_points, NR_POINTS, mmap_cmp);
 
     new_nr_entries             = 0;
@@ -232,7 +230,6 @@ struct e820_info mmap_sanitize(
         .max_nr_entries = MMAP_MAX_ENTRIES,
     };
 
-sanitize_end:
     return info;
 }
 

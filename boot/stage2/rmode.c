@@ -61,11 +61,11 @@ int32_t bios_mmap(struct e820_info *mmap)
     rv.i32 = rmode_trampoline((void (*)(void))__bios_mmap, mmap);
     switch(rv.i32) {
         case 0: break;
-        case -1: panic("E820 unsupported!"); break;
-        case -2: panic("E820 malformed response"); break;
-        case -3: panic("E820 malformed entry size"); break;
-        case -4: panic("E820 map exhausted"); break;
-        default: panic("E820 unknown error!");
+        case -1: panic("E820: unsupported!"); break;
+        case -2: panic("E820: malformed response"); break;
+        case -3: panic("E820: malformed entry size"); break;
+        case -4: panic("E820: map exhausted"); break;
+        default: panic("E820: unknown error!");
     }
     return rv.i32;
 }
