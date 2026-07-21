@@ -49,8 +49,8 @@ struct gdt_entry {
 struct gdt_info {
     struct gdt_ptr   *gdtr;
     struct gdt_entry *entries;
-    size_t            max_nr_entries;
     size_t            nr_entries;
+    size_t            max_nr_entries;
 };
 
 extern struct gdt_ptr   __GDT_PTR_LOCATION;
@@ -68,7 +68,7 @@ struct gdt_info *gdt_info_init(void)
     return &gdt_info;
 }
 
-void gdt_entry_add(
+int gdt_entry_add(
     struct gdt_info *info,
     void            *base,
     uint32_t         limit,
@@ -81,7 +81,8 @@ void gdt_entry_add(
     size_t            size;
     size_t            index;
 
-    if(limit > 0xFFFFF) goto fail;
+    if(limit > 0xFFFFF) return -1;
+    if(info->nr_entries + 1 > GDT_MAX_ENTRIES) return -2;
 
     gdtr = info->gdtr;
 
@@ -90,8 +91,7 @@ void gdt_entry_add(
                     (uintptr_t)gdtr->base_8 << 8 | (uintptr_t)gdtr->base_0;
 
     entry = (struct gdt_entry *)gdt_base_addr;
-    size  = ((uint16_t)gdtr->size_8 << 8 | (uint16_t)gdtr->size_0) + 1;
-    if(size + sizeof(*entry) > 0x10000) goto fail;
+    size  = (((uint16_t)gdtr->size_8 << 8) | ((uint16_t)gdtr->size_0)) + 1;
 
     index = size / sizeof(*entry);
     entry += index;
@@ -109,22 +109,27 @@ void gdt_entry_add(
     size         = sizeof(*entry) * (index + 1) - 1;
     gdtr->size_0 = ((unsigned char *)&size)[0];
     gdtr->size_8 = ((unsigned char *)&size)[1];
-fail:
-    return;
+
+    info->nr_entries = index + 1;
+
+    return 0;
 }
 
-void gdt_default_entries_add(struct gdt_info *info)
+int gdt_default_entries_add(struct gdt_info *info)
 {
     uint8_t access;
     uint8_t flags;
+    int     rv;
 
     access = GDT_PRESENT | GDT_SEGMENT | GDT_RW | GDT_ACCESSED;
     flags  = GDT_GRAN | GDT_BITS_32;
 
-    gdt_entry_add(info, 0, 0xFFFFF, access | GDT_EXEC, flags);
-    gdt_entry_add(info, 0, 0xFFFFF, access, flags);
+    rv = gdt_entry_add(info, 0, 0xFFFFF, access | GDT_EXEC, flags);
+    if(rv) goto default_fail;
+    rv = gdt_entry_add(info, 0, 0xFFFFF, access, flags);
 
-    return;
+default_fail:
+    return rv;
 }
 
 struct gdt_info *gdt_init(void)
@@ -140,6 +145,7 @@ struct gdt_info *gdt_init(void)
 
     /* NULL GDT entry */
     gdt_size = sizeof(*base) - 1;
+    info->nr_entries++;
 
     gdtr->size_0  = ((unsigned char *)&gdt_size)[0];
     gdtr->size_8  = ((unsigned char *)&gdt_size)[1];

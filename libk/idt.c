@@ -61,8 +61,8 @@ struct idt_entry {
 struct idt_info {
     struct idt_ptr   *idtr;
     struct idt_entry *entries;
-    size_t            max_nr_entries;
     size_t            nr_entries;
+    size_t            max_nr_entries;
     uint32_t          present[IDT_BITMAP_NR(uint32_t)];
 };
 
@@ -135,7 +135,6 @@ struct idt_info *idt_init(void)
     unsigned char    *arr_limit;
     unsigned char    *arr_base;
 
-    size_t   entries;
     uint16_t limit;
 
     info = idt_info_init();
@@ -157,9 +156,7 @@ struct idt_info *idt_init(void)
 
     memset(info->present, 0, sizeof(info->present));
 
-    do {
-        entries = idt_entry_add(info, &exception_unknown, 0x08, 0x8E);
-    } while(entries < idt_entries_max(info));
+    while(!idt_entry_add(info, &exception_unknown, 0x08, 0x8E));
 
     idt_install(info);
     return info;
@@ -175,12 +172,14 @@ size_t idt_entries_max(struct idt_info *info)
     return info->max_nr_entries;
 }
 
-size_t idt_entry_set(
+/* TODO: Don't uncritically accept input and overwrite in-use entries. */
+
+int idt_entry_set(
     struct idt_info *info,
     void             (*idt_handler)(void),
+    size_t           at_offset,
     uint16_t         select,
-    uint8_t          flags,
-    uint8_t          at_offset)
+    uint8_t          flags)
 {
     struct idt_entry *entry;
     unsigned char    *offset;
@@ -191,13 +190,13 @@ size_t idt_entry_set(
     uint8_t           index;
     uint8_t           bit;
 
+    if(at_offset >= IDT_ENTRY_NUM) return -1;
     nr_entries = info->nr_entries;
     index      = at_offset / (sizeof(info->present[0]) * CHAR_BIT);
     bit        = at_offset % (sizeof(info->present[0]) * CHAR_BIT);
     bitmap     = info->present[index] & (1U << bit);
 
-    if(!bitmap) nr_entries++;
-    if(nr_entries > IDT_ENTRY_NUM) goto idt_set_exit;
+    nr_entries = !bitmap ? nr_entries + 1 : nr_entries;
     info->present[index] |= 1U << bit;
 
     entry    = info->entries + at_offset;
@@ -217,68 +216,71 @@ size_t idt_entry_set(
     entry->flags = flags;
 
     info->nr_entries = nr_entries;
-idt_set_exit:
-    return info->nr_entries;
+
+    return 0;
 }
 
-size_t idt_entry_add(
+/* TODO: Caller needs a descriptor to the new IDT entry it just got. */
+
+int idt_entry_add(
     struct idt_info *info,
     void             (*idt_handler)(void),
     uint16_t         select,
     uint8_t          flags)
 {
-    return idt_entry_set(info, idt_handler, select, flags, info->nr_entries);
+    /* TODO: Implement bitmap search for empty entries when remove added. */
+    return idt_entry_set(info, idt_handler, info->nr_entries, select, flags);
 }
 
 /* This is disgusting, I know, but also necessary */
 
 void exception_idt_init(struct idt_info *info)
 {
-    idt_entry_set(info, &exception_0x00, 0x08, 0x8E, 0x00);
-    idt_entry_set(info, &exception_0x01, 0x08, 0x8E, 0x01);
-    idt_entry_set(info, &exception_0x02, 0x08, 0x8E, 0x02);
-    idt_entry_set(info, &exception_0x03, 0x08, 0x8E, 0x03);
-    idt_entry_set(info, &exception_0x04, 0x08, 0x8E, 0x04);
-    idt_entry_set(info, &exception_0x05, 0x08, 0x8E, 0x05);
-    idt_entry_set(info, &exception_0x06, 0x08, 0x8E, 0x06);
-    idt_entry_set(info, &exception_0x07, 0x08, 0x8E, 0x07);
-    idt_entry_set(info, &exception_0x08, 0x08, 0x8E, 0x08);
-    idt_entry_set(info, &exception_0x09, 0x08, 0x8E, 0x09);
-    idt_entry_set(info, &exception_0x0A, 0x08, 0x8E, 0x0A);
-    idt_entry_set(info, &exception_0x0B, 0x08, 0x8E, 0x0B);
-    idt_entry_set(info, &exception_0x0C, 0x08, 0x8E, 0x0C);
-    idt_entry_set(info, &exception_0x0D, 0x08, 0x8E, 0x0D);
-    idt_entry_set(info, &exception_0x0E, 0x08, 0x8E, 0x0E);
-    idt_entry_set(info, &exception_unknown, 0x08, 0x8E, 0x0F);
-    idt_entry_set(info, &exception_0x10, 0x08, 0x8E, 0x10);
-    idt_entry_set(info, &exception_0x11, 0x08, 0x8E, 0x11);
-    idt_entry_set(info, &exception_0x12, 0x08, 0x8E, 0x12);
-    idt_entry_set(info, &exception_0x13, 0x08, 0x8E, 0x13);
-    idt_entry_set(info, &exception_0x14, 0x08, 0x8E, 0x14);
-    idt_entry_set(info, &exception_0x15, 0x08, 0x8E, 0x15);
+    idt_entry_set(info, &exception_0x00, 0x00, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x01, 0x01, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x02, 0x02, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x03, 0x03, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x04, 0x04, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x05, 0x05, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x06, 0x06, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x07, 0x07, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x08, 0x08, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x09, 0x09, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x0A, 0x0A, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x0B, 0x0B, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x0C, 0x0C, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x0D, 0x0D, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x0E, 0x0E, 0x08, 0x8E);
+    idt_entry_set(info, &exception_unknown, 0x0F, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x10, 0x10, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x11, 0x11, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x12, 0x12, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x13, 0x13, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x14, 0x14, 0x08, 0x8E);
+    idt_entry_set(info, &exception_0x15, 0x15, 0x08, 0x8E);
 
     return;
 }
 
 void irq_idt_init(struct idt_info *info)
 {
-    idt_entry_set(info, &irq_0x00, 0x08, 0x8E, IRQ0_BASE_PM);
-    idt_entry_set(info, &irq_0x01, 0x08, 0x8E, IRQ0_BASE_PM + 0x1);
-    idt_entry_set(info, &irq_0x02, 0x08, 0x8E, IRQ0_BASE_PM + 0x2);
-    idt_entry_set(info, &irq_0x03, 0x08, 0x8E, IRQ0_BASE_PM + 0x3);
-    idt_entry_set(info, &irq_0x04, 0x08, 0x8E, IRQ0_BASE_PM + 0x4);
-    idt_entry_set(info, &irq_0x05, 0x08, 0x8E, IRQ0_BASE_PM + 0x5);
-    idt_entry_set(info, &irq_0x06, 0x08, 0x8E, IRQ0_BASE_PM + 0x6);
-    idt_entry_set(info, &irq_0x07, 0x08, 0x8E, IRQ0_BASE_PM + 0x7);
+    idt_entry_set(info, &irq_0x00, IRQ0_BASE_PM, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x01, IRQ0_BASE_PM + 1, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x02, IRQ0_BASE_PM + 2, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x03, IRQ0_BASE_PM + 3, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x04, IRQ0_BASE_PM + 4, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x05, IRQ0_BASE_PM + 5, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x06, IRQ0_BASE_PM + 6, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x07, IRQ0_BASE_PM + 7, 0x08, 0x8E);
 
-    idt_entry_set(info, &irq_0x08, 0x08, 0x8E, IRQ1_BASE_PM);
-    idt_entry_set(info, &irq_0x09, 0x08, 0x8E, IRQ1_BASE_PM + 0x1);
-    idt_entry_set(info, &irq_0x0A, 0x08, 0x8E, IRQ1_BASE_PM + 0x2);
-    idt_entry_set(info, &irq_0x0B, 0x08, 0x8E, IRQ1_BASE_PM + 0x3);
-    idt_entry_set(info, &irq_0x0C, 0x08, 0x8E, IRQ1_BASE_PM + 0x4);
-    idt_entry_set(info, &irq_0x0D, 0x08, 0x8E, IRQ1_BASE_PM + 0x5);
-    idt_entry_set(info, &irq_0x0E, 0x08, 0x8E, IRQ1_BASE_PM + 0x6);
-    idt_entry_set(info, &irq_0x0F, 0x08, 0x8E, IRQ1_BASE_PM + 0x7);
+    idt_entry_set(info, &irq_0x08, IRQ1_BASE_PM, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x09, IRQ1_BASE_PM + 1, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x0A, IRQ1_BASE_PM + 2, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x0B, IRQ1_BASE_PM + 3, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x0C, IRQ1_BASE_PM + 4, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x0D, IRQ1_BASE_PM + 5, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x0E, IRQ1_BASE_PM + 6, 0x08, 0x8E);
+    idt_entry_set(info, &irq_0x0F, IRQ1_BASE_PM + 7, 0x08, 0x8E);
 
     return;
 }
