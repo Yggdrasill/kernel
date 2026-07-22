@@ -23,8 +23,8 @@
 #include <libk/gdt.h>
 #include <libk/internal/gdt.h>
 
-extern struct gdt_ptr    __GDTR_DATA;
-extern struct gdt_entry *__GDT_ENTRIES;
+extern struct gdt_ptr   __GDTR_DATA;
+extern struct gdt_entry __GDT_ENTRIES[];
 
 static struct gdt_info gdt_info;
 

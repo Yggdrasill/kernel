@@ -52,7 +52,6 @@ struct e820_info {
 };
 
     #define MMAP_ENTRY_SIZE  (sizeof(struct e820_map))
-    #define MMAP_TABLE_SIZE  (MMAP_MAX_ENTRIES * MMAP_ENTRY_SIZE)
     #define MMAP_BASE_OFFSET (offsetof(struct e820_map, base))
     #define MMAP_SIZE_OFFSET (offsetof(struct e820_map, size))
     #define MMAP_TYPE_OFFSET (offsetof(struct e820_map, type))
