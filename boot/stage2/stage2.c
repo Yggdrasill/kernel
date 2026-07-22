@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "mmap.h"
+#include "pmm.h"
 #include "rmode.h"
 
 #include <libk/gdt.h>
@@ -100,6 +101,7 @@ int main(void)
 
     info = boot_init();
     irq_unmask(IRQ_NUM_KBD);
+    pmm_init(info.mmap);
 
     halt();
     hcf();

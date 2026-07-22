@@ -28,8 +28,6 @@
 #include <libk/mmap.h>
 #include <libk/util.h>
 
-#define MMAP_END_ADDR(x) ((x)->base + (x)->size)
-
 struct e820_point {
     struct e820_map *entry;
     uint64_t         addr;
