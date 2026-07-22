@@ -68,9 +68,9 @@ MMAP_ADDR  = 0x28000;
 MMAP_SIZE  = 64K;
 IDT_ADDR   = 0x38000;
 IDT_SIZE   = 4K;
+*/
 MEM2_ADDR  = 0x39000;
 MEM2_SIZE  = 220K;
-*/
 STACK_ADDR = 0x70000;
 STACK_SIZE = 64K;
 EBDA_ADDR  = 0x80000;
@@ -91,18 +91,20 @@ MEMORY {
     mem1(rx)     :   org = MEM1_ADDR,  len = MEM1_SIZE
     stage2(rx)   :   org = ST2_ADDR,   len = ST2_SIZE
     elf(rw)      :   org = ELF_ADDR,   len = ELF_SIZE
+#ifdef LD_BOOT_STAGE2
     prealloc(rw) :   org = PRE_ADDR,   len = PRE_SIZE
 /*
     gdt(rw)      :   org = GDT_ADDR,   len = GDT_SIZE
     idt(rw)      :   org = IDT_ADDR,   len = IDT_SIZE
     mmap(rw)     :   org = MMAP_ADDR,  len = MMAP_SIZE
-    mem2(rx)     :   org = MEM2_ADDR,  len = MEM2_SIZE
-*/
+ */
+    mem2(rx)     :   org = MEM2_ADDR,  len = STACK_ADDR - (PRE_ADDR + PRE_SIZE)
     stack(rw)    :   org = STACK_ADDR, len = STACK_SIZE
     ebda(rx)     :   org = EBDA_ADDR,  len = EBDA_SIZE
     vga(rw)      :   org = VGA_ADDR,   len = VGA_SIZE
     fbr(rw)      :   org = FBR_ADDR,   len = FBR_SIZE
     upper(rx)    :   org = UPPR_ADDR,  len = UPPR_SIZE
+#endif
 }
 
 PHDRS {
