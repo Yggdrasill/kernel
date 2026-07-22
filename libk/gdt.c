@@ -25,53 +25,12 @@
 
 #include <libk/gdt.h>
 #include <libk/internal/gdt.h>
+#include <libk/util.h>
 
 #define GDT_DEFAULT_CODE 0x08
 #define GDT_DEFAULT_DATA 0x010
 
-struct gdt_ptr {
-    uint8_t size_0;
-    uint8_t size_8;
-    uint8_t base_0;
-    uint8_t base_8;
-    uint8_t base_16;
-    uint8_t base_24;
-};
-
-struct gdt_entry {
-    uint8_t limit_0;
-    uint8_t limit_8;
-    uint8_t base_0;
-    uint8_t base_8;
-    uint8_t base_16;
-    uint8_t access;
-    uint8_t limit_flags;
-    uint8_t base_24;
-};
-
-struct gdt_info {
-    struct gdt_ptr   *gdtr;
-    struct gdt_entry *entries;
-    size_t            nr_entries;
-    size_t            max_nr_entries;
-};
-
 extern void gdt_segment_select(uint16_t code, uint16_t data);
-
-extern struct gdt_ptr   __GDT_PTR_LOCATION;
-extern struct gdt_entry __GDT_BASE_LOCATION;
-static struct gdt_info  gdt_info;
-
-struct gdt_info *gdt_info_init(void)
-{
-    gdt_info = (struct gdt_info){
-        .gdtr           = &__GDT_PTR_LOCATION,
-        .entries        = &__GDT_BASE_LOCATION,
-        .max_nr_entries = GDT_MAX_ENTRIES,
-        .nr_entries     = 0,
-    };
-    return &gdt_info;
-}
 
 int gdt_entry_add(
     struct gdt_info *info,
@@ -137,14 +96,14 @@ default_fail:
     return rv;
 }
 
-struct gdt_info *gdt_init(void)
+void gdt_init(struct gdt_info *info)
 {
     struct gdt_ptr   *gdtr;
     struct gdt_entry *base;
-    struct gdt_info  *info;
     uint16_t          gdt_size;
 
-    info = gdt_info_init();
+    if(!info) panic("GDT: NULL pointer argument!");
+
     gdtr = info->gdtr;
     base = info->entries;
 
@@ -164,6 +123,4 @@ struct gdt_info *gdt_init(void)
     gdt_default_entries_add(info);
     gdt_install(info);
     gdt_segment_select(GDT_DEFAULT_CODE, GDT_DEFAULT_DATA);
-
-    return info;
 }

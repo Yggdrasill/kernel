@@ -51,7 +51,7 @@ struct gdt_info;
 
 extern void gdt_install(struct gdt_info *);
 
-struct gdt_info *gdt_init(void);
-int gdt_entry_add(struct gdt_info *, void *, uint32_t, uint8_t, uint8_t);
+void gdt_init(struct gdt_info *);
+int  gdt_entry_add(struct gdt_info *, void *, uint32_t, uint8_t, uint8_t);
 
 #endif

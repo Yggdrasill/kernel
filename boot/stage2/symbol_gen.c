@@ -19,17 +19,29 @@
  *
  */
 
+#include <libk/internal/gdt.h>
+#include <libk/internal/idt.h>
 #include <libk/internal/mmap.h>
 #include <stddef.h>
 #include <stdint.h>
 
 /* Export symbols to ELF file, to be used in assembly and linker scripts. */
 
+volatile const uint32_t ABI_GDT_PTR_SIZE   = GDT_PTR_SIZE;
+volatile const uint32_t ABI_GDT_ENTRY_SIZE = GDT_ENTRY_SIZE;
+
+volatile const uint32_t ABI_IDT_PTR_SIZE   = IDT_PTR_SIZE;
+volatile const uint32_t ABI_IDT_ENTRY_SIZE = IDT_ENTRY_SIZE;
+
 volatile const uint32_t ABI_MMAP_TABLE_SIZE = MMAP_TABLE_SIZE;
 volatile const uint32_t ABI_MMAP_ENTRY_SIZE = MMAP_ENTRY_SIZE;
 volatile const uint32_t ABI_MMAP_INFO_BASE  = INFO_BASE_OFFSET;
 volatile const uint32_t ABI_MMAP_INFO_NR    = INFO_NR_ENT_OFFSET;
 volatile const uint32_t ABI_MMAP_INFO_MAX   = INFO_MAX_NR_OFFSET;
+
+volatile const uint32_t ABI_LINK_TIME_TOTAL =
+    GDT_ENTRY_SIZE * GDT_MAX_ENTRIES + IDT_ENTRY_SIZE * IDT_MAX_ENTRIES +
+    2 * MMAP_TABLE_SIZE * MMAP_ENTRY_SIZE;
 
 int main(void)
 {

@@ -33,12 +33,8 @@ extern char __BIOS_END;
 extern char __BOOTLOADER_START;
 extern char __BOOTLOADER_END;
 
-extern char __GDTR_START;
-extern char __GDTR_END;
-extern char __GDT_START;
-extern char __GDT_END;
-extern char __IDT_START;
-extern char __IDT_END;
+extern char __PREALLOC_START;
+extern char __PREALLOC_END;
 extern char __STACK_START;
 extern char __STACK_END;
 
@@ -76,32 +72,8 @@ static int mmap_clobber(struct e820_info *info)
         .attrib = 0,
     };
     mmap[nr_entries++] = (struct e820_map){
-        .base   = (uintptr_t)&__GDTR_START,
-        .size   = MMAP_REGION_SIZE(__GDTR_START, __GDTR_END),
-        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-        .attrib = 0,
-    };
-    mmap[nr_entries++] = (struct e820_map){
-        .base   = (uintptr_t)&__GDT_START,
-        .size   = MMAP_REGION_SIZE(__GDT_START, __GDT_END),
-        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-        .attrib = 0,
-    };
-    mmap[nr_entries++] = (struct e820_map){
-        .base   = (uintptr_t)old_map,
-        .size   = MMAP_TABLE_SIZE,
-        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-        .attrib = 0,
-    };
-    mmap[nr_entries++] = (struct e820_map){
-        .base   = (uintptr_t)new_map,
-        .size   = MMAP_TABLE_SIZE,
-        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-        .attrib = 0,
-    };
-    mmap[nr_entries++] = (struct e820_map){
-        .base   = (uintptr_t)&__IDT_START,
-        .size   = MMAP_REGION_SIZE(__IDT_START, __IDT_END),
+        .base   = (uintptr_t)&__PREALLOC_START,
+        .size   = MMAP_REGION_SIZE(__PREALLOC_START, __PREALLOC_END),
         .type   = MMAP_BOOTLOADER_RECLAIMABLE,
         .attrib = 0,
     };

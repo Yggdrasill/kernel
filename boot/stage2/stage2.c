@@ -21,6 +21,8 @@
 
 #include <string.h>
 
+#include "gdt.h"
+#include "idt.h"
 #include "mmap.h"
 #include "pmm.h"
 #include "rmode.h"
@@ -47,11 +49,13 @@ static struct boot_info boot_init(void)
     if(irq_read_imr() != 0xFFFF) irq_mask_all();
     if(!nmi_status()) nmi_disable();
 
-    gdt = gdt_init();
+    gdt = gdt_info_init();
+    gdt_init(gdt);
 
     memsetw((int16_t *)&FB_ADDR, 0x0720, 0x7D0);
 
-    idt = idt_init();
+    idt = idt_info_init();
+    idt_init(idt);
     exception_idt_init(idt);
     irq_idt_init(idt);
 

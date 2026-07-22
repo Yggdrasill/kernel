@@ -19,27 +19,27 @@
  *
  */
 
-#ifndef IDT_H
-#define IDT_H
+#include "idt.h"
 
-#include <stddef.h>
-#include <stdint.h>
+#include <libk/idt.h>
+#include <libk/internal/idt.h>
 
-struct idt_ptr;
-struct idt_entry;
-struct idt_info;
+/*
+ * This global state is a bootloader-only construct and will not be allowed
+ * within the actual kernel.
+ */
 
-extern void idt_install(struct idt_info *);
+extern struct idt_ptr   __IDTR_DATA;
+extern struct idt_entry __IDT_ENTRIES[];
+static struct idt_info  idt_info;
 
-void idt_init(struct idt_info *);
-
-size_t idt_entries_nr(struct idt_info *);
-size_t idt_entries_max(struct idt_info *);
-
-int idt_entry_set(struct idt_info *, void (*)(void), size_t, uint16_t, uint8_t);
-int idt_entry_add(struct idt_info *, void (*)(void), uint16_t, uint8_t);
-
-void exception_idt_init(struct idt_info *entries);
-void irq_idt_init(struct idt_info *entries);
-
-#endif
+struct idt_info *idt_info_init(void)
+{
+    idt_info = (struct idt_info){
+        .idtr           = &__IDTR_DATA,
+        .entries        = __IDT_ENTRIES,
+        .max_nr_entries = IDT_MAX_ENTRIES,
+        .nr_entries     = 0,
+    };
+    return &idt_info;
+}

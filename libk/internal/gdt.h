@@ -22,9 +22,45 @@
 #ifndef GDT_INTERNAL_H
 #define GDT_INTERNAL_H
 
-#define GDT_REG_SIZE    6
-#define GDT_ENTRY_SIZE  8
 #define GDT_MAX_ENTRIES 8192
-#define GDT_TABLE_SIZE  (GDT_ENTRY_SIZE * GDT_MAX_ENTRIES)
+
+#if !defined(LD_BOOT_STAGE1) && !defined(LD_BOOT_STAGE2)
+
+    #include <stddef.h>
+    #include <stdint.h>
+
+struct gdt_ptr {
+    uint8_t size_0;
+    uint8_t size_8;
+    uint8_t base_0;
+    uint8_t base_8;
+    uint8_t base_16;
+    uint8_t base_24;
+};
+
+struct gdt_entry {
+    uint8_t limit_0;
+    uint8_t limit_8;
+    uint8_t base_0;
+    uint8_t base_8;
+    uint8_t base_16;
+    uint8_t access;
+    uint8_t limit_flags;
+    uint8_t base_24;
+};
+
+struct gdt_info {
+    struct gdt_ptr   *gdtr;
+    struct gdt_entry *entries;
+    size_t            nr_entries;
+    size_t            max_nr_entries;
+};
+
+struct gdt_entry;
+
+    #define GDT_PTR_SIZE   (sizeof(struct gdt_ptr))
+    #define GDT_ENTRY_SIZE (sizeof(struct gdt_entry))
+
+#endif
 
 #endif

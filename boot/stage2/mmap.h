@@ -19,5 +19,12 @@
  *
  */
 
+#ifndef BOOT_MMAP_H
+#define BOOT_MMAP_H
+
+#include <libk/mmap.h>
+
 struct e820_info *boot_mmap_init(void);
 struct e820_info *boot_mmap_setup(struct e820_info *old_info);
+
+#endif

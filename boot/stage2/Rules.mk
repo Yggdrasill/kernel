@@ -22,7 +22,7 @@ $(OBJDIR_GEN)/mmap_generated.s: $(OBJDIR_GEN)/symbol_gen
 	done > $@
 
 $(OBJDIR_GEN)/mmap_generated.h: $(OBJDIR_GEN)/symbol_gen
-	for sym in $$(readelf -Ws $< | grep "ABI_\(MMAP\|INFO\)" \
+	for sym in $$(readelf -Ws $< | grep "ABI_\(MMAP\|INFO\|[GI]DT\|LINK\)" \
 		| awk -v OFS=',' '{ print $$8,$$3,$$2 };'); \
 	do \
 		name=$${sym%%,*}; \

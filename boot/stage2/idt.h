@@ -19,27 +19,12 @@
  *
  */
 
-#ifndef IDT_H
-#define IDT_H
+#ifndef BOOT_IDT_H
+#define BOOT_IDT_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include <libk/idt.h>
+#include <libk/internal/idt.h>
 
-struct idt_ptr;
-struct idt_entry;
-struct idt_info;
-
-extern void idt_install(struct idt_info *);
-
-void idt_init(struct idt_info *);
-
-size_t idt_entries_nr(struct idt_info *);
-size_t idt_entries_max(struct idt_info *);
-
-int idt_entry_set(struct idt_info *, void (*)(void), size_t, uint16_t, uint8_t);
-int idt_entry_add(struct idt_info *, void (*)(void), uint16_t, uint8_t);
-
-void exception_idt_init(struct idt_info *entries);
-void irq_idt_init(struct idt_info *entries);
+struct idt_info *idt_info_init(void);
 
 #endif
