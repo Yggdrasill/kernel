@@ -97,17 +97,13 @@ static struct e820_map *const new_map = __mmap_new_map;
  * line-sweeping type algorithm to resolve overlapping memory regions.
  */
 
-struct e820_info mmap_sanitize(
-    struct e820_map *dst,
-    struct e820_map *src,
-    const uint32_t   nr_entries,
-    const uint32_t   dst_max_entries)
+int mmap_sanitize(struct e820_info *dst_info, struct e820_info *src_info)
 {
     struct e820_point e820_points[2 * MMAP_MAX_ENTRIES];
-    struct e820_info  info;
 
-    struct e820_map *overlap_map[MMAP_MAX_ENTRIES];
-
+    struct e820_map   *dst;
+    struct e820_map   *src;
+    struct e820_map   *overlap_map[MMAP_MAX_ENTRIES];
     struct e820_point *prev_point;
 
     size_t new_nr_entries;
@@ -119,15 +115,17 @@ struct e820_info mmap_sanitize(
     uint32_t attrib;
     uint32_t prev_attrib;
 
-    info = (struct e820_info){
-        .base           = dst,
-        .nr_entries     = 0,
-        .max_nr_entries = dst_max_entries,
-    };
+    if(!dst_info || !src_info || !dst_info->base || !src_info->base) return -1;
 
-    if(!nr_entries) panic("E820: zero entries!");
+    dst = dst_info->base;
+    src = src_info->base;
+
+    const size_t nr_entries      = src_info->nr_entries;
+    const size_t dst_max_entries = dst_info->max_nr_entries;
+
+    if(!nr_entries) return -2;
     if(nr_entries > dst_max_entries || dst_max_entries > MMAP_MAX_ENTRIES) {
-        panic("E820: too many entries!");
+        return -3;
     }
 
     /*
@@ -145,9 +143,9 @@ struct e820_info mmap_sanitize(
     }
 
     const size_t NR_POINTS = j;
-    if(!NR_POINTS) panic("E820: no entries left to process!");
-    isort_mmap(e820_points, NR_POINTS, mmap_cmp);
+    if(!NR_POINTS) return -4;
 
+    isort_mmap(e820_points, NR_POINTS, mmap_cmp);
     new_nr_entries             = 0;
     nr_overlaps                = 0;
     prev_point                 = e820_points;
@@ -224,13 +222,23 @@ struct e820_info mmap_sanitize(
         }
     }
 
-    info = (struct e820_info){
-        .base           = dst,
-        .nr_entries     = new_nr_entries,
-        .max_nr_entries = MMAP_MAX_ENTRIES,
-    };
+    dst_info->nr_entries = new_nr_entries;
 
-    return info;
+    if(i < NR_POINTS && new_nr_entries == dst_max_entries) return -5;
+
+    return 0;
+}
+
+char *mmap_sanitize_error(int status)
+{
+    switch(status) {
+        case -1: return "E820san: Null pointer argument";
+        case -2: return "E820san: Empty input map";
+        case -3: return "E820san: Insufficient capacity";
+        case -4: return "E820san: No points left to process";
+        case -5: return "E820san: Output map exhausted";
+    }
+    return "";
 }
 
 void mmap_print(struct e820_info *info)
@@ -326,37 +334,41 @@ int mmap_clobber(struct e820_info *info)
  * As in every other source file: This type of global state is bootloader only.
  */
 
-static struct e820_info mmap_info;
+static struct e820_info old_mmap_info = {
+    .base = old_map,
+    .nr_entries = 0,
+    .max_nr_entries = MMAP_MAX_ENTRIES,
+};
 
-struct e820_info *mmap_info_init(void)
-{
-    struct e820_info *info;
-
-    info = &mmap_info;
-
-    *info = (struct e820_info){
-        .base = old_map, .nr_entries = 0, .max_nr_entries = MMAP_MAX_ENTRIES};
-
-    return info;
-}
+static struct e820_info new_mmap_info = {
+    .base = new_map,
+    .nr_entries = 0,
+    .max_nr_entries = MMAP_MAX_ENTRIES,
+};
 
 struct e820_info *mmap_init(void)
 {
     struct e820_info *info;
 
-    info = mmap_info_init();
+    info = &old_mmap_info;
     mmap_clobber(info);
 
     return info;
 }
 
-struct e820_info *mmap_setup(struct e820_info *info)
+struct e820_info *mmap_setup(struct e820_info *old_info)
 {
-    struct e820_info new_info;
-    struct e820_map *old;
-    old      = info->base;
-    new_info = mmap_sanitize(new_map, old, info->nr_entries, MMAP_MAX_ENTRIES);
-    memcpy(info, &new_info, sizeof(*info));
-    mmap_print(info);
-    return info;
+    struct e820_info *new_info;
+
+    char *error;
+    int   status;
+
+    new_info = &new_mmap_info;
+    status = mmap_sanitize(new_info, old_info);
+    if(status) {
+        error = mmap_sanitize_error(status);
+        panic(error);
+    }
+    mmap_print(new_info);
+    return new_info;
 }

@@ -28,8 +28,8 @@
 struct e820_info;
 struct e820_map;
 
-struct e820_info mmap_sanitize(
-    struct e820_map *, struct e820_map *, const uint32_t, const uint32_t);
+int mmap_sanitize(
+    struct e820_info *, struct e820_info *);
 struct e820_info *mmap_init(void);
 struct e820_info *mmap_setup(struct e820_info *);
 
