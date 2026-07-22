@@ -98,8 +98,11 @@ MEMORY {
 }
 
 PHDRS {
+#ifdef LD_BOOT_STAGE1
     P_STAGE1 PT_LOAD;
+#elif defined(LD_BOOT_STAGE2)
     P_STAGE2 PT_LOAD;
+#endif
 }
 
 SECTIONS {
@@ -115,14 +118,14 @@ SECTIONS {
     __BOOT_ADDR = .;
     __BOOTLOADER_START = .;
     .boot STAGE1_NOLOAD : {
-        *(.boot)
-        *(.boot.util)
-        *(.boot.rodata)
+        KEEP(*(.boot))
+        KEEP(*(.boot.util))
+        KEEP(*(.boot.rodata))
     } > boot : STAGE1_PHDR
     PROVIDE(__BOOT_SIZE = BOOT_ADDR - ENTR_ADDR);
     . = MBR_ADDR;
     .mbr STAGE1_NOLOAD : {
-        *(.mbr)
+        KEEP(*(.mbr))
     } > mbr : STAGE1_PHDR
 
     . = MEM1_ADDR;
@@ -130,17 +133,23 @@ SECTIONS {
         __STAGE15_LOAD_ADDR = ABSOLUTE(.);
         __STAGE15_LOAD_SEG = ABSOLUTE((__STAGE15_LOAD_ADDR >> 4) & 0xF000);
         __STAGE15_LOAD_OFF = ABSOLUTE(__STAGE15_LOAD_ADDR & 0xFFFF);
-        *(.stage15)
-        *(.stage15.data)
-        *(.stage15.rodata)
-        *(.stage15.bss)
+        KEEP(*(.stage15))
+        KEEP(*(.stage15.data))
+        KEEP(*(.stage15.rodata))
+        KEEP(*(.stage15.bss))
     } > mem1 : STAGE1_PHDR
 
     . = ST2_ADDR;
 #ifdef LD_BOOT_STAGE2
     stage2.o = .;
+    /DISCARD/ : {
+        *(.elf_init)
+    }
 #endif
     ._init STAGE2_NOLOAD : {
+#ifdef LD_BOOT_STAGE1
+        *(.elf_init)
+#endif
         *(._init)
     } > stage2 : STAGE2_PHDR
     .text STAGE2_NOLOAD : {

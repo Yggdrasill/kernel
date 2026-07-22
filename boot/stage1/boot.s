@@ -359,7 +359,7 @@ mmap_off    dw 0
 
 init_found  db 0
 
-section .stage2.bss alloc noexec nobits write
+section .elf_init alloc noexec nobits write
 ei_mag:       resd 1
 e_ident:      resb 12
 e_type:       resw 1
