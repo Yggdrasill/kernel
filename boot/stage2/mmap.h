@@ -19,16 +19,5 @@
  *
  */
 
-#ifndef MMAP_H
-#define MMAP_H
-
-#include <stddef.h>
-#include <stdint.h>
-
-struct e820_info;
-struct e820_map;
-
-int mmap_sanitize(struct e820_info *, struct e820_info *);
-char *mmap_sanitize_error(int);
-
-#endif
+struct e820_info *boot_mmap_init(void);
+struct e820_info *boot_mmap_setup(struct e820_info *old_info);

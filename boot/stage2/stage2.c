@@ -19,14 +19,10 @@
  *
  */
 
-/*
- * stdarg.h is always provided in freestanding environments, and allows us to
- * use the C standard's variable argument lists.
- */
-
 #include <string.h>
 
-#include <rmode.h>
+#include "rmode.h"
+#include "mmap.h"
 
 #include <libk/gdt.h>
 #include <libk/idt.h>
@@ -37,7 +33,7 @@
 
 int main(void)
 {
-#ifdef TEST_MMAP
+#if 0
     struct e820_map test_map[MMAP_MAX_ENTRIES];
     struct e820_map broken_map[] = {
         {0x0,      0x200,   2, 0},
@@ -82,15 +78,11 @@ int main(void)
     nmi_enable();
     ints_flag_set();
 
-#ifndef TEST_MMAP
-    mmap = mmap_init();
+    mmap = boot_mmap_init();
     /* Panics if error */
     bios_mmap(mmap);
-    mmap = mmap_setup(mmap);
-#else
-    memcpy(test_map, broken_map, sizeof(broken_map));
-    mmap_init(test_map, sizeof(broken_map) / sizeof(*broken_map));
-#endif
+    mmap = boot_mmap_setup(mmap);
+
     bios_print("test string", strlen("test string"));
 
     halt();
