@@ -19,10 +19,10 @@
  *
  */
 
-#include <string.h>
 #include <libk/internal/mmap.h>
 #include <libk/mmap.h>
 #include <libk/util.h>
+#include <string.h>
 
 #include "mmap.h"
 
@@ -145,14 +145,14 @@ static void mmap_print(struct e820_info *info)
 }
 
 static struct e820_info old_mmap_info = {
-    .base = old_map,
-    .nr_entries = 0,
+    .base           = old_map,
+    .nr_entries     = 0,
     .max_nr_entries = MMAP_MAX_ENTRIES,
 };
 
 static struct e820_info new_mmap_info = {
-    .base = new_map,
-    .nr_entries = 0,
+    .base           = new_map,
+    .nr_entries     = 0,
     .max_nr_entries = MMAP_MAX_ENTRIES,
 };
 
@@ -174,7 +174,7 @@ struct e820_info *boot_mmap_setup(struct e820_info *old_info)
     int   status;
 
     new_info = &new_mmap_info;
-    status = mmap_sanitize(new_info, old_info);
+    status   = mmap_sanitize(new_info, old_info);
     if(status) {
         error = mmap_sanitize_error(status);
         panic(error);

@@ -28,7 +28,7 @@
 struct e820_info;
 struct e820_map;
 
-int mmap_sanitize(struct e820_info *, struct e820_info *);
+int   mmap_sanitize(struct e820_info *, struct e820_info *);
 char *mmap_sanitize_error(int);
 
 #endif
