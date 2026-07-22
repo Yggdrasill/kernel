@@ -176,6 +176,7 @@ void puthex(void *hex, size_t n, uint8_t cut)
         if(i <= 1 || !cut || chars[0] != '0' || chars[1] != '0') {
             putchar(chars[0]);
             putchar(chars[1]);
+            cut = 0;
         }
     }
 

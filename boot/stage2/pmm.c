@@ -53,7 +53,7 @@ int pmm_init(struct e820_info *info)
 
     memory = pmm_memory_sum(info);
     puts("Available memory:");
-    puthex(&memory, sizeof(memory), 0);
+    puthex(&memory, sizeof(memory), 1);
     puts(" bytes");
 
     return 0;
