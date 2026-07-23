@@ -19,6 +19,19 @@
  *
  */
 
+#ifndef BOOT_PMM_H
+#define BOOT_PMM_H
+
+#define PMM_INIT_ENTRIES 1024
+
+#if !defined(LD_BOOT_STAGE1) && !defined(LD_BOOT_STAGE2)
+
 #include <libk/mmap.h>
 
+typedef size_t pmm_bitmap;
+
 int pmm_init(struct e820_info *);
+
+#endif
+
+#endif

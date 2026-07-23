@@ -19,13 +19,15 @@
  *
  */
 
+#include "pmm.h"
+
 #include <libk/internal/gdt.h>
 #include <libk/internal/idt.h>
 #include <libk/internal/mmap.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#define SYMBOL_ALIGN (2 << 11)
+#define SYMBOL_ALIGN (1U << 12)
 #define SYMBOL_MASK  (~(SYMBOL_ALIGN - 1))
 #define ALIGN_END(x) (((x) + SYMBOL_ALIGN - 1) & SYMBOL_MASK)
 
@@ -44,10 +46,13 @@ volatile const uint32_t ABI_MMAP_INFO_BASE = INFO_BASE_OFFSET;
 volatile const uint32_t ABI_MMAP_INFO_NR   = INFO_NR_ENT_OFFSET;
 volatile const uint32_t ABI_MMAP_INFO_MAX  = INFO_MAX_NR_OFFSET;
 
+volatile const uint32_t ABI_PMM_BM_PREALLOC = PMM_INIT_ENTRIES * sizeof(pmm_bitmap);
+
 volatile const uint32_t ABI_LINK_TIME_TOTAL =
     ALIGN_END(GDT_ENTRY_SIZE * GDT_MAX_ENTRIES) +
     ALIGN_END(IDT_ENTRY_SIZE * IDT_MAX_ENTRIES) +
-    ALIGN_END(2 * MMAP_MAX_ENTRIES * MMAP_ENTRY_SIZE);
+    ALIGN_END(2 * MMAP_MAX_ENTRIES * MMAP_ENTRY_SIZE) +
+    ALIGN_END(PMM_INIT_ENTRIES * sizeof(pmm_bitmap));
 
 int main(void)
 {

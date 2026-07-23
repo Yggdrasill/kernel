@@ -98,12 +98,12 @@ MEMORY {
     mmap(rw)     :   org = MMAP_ADDR,  len = MMAP_SIZE
  */
     mem2(rx)     :   org = MEM2_ADDR,  len = STACK_ADDR - (PRE_ADDR + PRE_SIZE)
+#endif
     stack(rw)    :   org = STACK_ADDR, len = STACK_SIZE
     ebda(rx)     :   org = EBDA_ADDR,  len = EBDA_SIZE
     vga(rw)      :   org = VGA_ADDR,   len = VGA_SIZE
     fbr(rw)      :   org = FBR_ADDR,   len = FBR_SIZE
     upper(rx)    :   org = UPPR_ADDR,  len = UPPR_SIZE
-#endif
 }
 
 PHDRS {
@@ -207,11 +207,12 @@ SECTIONS {
         __mmap_new_map = .;
         . += ABI_MMAP_TABLE_SIZE;
     } > prealloc : NONE
-    __PREALLOC_END = .;
 
-    .pmm (NOLOAD) : {
-        __MMAP_HEAP_LOCATION = .;
+    .pmm ALIGN(0x1000) (NOLOAD) : {
+        pmm_initial = .;
     } > mem2 : NONE
+    . += ABI_PMM_BM_PREALLOC;
+    __PREALLOC_END = .;
 
     . = STACK_ADDR;
     __STACK_START = .;
