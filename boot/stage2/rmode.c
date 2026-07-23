@@ -58,7 +58,7 @@ extern uint32_t rmode_trampoline(void (*)(void), ...);
 int32_t bios_mmap(struct e820_info *mmap)
 {
     union rmode_ret_t rv;
-    rv.i32 = rmode_trampoline((void (*)(void))__bios_mmap, mmap);
+    rv.i32 = (int32_t)rmode_trampoline((void (*)(void))__bios_mmap, mmap);
     switch(rv.i32) {
         case 0: break;
         case -1: panic("E820: unsupported!"); break;

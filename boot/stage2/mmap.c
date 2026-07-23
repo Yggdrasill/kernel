@@ -51,7 +51,7 @@ extern struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
 static struct e820_map *const old_map = __mmap_old_map;
 static struct e820_map *const new_map = __mmap_new_map;
 
-static int mmap_clobber(struct e820_info *info)
+static size_t mmap_clobber(struct e820_info *info)
 {
     struct e820_map *mmap;
     size_t           nr_entries;

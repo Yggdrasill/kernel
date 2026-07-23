@@ -31,7 +31,7 @@ void *memset(void *s, int c, size_t n)
     i   = 0;
     ptr = (unsigned char *)s;
     while(i < n) {
-        *(ptr + i) = c;
+        *(ptr + i) = (unsigned char)c;
         i++;
     }
 
@@ -46,7 +46,7 @@ void *memsetw(int16_t *s, int16_t c, size_t n)
     i   = 0;
     ptr = s;
     while(i < n) {
-        *(ptr + i) = c;
+        *(ptr + i) = (unsigned char)c;
         i++;
     }
 
@@ -134,8 +134,8 @@ void putchar(char ch)
 {
     int16_t *vga;
 
-    static int y;
-    static int x;
+    static size_t y;
+    static size_t x;
 
     if(x >= 80 || ch == '\n') {
         x = 0;
@@ -158,20 +158,20 @@ void putchar(char ch)
 
 void puthex(void *hex, size_t n, uint8_t cut)
 {
-    char  *hex_array;
-    char   chars[2];
+    char *hex_array;
+    char  chars[2];
+
     size_t i, j;
 
     hex_array = (char *)hex;
-
     putchar('0');
     putchar('x');
 
     for(i = n, j = i - 1; i > 0; i--, j--) {
         chars[0] = (hex_array[j] & 0xF0) >> 4;
         chars[1] = hex_array[j] & 0x0F;
-        chars[0] += chars[0] >= 0x0A ? 'A' - 0x0A : '0';
-        chars[1] += chars[1] >= 0x0A ? 'A' - 0x0A : '0';
+        chars[0] = (char)(chars[0] + (chars[0] >= 0x0A ? 'A' - 0x0A : '0'));
+        chars[1] = (char)(chars[1] + (chars[1] >= 0x0A ? 'A' - 0x0A : '0'));
 
         if(i <= 1 || !cut || chars[0] != '0' || chars[1] != '0') {
             putchar(chars[0]);
@@ -183,7 +183,7 @@ void puthex(void *hex, size_t n, uint8_t cut)
     return;
 }
 
-void puts(char *str)
+void puts(const char *str)
 {
     while(*str) {
         putchar(*str);

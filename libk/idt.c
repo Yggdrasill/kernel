@@ -124,9 +124,9 @@ int idt_entry_set(
     unsigned char    *selector;
     intptr_t          raw_ptr;
     size_t            nr_entries;
+    size_t            index;
+    size_t            bit;
     uint32_t          bitmap;
-    uint8_t           index;
-    uint8_t           bit;
 
     if(at_offset >= IDT_MAX_ENTRIES) return -1;
     nr_entries = info->nr_entries;

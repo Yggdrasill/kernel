@@ -145,10 +145,10 @@ void irq_mask(unsigned char irq)
     return;
 }
 
-void irq_unmask(unsigned char irq)
+void irq_unmask(uint8_t irq)
 {
-    uint16_t      port;
-    unsigned char mask;
+    uint16_t port;
+    uint8_t  mask;
 
     if(irq > 0x0F) return;
 
@@ -156,7 +156,7 @@ void irq_unmask(unsigned char irq)
     irq  = irq < 8 ? irq : irq - 8;
 
     mask = port_read_byte(port);
-    mask = mask & ~(1 << irq);
+    mask = (uint8_t)(mask & ~(1 << irq));
     port_write_byte(port, mask);
 
     return;

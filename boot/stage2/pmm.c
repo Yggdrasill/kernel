@@ -44,8 +44,8 @@ static uint64_t pmm_memory_sum(
     uint64_t align_blocks;
     uint64_t total_blocks;
     uint64_t usable_blocks;
-    size_t   i, j, k, l;
-    uint32_t usable;
+    uint64_t i, j, k, l;
+    uint8_t  usable;
 
     const uint64_t MAX_BLOCKS = pmm_max * sizeof(*pmm) * CHAR_BIT;
 

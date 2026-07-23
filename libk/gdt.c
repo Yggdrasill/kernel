@@ -55,7 +55,7 @@ int gdt_entry_add(
                     (uintptr_t)gdtr->base_8 << 8 | (uintptr_t)gdtr->base_0;
 
     entry = (struct gdt_entry *)gdt_base_addr;
-    size  = (((uint16_t)gdtr->size_8 << 8) | ((uint16_t)gdtr->size_0)) + 1;
+    size  = (((size_t)gdtr->size_8 << 8) | ((size_t)gdtr->size_0)) + 1;
 
     index = size / sizeof(*entry);
     entry += index;
