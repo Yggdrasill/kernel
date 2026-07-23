@@ -393,13 +393,13 @@ rmode_return:
     call   mask_ints
     call   pmode_init
 bits 32
-    mov    ebx, [sret_ptr]
-    mov    [ebx], eax
-    push   dword [sret_ptr]
     call   restore_state
     call   restore_p70
     ; Allocate space for 32-bit return pointer.
     sub    esp, 4
+    mov    ebx, [sret_ptr]
+    mov    [ebx], eax
+    push   dword [sret_ptr]
     ; Push return path
     push   dword [saved_eflags]
     push   dword [saved_cs]
