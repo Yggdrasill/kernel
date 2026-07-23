@@ -29,17 +29,10 @@
 #include <libk/mmap.h>
 #include <libk/util.h>
 
-/*
- * rmode_trampoline cannot directly return union because it invokes sret stack
- * behaviour, which then causes rmode_trampoline to pop the wrong value off the
- * stack. This will proceed to cause triple-faulting as a return is made to a
- * bogus address.
- */
-
 extern int32_t __bios_mmap(struct e820_info *);
 extern void    __bios_print(uint16_t str, uint16_t len);
 
-extern uint32_t rmode_trampoline(void (*)(void), ...);
+extern union rmode_ret_t rmode_trampoline(void (*)(void), ...);
 
 /*
  * bios_mmap return codes:
@@ -58,7 +51,7 @@ extern uint32_t rmode_trampoline(void (*)(void), ...);
 int32_t bios_mmap(struct e820_info *mmap)
 {
     union rmode_ret_t rv;
-    rv.i32 = (int32_t)rmode_trampoline((void (*)(void))__bios_mmap, mmap);
+    rv = rmode_trampoline((void (*)(void))__bios_mmap, mmap);
     switch(rv.i32) {
         case 0: break;
         case -1: panic("E820: unsupported!"); break;

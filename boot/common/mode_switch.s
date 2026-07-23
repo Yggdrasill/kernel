@@ -20,6 +20,7 @@ bits 16
 global store_bios_imr
 global mask_ints
 global pmode_init
+global rmode_trampoline_no_sret
 global rmode_trampoline
 
 global shadow_p70
@@ -347,6 +348,10 @@ restore_state:
     pop   eax
     ret
 
+rmode_trampoline_no_sret:
+    pop    dword [resume]
+    push   dword fake_sret
+    push   dword [resume]
 rmode_trampoline:
     ; Save flags, cs, and clear DF/IF
     pushfd
@@ -370,6 +375,8 @@ bits 16
     ; from real mode. The return address will be
     ; pushed later.
     pop    dword [resume]
+    ; Clean up the sret pointer.
+    pop    dword [sret_ptr]
     ; Pop 32-bit callee address and push as 16-bit
     ; address, then call it with a tail call.
     pop    dword [callee]
@@ -386,6 +393,9 @@ rmode_return:
     call   mask_ints
     call   pmode_init
 bits 32
+    mov    ebx, [sret_ptr]
+    mov    [ebx], eax
+    push   dword [sret_ptr]
     call   restore_state
     call   restore_p70
     ; Allocate space for 32-bit return pointer.
@@ -397,6 +407,8 @@ bits 32
     iretd
 
 section .stage15.data
+fake_sret    dd 0x00
+shadow_p70   db 0x00
 
 gdt_info:
 gdt_size    dw  gdt_len - 1
@@ -421,8 +433,6 @@ idt_info:
 idt_size     dw 0
 idt_ptr      dd 0
 
-shadow_p70   db 0x00
-
 section .stage15.bss bss alloc noexec nobits write
 imr0_shadow:  resb 1
 imr1_shadow:  resb 1
@@ -444,6 +454,7 @@ return:       resd 1
 stack_seg:    resd 1
 resume:       resd 1
 callee:       resd 1
+sret_ptr:     resd 1
 saved_ss:     resw 1
 saved_es:     resw 1
 saved_ds:     resw 1

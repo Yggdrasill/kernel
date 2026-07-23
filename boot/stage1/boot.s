@@ -29,7 +29,7 @@ extern mmap
 extern store_bios_imr
 extern mask_ints
 extern pmode_init
-extern rmode_trampoline
+extern rmode_trampoline_no_sret
 
 extern drive
 extern shadow_p70
@@ -209,7 +209,7 @@ read_elf:
     push  dword elf_len
     push  dword elf_err
     push  __bios_error
-    call  rmode_trampoline
+    call  rmode_trampoline_no_sret
 
 header_ok:
     sub         esp,  0x10
@@ -308,7 +308,7 @@ shr_cont:
     push        dword init_elen
     push        dword init_err
     push        __bios_error
-    call        rmode_trampoline
+    call        rmode_trampoline_no_sret
 
 ph_loop:
     cmp         dword [ebx], dword PT_LOAD_TYPE ; Only PT_LOAD
