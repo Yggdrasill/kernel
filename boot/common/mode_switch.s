@@ -399,7 +399,7 @@ bits 32
     cmp    ebx, dword 0x00
     je     skip_sret
     mov    [ebx], eax
-    push   dword [sret_ptr]
+    mov    eax, ebx
 skip_sret:
     ; Now restore regs and machine state.
     call   restore_state
