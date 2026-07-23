@@ -350,7 +350,7 @@ restore_state:
 
 rmode_trampoline_no_sret:
     pop    dword [resume]
-    push   dword fake_sret
+    push   dword 0x00
     push   dword [resume]
 rmode_trampoline:
     ; Save flags, cs, and clear DF/IF
@@ -386,20 +386,24 @@ bits 16
     sti
     ret
 rmode_return:
-    ; Restore machine state, enter protected mode
+    ; Enter protected mode.
     cli
     call   segment_fix
     call   ms_nmi_disable
     call   mask_ints
     call   pmode_init
 bits 32
-    call   restore_state
-    call   restore_p70
-    ; Allocate space for 32-bit return pointer.
+    ; Allocate space for popped callee pointer.
     sub    esp, 4
     mov    ebx, [sret_ptr]
+    cmp    ebx, dword 0x00
+    je     skip_sret
     mov    [ebx], eax
     push   dword [sret_ptr]
+skip_sret:
+    ; Now restore regs and machine state.
+    call   restore_state
+    call   restore_p70
     ; Push return path
     push   dword [saved_eflags]
     push   dword [saved_cs]
@@ -407,7 +411,6 @@ bits 32
     iretd
 
 section .stage15.data
-fake_sret    dd 0x00
 shadow_p70   db 0x00
 
 gdt_info:
