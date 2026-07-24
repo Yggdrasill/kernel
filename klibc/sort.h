@@ -25,12 +25,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-void isort(
-    void  *base,
-    size_t nmemb,
-    size_t size,
-    int    (*compar)(const void *, const void *));
-
 #define ISORT_DECLARE(name, type)                                              \
     void isort_##name(                                                         \
         type *base, size_t nmemb, int (*compar)(const type *, const type *));
