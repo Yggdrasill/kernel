@@ -62,8 +62,6 @@ pmm_memory_sum(struct e820_info *info, pmm_bitmap *pmm, const size_t pmm_max)
     uint64_t i, j, k, l;
     uint8_t  usable;
 
-    const uint64_t MAX_BLOCKS = pmm_max * sizeof(*pmm) * CHAR_BIT;
-
     memset(pmm, 0xFF, sizeof(*pmm) * pmm_max);
 
     total_blocks  = 0;
@@ -93,16 +91,15 @@ pmm_memory_sum(struct e820_info *info, pmm_bitmap *pmm, const size_t pmm_max)
 
         if(!usable) continue;
         usable_blocks = usable_blocks + align_blocks;
-        if(total_blocks < MAX_BLOCKS) {
-            j = (align_base / PMM_ALIGN) / (sizeof(*pmm) * CHAR_BIT);
-            k = (align_base / PMM_ALIGN) % (sizeof(*pmm) * CHAR_BIT);
-            l = (align_base / PMM_ALIGN);
-            while(j < pmm_max && l++ < total_blocks) {
-                pmm[j] &= ~((pmm_bitmap)1 << k);
-                if(++k >= sizeof(*pmm) * CHAR_BIT) {
-                    k = 0;
-                    j++;
-                }
+
+        j = (align_base / PMM_ALIGN) / (sizeof(*pmm) * CHAR_BIT);
+        k = (align_base / PMM_ALIGN) % (sizeof(*pmm) * CHAR_BIT);
+        l = (align_base / PMM_ALIGN);
+        while(j < pmm_max && l++ < total_blocks) {
+            pmm[j] &= ~((pmm_bitmap)1 << k);
+            if(++k >= sizeof(*pmm) * CHAR_BIT) {
+                k = 0;
+                j++;
             }
         }
     }
