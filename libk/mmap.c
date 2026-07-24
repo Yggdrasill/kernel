@@ -19,6 +19,7 @@
  *
  */
 
+#include <math.h>
 #include <sort.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -33,9 +34,12 @@ struct e820_point {
     uint64_t         addr;
 };
 
-ISORT_IMPLEMENT(mmap, struct e820_point)
+/* clang-format off */
+static ISORT_IMPLEMENT(mmap, struct e820_point)
+static SAFE_ADD_IMPLEMENT(uint64, uint64_t, UINT64_MAX)
 
 static int mmap_is_base(const struct e820_point *p)
+/* clang-format on */
 {
     return p->addr == p->entry->base;
 }
@@ -80,6 +84,8 @@ int mmap_sanitize(struct e820_info *dst_info, struct e820_info *src_info)
     struct e820_map   *overlap_map[MMAP_MAX_ENTRIES];
     struct e820_point *prev_point;
 
+    uint64_t mmap_tail;
+
     size_t new_nr_entries;
     size_t nr_overlaps;
     size_t i, j;
@@ -112,9 +118,12 @@ int mmap_sanitize(struct e820_info *dst_info, struct e820_info *src_info)
     j = 0;
     for(i = 0; i < nr_entries; i++) {
         if(!src[i].size) continue;
+        mmap_tail = 0;
+        if(safe_add_uint64(&mmap_tail, src[i].base, src[i].size)) {
+            panic("mmap: integer overflow!");
+        }
         e820_points[j++] = (struct e820_point){src + i, src[i].base};
-        e820_points[j++] =
-            (struct e820_point){src + i, src[i].base + src[i].size};
+        e820_points[j++] = (struct e820_point){src + i, mmap_tail};
     }
 
     const size_t NR_POINTS = j;
