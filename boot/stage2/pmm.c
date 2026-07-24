@@ -28,15 +28,13 @@
 #include <stdint.h>
 #include <string.h>
 
-#define PMM_BITS  (12)
-#define PMM_ALIGN (1ULL << PMM_BITS)
+#define PMM_ALIGN (1ULL << 12)
 #define PMM_MASK  (~(PMM_ALIGN - 1ULL))
 
 #define PMM_MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /* clang-format off */
 static SAFE_ADD_IMPLEMENT(uint64, uint64_t, UINT64_MAX)
-static SAFE_ADD_IMPLEMENT(size, size_t, SIZE_MAX)
 
 static inline uint64_t pmm_align_up(uint64_t align)
 /* clang-format on */
@@ -53,24 +51,32 @@ static inline uint64_t pmm_align_down(uint64_t align)
 }
 
 static uint64_t
-pmm_memory_sum(struct e820_info *info, pmm_bitmap *pmm, const size_t pmm_max)
+pmm_memory_sum(struct e820_info *info, struct pmm_bitmap *pmm)
 {
     struct e820_map *entry;
 
-    uint64_t align_base;
-    uint64_t align_end;
-    uint64_t align_blocks;
-    uint64_t total_blocks;
-    uint64_t usable_blocks;
-    uint64_t i, j, k, l;
-    uint8_t  usable;
+    uint64_t  align_base;
+    uint64_t  align_end;
+    uint64_t  align_blocks;
+    uint64_t  total_blocks;
+    uint64_t  usable_blocks;
+    uint64_t  i, j, k, l;
+    size_t   *bitmap;
+    size_t    pmm_max;
+    uint8_t   usable;
 
-    memset(pmm, 0xFF, sizeof(*pmm) * pmm_max);
+    if(!info || !pmm || !pmm->bitmap) panic("pmm: NULL pointer!");
+
+    bitmap  = pmm->bitmap;
+    pmm_max = pmm->max_bits;
+    memset(bitmap, 0xFF, sizeof(*bitmap) * pmm_max);
 
     align_end     = 0;
     total_blocks  = 0;
     usable_blocks = 0;
-    for(i = 0, j = 0; i < info->nr_entries; i++) {
+
+    l = 0;
+    for(i = 0; i < info->nr_entries; i++) {
         entry  = info->base + i;
         usable = entry->type == MMAP_USABLE;
 
@@ -94,30 +100,33 @@ pmm_memory_sum(struct e820_info *info, pmm_bitmap *pmm, const size_t pmm_max)
         if(!usable) continue;
         usable_blocks = usable_blocks + align_blocks;
 
-        j = (align_base / PMM_ALIGN) / (sizeof(*pmm) * CHAR_BIT);
-        k = (align_base / PMM_ALIGN) % (sizeof(*pmm) * CHAR_BIT);
-        l = (align_base / PMM_ALIGN);
-        while(j < pmm_max && l++ < total_blocks) {
-            pmm[j] &= ~((pmm_bitmap)1 << k);
-            if(++k >= sizeof(*pmm) * CHAR_BIT) {
+        j = (align_base / PMM_ALIGN) / (sizeof(*bitmap) * CHAR_BIT);
+        k = (align_base / PMM_ALIGN) % (sizeof(*bitmap) * CHAR_BIT);
+        while(l < pmm_max && l < total_blocks) {
+            bitmap[j] &= ~((size_t)1 << k);
+            if(++k >= sizeof(*bitmap) * CHAR_BIT) {
                 k = 0;
                 j++;
             }
+            l++;
         }
     }
 
     return usable_blocks;
 }
 
-extern pmm_bitmap pmm_initial[PMM_INIT_ENTRIES];
+extern size_t pmm_initial[PMM_INIT_ENTRIES];
 
 int pmm_init(struct e820_info *info)
 {
-    pmm_bitmap *pmm;
-    uint64_t    memory;
+    struct pmm_bitmap pmm;
 
-    pmm    = pmm_initial;
-    memory = pmm_memory_sum(info, pmm, PMM_INIT_ENTRIES) * PMM_ALIGN;
+    uint64_t memory;
+
+    pmm.bitmap = pmm_initial;
+    pmm.nr_bits = 0;
+    pmm.max_bits = PMM_INIT_ENTRIES * sizeof(*pmm.bitmap);
+    memory = pmm_memory_sum(info, &pmm) * PMM_ALIGN;
     puts("usable memory discovered:");
     puthex(&memory, sizeof(memory), 1);
     puts(" bytes");

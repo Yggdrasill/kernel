@@ -28,7 +28,11 @@
 
     #include <libk/mmap.h>
 
-typedef size_t pmm_bitmap;
+struct pmm_bitmap {
+    size_t *bitmap;
+    size_t nr_bits;
+    size_t max_bits;
+};
 
 int pmm_init(struct e820_info *);
 

@@ -31,6 +31,8 @@
 #define SYMBOL_MASK  (~(SYMBOL_ALIGN - 1))
 #define ALIGN_END(x) (((x) + SYMBOL_ALIGN - 1) & SYMBOL_MASK)
 
+static const struct pmm_bitmap pmm_bitmap_sym;
+
 /* Export symbols to ELF file, to be used in assembly and linker scripts. */
 
 volatile const uint32_t ABI_GDT_PTR_SIZE   = GDT_PTR_SIZE;
@@ -47,13 +49,13 @@ volatile const uint32_t ABI_MMAP_INFO_NR   = INFO_NR_ENT_OFFSET;
 volatile const uint32_t ABI_MMAP_INFO_MAX  = INFO_MAX_NR_OFFSET;
 
 volatile const uint32_t ABI_PMM_BM_PREALLOC =
-    PMM_INIT_ENTRIES * sizeof(pmm_bitmap);
+    PMM_INIT_ENTRIES * sizeof(pmm_bitmap_sym.bitmap);
 
 volatile const uint32_t ABI_LINK_TIME_TOTAL =
     ALIGN_END(GDT_ENTRY_SIZE * GDT_MAX_ENTRIES) +
     ALIGN_END(IDT_ENTRY_SIZE * IDT_MAX_ENTRIES) +
     ALIGN_END(2 * MMAP_MAX_ENTRIES * MMAP_ENTRY_SIZE) +
-    ALIGN_END(PMM_INIT_ENTRIES * sizeof(pmm_bitmap));
+    ALIGN_END(PMM_INIT_ENTRIES * sizeof(pmm_bitmap_sym.bitmap));
 
 int main(void)
 {
