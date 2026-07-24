@@ -24,19 +24,36 @@
 #include <libk/internal/mmap.h>
 #include <libk/util.h>
 #include <limits.h>
+#include <math.h>
+#include <stdint.h>
 #include <string.h>
 
 #define PMM_ALIGN (1ULL << 12)
 #define PMM_MASK  (~(PMM_ALIGN - 1ULL))
 
-#define MMAP_END_ADDR(x) ((x)->base + (x)->size)
+/* clang-format off */
+static SAFE_ADD_IMPLEMENT(uint64, uint64_t, UINT64_MAX)
+static SAFE_SUB_IMPLEMENT(uint64, uint64_t)
 
-#define ALIGN_UP(x)   (((x) + PMM_ALIGN - 1) & PMM_MASK)
-#define ALIGN_DOWN(x) ((x) & PMM_MASK)
+static inline uint64_t pmm_align_up(uint64_t align)
+/* clang-format on */
+{
+    if(safe_add_uint64(&align, align, PMM_ALIGN - 1)) {
+        panic("PMM: Integer overflow!");
+    }
+    return align & PMM_MASK;
+}
+
+static inline uint64_t pmm_align_down(uint64_t align)
+{
+    return align & PMM_MASK;
+}
 
 static uint64_t
 pmm_memory_sum(struct e820_info *info, pmm_bitmap *pmm, const size_t pmm_max)
 {
+    struct e820_map *entry;
+
     uint64_t align_base;
     uint64_t align_end;
     uint64_t align_blocks;
@@ -52,14 +69,26 @@ pmm_memory_sum(struct e820_info *info, pmm_bitmap *pmm, const size_t pmm_max)
     total_blocks  = 0;
     usable_blocks = 0;
     for(i = 0, j = 0; i < info->nr_entries; i++) {
-        usable = info->base[i].type == MMAP_USABLE;
+        entry  = info->base + i;
+        usable = entry->type == MMAP_USABLE;
 
-        align_base = info->base[i].base;
-        align_base = usable ? ALIGN_UP(align_base) : ALIGN_DOWN(align_base);
-        align_end  = MMAP_END_ADDR(info->base + i);
-        align_end  = usable ? ALIGN_DOWN(align_end) : ALIGN_UP(align_end);
-        align_blocks =
-            align_end > align_base ? (align_end - align_base) / PMM_ALIGN : 0;
+        align_base = entry->base;
+        align_base =
+            usable ? pmm_align_up(align_base) : pmm_align_down(align_base);
+
+        align_end = entry->base;
+        if(safe_add_uint64(&align_end, entry->base, entry->size)) {
+            panic("PMM: Integer overflow!");
+        }
+
+        align_end =
+            usable ? pmm_align_down(align_end) : pmm_align_up(align_end);
+
+        if(safe_sub_uint64(&align_blocks, align_end, align_base)) {
+            align_blocks = 0;
+        }
+
+        align_blocks /= PMM_ALIGN;
         total_blocks = total_blocks + align_blocks;
 
         if(!usable) continue;
