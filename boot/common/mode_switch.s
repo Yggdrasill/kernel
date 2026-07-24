@@ -170,7 +170,7 @@ pmode_init:
 
     xor   eax, eax
     mov   eax, ss
-    mov   [stack_seg], ax
+    mov   cx, ax
     shl   eax, 4
     add   eax, esp
     mov   esp, eax
@@ -204,7 +204,7 @@ pmode32:
     ; esp was earlier.
 
     push  eax
-    movzx eax, word [stack_seg]
+    movzx eax, word cx
     shl   eax, 4
     add   eax, ebp
     mov   ebp, eax
@@ -219,11 +219,11 @@ pmode32:
     ; reserved, and the eax push.
     
     movzx eax, word [esp + 6]
-    mov   [return], eax
+    mov   ecx, eax
     pop   eax
     ; Overwrite old value
     add   esp, 4
-    push  dword [return]
+    push  dword ecx
 
     ret
 
@@ -291,10 +291,10 @@ rmode:
     ; pointer and will exit with a 2-byte one.
     push  eax
     mov   eax, dword [esp + 4]
-    mov   [return], eax
+    mov   ecx, eax
     pop   eax
     add   esp, 4
-    push  word [return]
+    push  word cx
 
     ret
 
@@ -453,8 +453,6 @@ saved_esi:    resd 1
 saved_edi:    resd 1
 saved_ebp:    resd 1
 saved_cs:     resd 1
-return:       resd 1
-stack_seg:    resd 1
 resume:       resd 1
 callee:       resd 1
 sret_ptr:     resd 1
