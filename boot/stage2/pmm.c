@@ -28,18 +28,21 @@
 #include <stdint.h>
 #include <string.h>
 
-#define PMM_ALIGN (1ULL << 12)
+#define PMM_BITS  (12)
+#define PMM_ALIGN (1ULL << PMM_BITS)
 #define PMM_MASK  (~(PMM_ALIGN - 1ULL))
+
+#define PMM_MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /* clang-format off */
 static SAFE_ADD_IMPLEMENT(uint64, uint64_t, UINT64_MAX)
-static SAFE_SUB_IMPLEMENT(uint64, uint64_t)
+static SAFE_ADD_IMPLEMENT(size, size_t, SIZE_MAX)
 
 static inline uint64_t pmm_align_up(uint64_t align)
 /* clang-format on */
 {
     if(safe_add_uint64(&align, align, PMM_ALIGN - 1)) {
-        panic("PMM: Integer overflow!");
+        panic("pmm_align_up: integer overflow!");
     }
     return align & PMM_MASK;
 }
@@ -64,6 +67,7 @@ pmm_memory_sum(struct e820_info *info, pmm_bitmap *pmm, const size_t pmm_max)
 
     memset(pmm, 0xFF, sizeof(*pmm) * pmm_max);
 
+    align_end     = 0;
     total_blocks  = 0;
     usable_blocks = 0;
     for(i = 0, j = 0; i < info->nr_entries; i++) {
@@ -73,20 +77,18 @@ pmm_memory_sum(struct e820_info *info, pmm_bitmap *pmm, const size_t pmm_max)
         align_base = entry->base;
         align_base =
             usable ? pmm_align_up(align_base) : pmm_align_down(align_base);
+        align_base = PMM_MAX(align_base, align_end);
 
         align_end = entry->base;
         if(safe_add_uint64(&align_end, entry->base, entry->size)) {
-            panic("PMM: Integer overflow!");
+            panic("pmm_memory_sum: integer overflow!");
         }
 
         align_end =
             usable ? pmm_align_down(align_end) : pmm_align_up(align_end);
+        align_end = PMM_MAX(align_base, align_end);
 
-        if(safe_sub_uint64(&align_blocks, align_end, align_base)) {
-            align_blocks = 0;
-        }
-
-        align_blocks /= PMM_ALIGN;
+        align_blocks = (align_end - align_base) / PMM_ALIGN;
         total_blocks = total_blocks + align_blocks;
 
         if(!usable) continue;
