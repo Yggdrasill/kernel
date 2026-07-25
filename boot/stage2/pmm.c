@@ -124,6 +124,16 @@ static uint64_t pmm_memory_sum(struct e820_info *info, struct pmm_bitmap *pmm)
     return usable_blocks;
 }
 
+static inline size_t pmm_select_entry(uintptr_t addr)
+{
+    return (size_t)(addr / (uintptr_t)(PMM_ALIGN * PMM_BITS));
+}
+
+static inline size_t pmm_select_bit(uintptr_t addr)
+{
+    return (size_t)((addr / (uintptr_t)PMM_ALIGN) % (uintptr_t)PMM_BITS);
+}
+
 /*
 static inline int
 pmm_chunk_not_contiguous(const struct pmm_bitmap *pmm, size_t entry)
@@ -216,10 +226,60 @@ pmm_no_free:
     return addr;
 }
 
-void *pmm_malloc(struct pmm_bitmap *pmm, size_t size)
+static void pmm_set_n_used(
+    const struct pmm_bitmap *pmm, const size_t n, const uintptr_t addr)
+{
+    size_t entry;
+    size_t bit;
+    size_t i;
+
+    entry = pmm_select_entry(addr);
+    bit   = pmm_select_bit(addr);
+    for(i = 0; i < n; i++) {
+        pmm->bitmap[entry] |= (1U << bit);
+        if(++bit >= PMM_BITS) {
+            bit = 0;
+            entry++;
+        }
+    }
+
+    return;
+}
+
+static void pmm_set_n_free(
+    const struct pmm_bitmap *pmm, const size_t n, const uintptr_t addr)
+{
+    size_t entry;
+    size_t bit;
+    size_t i;
+
+    entry = pmm_select_entry(addr);
+    bit   = pmm_select_bit(addr);
+    for(i = 0; i < n; i++) {
+        pmm->bitmap[entry] &= ~(1U << bit);
+        if(++bit >= PMM_BITS) {
+            bit = 0;
+            entry++;
+        }
+    }
+
+    return;
+}
+
+static void pmm_print_map(
+    struct pmm_bitmap *pmm, const size_t start, const size_t end)
+{
+    size_t i;
+    for(i = start; i < end; i++) {
+        puthex(&pmm->bitmap[i], sizeof(*pmm->bitmap), 0);
+        putchar('\n');
+    }
+    return;
+}
+
+void *pmm_alloc(struct pmm_bitmap *pmm, size_t size)
 {
     uintptr_t addr;
-    void     *ret;
     size_t    alloc_blocks;
 
     if(!pmm || !size) return NULL;
@@ -227,29 +287,25 @@ void *pmm_malloc(struct pmm_bitmap *pmm, size_t size)
     alloc_blocks = size / (size_t)PMM_ALIGN;
     alloc_blocks += (size % (size_t)PMM_ALIGN) > 0;
 
-    if((addr = pmm_find_n_free(pmm, alloc_blocks))) {
-        puts("found memory");
-        puthex(&addr, sizeof(addr), 0);
-        putchar(' ');
-        puthex(&alloc_blocks, sizeof(alloc_blocks), 0);
-        putchar('\n');
-    } else {
-        puts("no free memory!");
-    }
-    halt();
+    addr = pmm_find_n_free(pmm, alloc_blocks);
+    if(addr) pmm_set_n_used(pmm, alloc_blocks, addr);
 
-    return ret;
+    return (void *)addr;
 }
 
-void pmm_print_map(struct pmm_bitmap *pmm)
+void pmm_free(struct pmm_bitmap *pmm, void *p, size_t size)
 {
-    size_t entries;
-    entries = 10;
-    /* entries = pmm->nr_entries; */
-    for(size_t i = 0; i < entries; i++) {
-        puthex(&pmm->bitmap[i], sizeof(*pmm->bitmap), 0);
-        putchar('\n');
-    }
+    uintptr_t addr;
+    size_t    alloc_blocks;
+
+    if(!pmm || !p || !size) return;
+
+    alloc_blocks = size / (size_t)PMM_ALIGN;
+    alloc_blocks += (size % (size_t)PMM_ALIGN) > 0;
+
+    addr = (uintptr_t)p;
+    pmm_set_n_free(pmm, alloc_blocks, addr);
+
     return;
 }
 
@@ -268,20 +324,6 @@ int pmm_init(struct e820_info *info)
     };
     memory = pmm_memory_sum(info, &pmm);
     memory = memory * PMM_ALIGN;
-    /*
-    puts("usable memory discovered:");
-    puthex(&memory, sizeof(memory), 1);
-    puts(" bytes");
-    puthex(&pmm.nr_entries, sizeof(pmm.nr_entries), 1);
-    puts(" entries");
-    */
-    pmm.bitmap[0] = 0xFFFFFFFF;
-    pmm.bitmap[1] = pmm.bitmap[1] | 1;
-    pmm.bitmap[1] = pmm.bitmap[1] | (1UL << 16);
-    pmm.bitmap[1] = pmm.bitmap[1] | (1UL << 31);
-    pmm.bitmap[3] = ~0U;
-    pmm_print_map(&pmm);
-    pmm_malloc(&pmm, 4096 * 33);
 
     return 0;
 }
