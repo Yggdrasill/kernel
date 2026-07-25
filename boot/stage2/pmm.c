@@ -35,6 +35,8 @@
 
 #define PMM_MAX(a, b) ((a) > (b) ? (a) : (b))
 
+#define PMM_ADDR(x, i, b) ((i * bits_sizeof(x) + b) * (size_t)PMM_ALIGN)
+
 static SAFE_ADD_IMPLEMENT(uint64, uint64_t, UINT64_MAX)
 
 static inline uint64_t pmm_align_up(uint64_t align)
@@ -150,7 +152,7 @@ pmm_chunk_first_empty(const struct pmm_bitmap *pmm, size_t entry, size_t *result
 static size_t pmm_block_first_free(const size_t bitmap, size_t bit)
 {
     while(bit < bits_sizeof(bitmap) && bitmap & (1UL << bit)) bit++;
-    return bit != bits_sizeof(bitmap) ? bit : ~0U;
+    return bit < bits_sizeof(bitmap) ? bit : ~0U;
 }
 
 static size_t pmm_block_contiguous_free(const size_t bitmap, size_t bit)
@@ -164,9 +166,11 @@ static size_t pmm_block_contiguous_free(const size_t bitmap, size_t bit)
     return i;
 }
 
-static int pmm_find_n_free_at(
-    const struct pmm_bitmap *pmm, const size_t n, size_t entry)
+static uintptr_t
+pmm_find_n_free_at(const struct pmm_bitmap *pmm, const size_t n, size_t entry)
 {
+    uintptr_t addr;
+
     size_t *bitmap;
     size_t nr_free;
     size_t total_free;
@@ -175,47 +179,57 @@ static int pmm_find_n_free_at(
 
     bitmap     = pmm->bitmap;
     bit        = pmm_block_first_free(bitmap[entry], 0);
-    total_free = pmm_block_contiguous_free(bitmap[entry], bit);
-    if(n <= total_free) return 0;
+    if(bit >= bits_sizeof(bitmap)) return 0;
 
+    total_free = pmm_block_contiguous_free(bitmap[entry], bit);
+    if(n <= total_free) return PMM_ADDR(bitmap, entry, bit);
+
+    addr = 0;
     for(i = entry + 1; i < pmm->nr_entries; i++) {
         nr_free = pmm_block_contiguous_free(bitmap[i], 0);
         total_free += nr_free;
-        if(n <= total_free || !nr_free) break;
+        if(n <= total_free || !nr_free) {
+            addr = PMM_ADDR(bitmap, entry, bit);
+            break;
+        }
     }
-    return n <= total_free ? 0 : -1;
+    return addr;
 }
 
-static int pmm_find_n_free(const struct pmm_bitmap *pmm, const size_t n, size_t *entry)
+static uintptr_t
+pmm_find_n_free(const struct pmm_bitmap *pmm, const size_t n)
 {
+    uintptr_t addr;
+
     size_t i;
 
-    if(!entry) return -1;
-
-    *entry = 0;
-    if(pmm_chunk_first_free(pmm, *entry, entry)) return -1;
-    for(i = *entry; i < pmm->nr_entries; i++) {
-        if(!pmm_find_n_free_at(pmm, n, *entry)) return 0;
-        if(pmm_chunk_first_free(pmm, *entry + 1, entry)) return -1;
+    i = 0;
+    addr = 0;
+    if(pmm_chunk_first_free(pmm, i, &i)) return 0;
+    while(i < pmm->nr_entries) {
+        addr = pmm_find_n_free_at(pmm, n, i);
+        if(addr) break;
+        if(pmm_chunk_first_free(pmm, i + 1, &i)) return 0;
+        i++;
     }
 
-    return -1;
+    return addr;
 }
 
 void *pmm_malloc(struct pmm_bitmap *pmm, size_t size)
 {
+    uintptr_t addr;
     void   *ret;
     size_t  alloc_blocks;
-    size_t  free_chunk;
 
     if(!pmm || !size) return NULL;
 
     alloc_blocks = size / (size_t)PMM_ALIGN;
     alloc_blocks += size % (size_t)PMM_ALIGN ? 1 : 0;
 
-    if(!pmm_find_n_free(pmm, alloc_blocks, &free_chunk)) {
+    if((addr = pmm_find_n_free(pmm, alloc_blocks))) {
         puts("found memory");
-        puthex(&free_chunk, sizeof(free_chunk), 0); putchar(' ');
+        puthex(&addr, sizeof(addr), 0); putchar(' ');
         puthex(&alloc_blocks, sizeof(alloc_blocks), 0); putchar('\n');
     } else {
         puts("no free memory!");
