@@ -35,6 +35,7 @@
 #define PMM_MASK  (~(PMM_ALIGN - 1ULL))
 
 #define PMM_MAX(a, b) ((a) > (b) ? (a) : (b))
+#define PMM_MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #define PMM_ADDR(i, b) ((i * PMM_BITS + b) * (size_t)PMM_ALIGN)
 
@@ -70,7 +71,7 @@ static uint64_t pmm_memory_sum(struct e820_info *info, struct pmm_bitmap *pmm)
     if(!info || !pmm || !pmm->bitmap) panic("pmm: NULL pointer!");
 
     bitmap  = pmm->bitmap;
-    pmm_max = pmm->max_entries * PMM_BITS;
+    pmm_max = PMM_MIN(pmm->max_entries, PMM_MAX_ENTRIES) * PMM_BITS;
     memset(bitmap, 0xFF, sizeof(*bitmap) * pmm->max_entries);
 
     align_end     = 0;
@@ -266,8 +267,8 @@ static void pmm_set_n_free(
     return;
 }
 
-static void pmm_print_map(
-    struct pmm_bitmap *pmm, const size_t start, const size_t end)
+static void
+pmm_print_map(struct pmm_bitmap *pmm, const size_t start, const size_t end)
 {
     size_t i;
     for(i = start; i < end; i++) {
@@ -277,20 +278,22 @@ static void pmm_print_map(
     return;
 }
 
-static struct pmm_bitmap *pmm_ptr = NULL;
+static struct pmm_bitmap *pmm = NULL;
 
 void *pmm_alloc(size_t size)
 {
     uintptr_t addr;
     size_t    alloc_blocks;
 
-    if(!pmm_ptr || !size) return NULL;
+    if(!pmm || !size) return NULL;
 
     alloc_blocks = size / (size_t)PMM_ALIGN;
-    alloc_blocks += (size % (size_t)PMM_ALIGN) > 0;
+    alloc_blocks = alloc_blocks + ((size % (size_t)PMM_ALIGN) > 0);
 
-    addr = pmm_find_n_free(pmm_ptr, alloc_blocks);
-    if(addr) pmm_set_n_used(pmm_ptr, alloc_blocks, addr);
+    if(pmm->available < (alloc_blocks * (size_t)PMM_ALIGN)) return NULL;
+
+    addr = pmm_find_n_free(pmm, alloc_blocks);
+    if(addr) pmm_set_n_used(pmm, alloc_blocks, addr);
 
     return (void *)addr;
 }
@@ -300,33 +303,62 @@ void pmm_free(void *p, size_t size)
     uintptr_t addr;
     size_t    alloc_blocks;
 
-    if(!pmm_ptr || !p || !size) return;
+    if(!pmm || !p || !size) return;
 
     alloc_blocks = size / (size_t)PMM_ALIGN;
     alloc_blocks += (size % (size_t)PMM_ALIGN) > 0;
 
     addr = (uintptr_t)p;
-    pmm_set_n_free(pmm_ptr, alloc_blocks, addr);
+    pmm_set_n_free(pmm, alloc_blocks, addr);
+    pmm->available += (alloc_blocks * (size_t)PMM_ALIGN);
 
     return;
 }
 
-extern size_t pmm_initial[PMM_INIT_ENTRIES];
-struct pmm_bitmap pmm;
+extern size_t     pmm_initial[PMM_INIT_ENTRIES];
+struct pmm_bitmap initial;
 
 int pmm_init(struct e820_info *info)
 {
-    uint64_t memory;
+    struct pmm_bitmap *new;
 
-    pmm = (struct pmm_bitmap){
+    uint64_t available;
+    size_t   entries;
+
+    initial = (struct pmm_bitmap){
         .bitmap      = pmm_initial,
         .nr_entries  = 0,
         .max_entries = PMM_INIT_ENTRIES,
     };
-    pmm_ptr = &pmm;
+    pmm = &initial;
 
-    memory = pmm_memory_sum(info, pmm_ptr);
-    memory = memory * PMM_ALIGN;
+    available = pmm_memory_sum(info, pmm);
+    entries   = (size_t)(available / PMM_BITS);
+    entries += (size_t)((available % PMM_BITS) > 0);
+
+    pmm->available = (size_t)(available * PMM_ALIGN);
+
+    new = pmm_alloc(sizeof(*new));
+    if(!new) return -1;
+
+    new->bitmap      = pmm_alloc(sizeof(*new->bitmap) * entries);
+    new->nr_entries  = 0;
+    new->max_entries = PMM_MAX_ENTRIES;
+    if(!new->bitmap) return -2;
+
+    available = pmm_memory_sum(info, new);
+
+    new->available = (size_t)(available * PMM_ALIGN);
+    if(available > (PMM_MAX_ENTRIES * PMM_BITS)) {
+        new->available = SIZE_MAX;
+        puts("pmm warn: memory map availability truncated");
+    }
+
+    memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * PMM_INIT_ENTRIES);
+    pmm = new;
+    pmm_free(pmm->bitmap, sizeof(*initial.bitmap) * PMM_INIT_ENTRIES);
+    puthex(&pmm->available, sizeof(pmm->available), 1);
+    puts(" bytes available");
 
     return 0;
 }
