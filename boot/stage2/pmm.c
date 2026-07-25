@@ -364,7 +364,7 @@ int pmm_init(struct e820_info *info)
     memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * PMM_INIT_ENTRIES);
 
     pmm = new;
-    pmm_free(pmm->bitmap, sizeof(*initial.bitmap) * PMM_INIT_ENTRIES);
+    pmm_free(initial.bitmap, sizeof(*initial.bitmap) * PMM_INIT_ENTRIES);
     puthex(&pmm->available, sizeof(pmm->available), 1);
     puts(" bytes available");
 
