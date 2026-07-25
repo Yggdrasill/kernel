@@ -277,44 +277,45 @@ static void pmm_print_map(
     return;
 }
 
-void *pmm_alloc(struct pmm_bitmap *pmm, size_t size)
+static struct pmm_bitmap *pmm_ptr = NULL;
+
+void *pmm_alloc(size_t size)
 {
     uintptr_t addr;
     size_t    alloc_blocks;
 
-    if(!pmm || !size) return NULL;
+    if(!pmm_ptr || !size) return NULL;
 
     alloc_blocks = size / (size_t)PMM_ALIGN;
     alloc_blocks += (size % (size_t)PMM_ALIGN) > 0;
 
-    addr = pmm_find_n_free(pmm, alloc_blocks);
-    if(addr) pmm_set_n_used(pmm, alloc_blocks, addr);
+    addr = pmm_find_n_free(pmm_ptr, alloc_blocks);
+    if(addr) pmm_set_n_used(pmm_ptr, alloc_blocks, addr);
 
     return (void *)addr;
 }
 
-void pmm_free(struct pmm_bitmap *pmm, void *p, size_t size)
+void pmm_free(void *p, size_t size)
 {
     uintptr_t addr;
     size_t    alloc_blocks;
 
-    if(!pmm || !p || !size) return;
+    if(!pmm_ptr || !p || !size) return;
 
     alloc_blocks = size / (size_t)PMM_ALIGN;
     alloc_blocks += (size % (size_t)PMM_ALIGN) > 0;
 
     addr = (uintptr_t)p;
-    pmm_set_n_free(pmm, alloc_blocks, addr);
+    pmm_set_n_free(pmm_ptr, alloc_blocks, addr);
 
     return;
 }
 
 extern size_t pmm_initial[PMM_INIT_ENTRIES];
+struct pmm_bitmap pmm;
 
 int pmm_init(struct e820_info *info)
 {
-    struct pmm_bitmap pmm;
-
     uint64_t memory;
 
     pmm = (struct pmm_bitmap){
@@ -322,7 +323,9 @@ int pmm_init(struct e820_info *info)
         .nr_entries  = 0,
         .max_entries = PMM_INIT_ENTRIES,
     };
-    memory = pmm_memory_sum(info, &pmm);
+    pmm_ptr = &pmm;
+
+    memory = pmm_memory_sum(info, pmm_ptr);
     memory = memory * PMM_ALIGN;
 
     return 0;
