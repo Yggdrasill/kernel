@@ -60,14 +60,13 @@ static uint64_t pmm_init_bitmap(struct e820_info *info, struct pmm_bitmap *pmm)
 
     uint64_t align_base;
     uint64_t align_end;
-    uint64_t align_blocks;
-    uint64_t usable_blocks;
+    uint64_t total_blocks;
     uint64_t end;
     uint64_t i, j, k, l;
-    size_t   free_blocks;
 
     const uint64_t bits_max = pmm->max_entries * PMM_BITS;
 
+    size_t  free_blocks;
     size_t *bitmap;
     uint8_t usable;
 
@@ -76,9 +75,8 @@ static uint64_t pmm_init_bitmap(struct e820_info *info, struct pmm_bitmap *pmm)
     bitmap = pmm->bitmap;
     memset(bitmap, 0xFF, sizeof(*bitmap) * pmm->max_entries);
 
-    align_end     = 0;
-    usable_blocks = 0;
-    free_blocks   = 0;
+    align_end   = 0;
+    free_blocks = 0;
 
     j = 0;
     for(i = 0; i < info->nr_entries; i++) {
@@ -99,10 +97,7 @@ static uint64_t pmm_init_bitmap(struct e820_info *info, struct pmm_bitmap *pmm)
             usable ? pmm_align_down(align_end) : pmm_align_up(align_end);
         align_end = PMM_MAX(align_base, align_end);
 
-        align_blocks = (align_end - align_base) / PMM_ALIGN;
-
         if(!usable) continue;
-        usable_blocks = usable_blocks + align_blocks;
 
         j   = (align_base / PMM_ALIGN) / PMM_BITS;
         k   = (align_base / PMM_ALIGN) % PMM_BITS;
@@ -122,13 +117,14 @@ static uint64_t pmm_init_bitmap(struct e820_info *info, struct pmm_bitmap *pmm)
     if((align_end / (PMM_BITS * PMM_ALIGN)) > SIZE_MAX) {
         panic("pmm_init_bitmap: too many memory blocks!");
     }
+    total_blocks = align_end / PMM_ALIGN;
 
     pmm->available  = free_blocks * (size_t)PMM_ALIGN;
     pmm->nr_entries = (size_t)(align_end / (PMM_BITS * PMM_ALIGN));
     pmm->nr_entries += (size_t)((align_end % (PMM_BITS * PMM_ALIGN)) > 0);
     if(pmm->nr_entries > pmm->max_entries) pmm->nr_entries = pmm->max_entries;
 
-    return usable_blocks;
+    return total_blocks;
 }
 
 static inline size_t pmm_select_entry(uintptr_t addr)
@@ -346,7 +342,7 @@ int pmm_init(struct e820_info *info)
 
     bytes = blocks * PMM_ALIGN;
     puthex(&bytes, sizeof(bytes), 1);
-    puts(" usable bytes");
+    puts(" bytes discovered");
 
     new = pmm_alloc(sizeof(*new));
     if(!new) {
@@ -364,7 +360,7 @@ int pmm_init(struct e820_info *info)
     }
 
     pmm_init_bitmap(info, new);
-    entries = PMM_MIN(entries, PMM_INIT_ENTRIES);
+    entries = PMM_MIN(PMM_INIT_ENTRIES, entries);
     memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * entries);
 
     pmm = new;
