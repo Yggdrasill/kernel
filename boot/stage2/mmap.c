@@ -151,6 +151,6 @@ struct e820_info *boot_mmap_setup(struct e820_info *old_info)
         error = mmap_sanitize_error(status);
         panic(error);
     }
-    mmap_print(new_info);
+//    mmap_print(new_info);
     return new_info;
 }

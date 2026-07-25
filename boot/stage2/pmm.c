@@ -104,7 +104,7 @@ pmm_memory_sum(struct e820_info *info, struct pmm_bitmap *pmm)
         k = (align_base / PMM_ALIGN) % bits_sizeof(*bitmap);
         l = (align_base / PMM_ALIGN);
         while(l < pmm_max && l < total_blocks) {
-            bitmap[j] &= ~((size_t)1 << k);
+            bitmap[j] &= ~(1UL << k);
             if(++k >= bits_sizeof(*bitmap)) {
                 k = 0;
                 j++;
@@ -112,7 +112,6 @@ pmm_memory_sum(struct e820_info *info, struct pmm_bitmap *pmm)
             l++;
         }
     }
-
     /* memory limit 16TiB with 4K pages */
     if((align_end / (bits_sizeof(*bitmap) * PMM_ALIGN)) > SIZE_MAX) {
         panic("pmm_memory_sum: too many memory blocks!");
@@ -120,6 +119,119 @@ pmm_memory_sum(struct e820_info *info, struct pmm_bitmap *pmm)
     pmm->nr_entries = (size_t)(align_end / (bits_sizeof(*bitmap) * PMM_ALIGN));
     if(pmm->nr_entries > pmm->max_entries) pmm->nr_entries = pmm->max_entries;
     return usable_blocks;
+}
+
+/*
+static inline int
+pmm_chunk_not_contiguous(const struct pmm_bitmap *pmm, size_t entry)
+{
+    return entry < pmm->nr_entries ? (int)(pmm->bitmap[entry] & 1) : -1;
+}
+*/
+
+static int
+pmm_chunk_first_free(const struct pmm_bitmap *pmm, size_t entry, size_t *result)
+{
+    while(entry < pmm->nr_entries && pmm->bitmap[entry] == SIZE_MAX) entry++;
+    *result = entry;
+    return entry < pmm->nr_entries ? 0 : -1;
+}
+
+/*
+static int
+pmm_chunk_first_empty(const struct pmm_bitmap *pmm, size_t entry, size_t *result)
+{
+    while(entry < pmm->nr_entries && pmm->bitmap[entry] != 0) entry++;
+    *result = entry;
+    return entry < pmm->nr_entries ? 0 : -1;
+}
+*/
+
+static size_t pmm_block_first_free(const size_t bitmap, size_t bit)
+{
+    while(bit < bits_sizeof(bitmap) && bitmap & (1UL << bit)) bit++;
+    return bit != bits_sizeof(bitmap) ? bit : ~0U;
+}
+
+static size_t pmm_block_contiguous_free(const size_t bitmap, size_t bit)
+{
+    size_t i;
+    i = 0;
+    while(bit < bits_sizeof(bitmap) && !(bitmap & (1UL << bit))) {
+        i += (bitmap & (1UL << bit)) == 0;
+        bit++;
+    }
+    return i;
+}
+
+static int pmm_find_n_free_at(
+    const struct pmm_bitmap *pmm, const size_t n, size_t entry)
+{
+    size_t *bitmap;
+    size_t nr_free;
+    size_t total_free;
+    size_t bit;
+    size_t i;
+
+    bitmap     = pmm->bitmap;
+    bit        = pmm_block_first_free(bitmap[entry], 0);
+    total_free = pmm_block_contiguous_free(bitmap[entry], bit);
+    if(n <= total_free) return 0;
+
+    for(i = entry + 1; i < pmm->nr_entries; i++) {
+        nr_free = pmm_block_contiguous_free(bitmap[i], 0);
+        total_free += nr_free;
+        if(n <= total_free || !nr_free) break;
+    }
+    return n <= total_free ? 0 : -1;
+}
+
+static int pmm_find_n_free(const struct pmm_bitmap *pmm, const size_t n, size_t *entry)
+{
+    size_t i;
+
+    if(!entry) return -1;
+
+    *entry = 0;
+    if(pmm_chunk_first_free(pmm, *entry, entry)) return -1;
+    for(i = *entry; i < pmm->nr_entries; i++) {
+        if(!pmm_find_n_free_at(pmm, n, *entry)) return 0;
+        if(pmm_chunk_first_free(pmm, *entry + 1, entry)) return -1;
+    }
+
+    return -1;
+}
+
+void *pmm_malloc(struct pmm_bitmap *pmm, size_t size)
+{
+    void   *ret;
+    size_t  alloc_blocks;
+    size_t  free_chunk;
+
+    if(!pmm || !size) return NULL;
+
+    alloc_blocks = size / (size_t)PMM_ALIGN;
+    alloc_blocks += size % (size_t)PMM_ALIGN ? 1 : 0;
+
+    if(!pmm_find_n_free(pmm, alloc_blocks, &free_chunk)) {
+        puts("found memory");
+        puthex(&free_chunk, sizeof(free_chunk), 0); putchar(' ');
+        puthex(&alloc_blocks, sizeof(alloc_blocks), 0); putchar('\n');
+    } else {
+        puts("no free memory!");
+    }
+    halt();
+
+    return ret;
+}
+
+void pmm_print_map(struct pmm_bitmap *pmm)
+{
+//    size_t entries = pmm->nr_entries;
+    for(size_t i = 0; i < 20; i++) {
+        puthex(&pmm->bitmap[i], sizeof(*pmm->bitmap), 0); putchar('\n');
+    }
+    return;
 }
 
 extern size_t pmm_initial[PMM_INIT_ENTRIES];
@@ -130,15 +242,24 @@ int pmm_init(struct e820_info *info)
 
     uint64_t memory;
 
-    pmm.bitmap = pmm_initial;
-    pmm.nr_entries = 0;
-    pmm.max_entries = PMM_INIT_ENTRIES;
-    memory = pmm_memory_sum(info, &pmm) * PMM_ALIGN;
+    pmm = (struct pmm_bitmap) {
+        .bitmap = pmm_initial,
+        .nr_entries = 0,
+        .max_entries = PMM_INIT_ENTRIES,
+    };
+    memory = pmm_memory_sum(info, &pmm);
+    memory = memory * PMM_ALIGN;
     puts("usable memory discovered:");
     puthex(&memory, sizeof(memory), 1);
     puts(" bytes");
     puthex(&pmm.nr_entries, sizeof(pmm.nr_entries), 1);
     puts(" entries");
+    pmm.bitmap[0] = 0xFFFFFFFF;
+    pmm.bitmap[1] = pmm.bitmap[1] | 1;
+    pmm.bitmap[1] = pmm.bitmap[1] | (1UL << 16);
+    pmm.bitmap[3] = ~0U;
+    pmm_print_map(&pmm);
+    pmm_malloc(&pmm, 4096*5);
 
     return 0;
 }
