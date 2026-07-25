@@ -45,8 +45,10 @@ LD_ALL=-m elf_i386 -z noexecstack --nmagic
 LD_BOOT=-L boot/common/
 CFLAGS=-Wall -Wextra -pedantic
 
+build: $(BINDIR)/boot.bin $(BINDIR)/stage2.elf
+
 all: CFLAGS+=-Os
-all: $(BINDIR)/boot.bin $(BINDIR)/stage2.elf
+all: build
 
 sinclude $(DEPENDS)
 include $(SRCDIR_STAGE1)/Rules.mk
@@ -62,13 +64,19 @@ clean:
 	rm -rf build
 
 debug: CFLAGS+=-g -O0
-debug: all
+debug: build
 	objcopy --only-keep-debug bin/stage2.elf bin/stage2.debug
 	strip --strip-debug --strip-unneeded bin/stage2.elf
 	objcopy --add-gnu-debuglink=bin/stage2.debug bin/stage2.elf
 
 image: all
 image:
+	dd if=/dev/zero of=image.img bs=512 count=2880
+	dd if=bin/boot.bin of=image.img conv=notrunc bs=512 count=4
+	dd if=bin/stage2.elf of=image.img conv=notrunc bs=512 seek=4
+
+dimage: debug
+dimage:
 	dd if=/dev/zero of=image.img bs=512 count=2880
 	dd if=bin/boot.bin of=image.img conv=notrunc bs=512 count=4
 	dd if=bin/stage2.elf of=image.img conv=notrunc bs=512 seek=4
