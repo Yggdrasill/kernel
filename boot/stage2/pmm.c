@@ -299,7 +299,10 @@ void *pmm_alloc(size_t size)
     if(pmm->available < (alloc_blocks * (size_t)PMM_ALIGN)) return NULL;
 
     addr = pmm_find_n_free(pmm, alloc_blocks);
-    if(addr) pmm_set_n_used(pmm, alloc_blocks, addr);
+    if(addr) {
+        pmm_set_n_used(pmm, alloc_blocks, addr);
+        pmm->available -= (alloc_blocks * (size_t)PMM_ALIGN);
+    }
 
     return (void *)addr;
 }
@@ -361,7 +364,8 @@ int pmm_init(struct e820_info *info)
     }
 
     pmm_init_bitmap(info, new);
-    memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * PMM_INIT_ENTRIES);
+    entries = PMM_MIN(entries, PMM_INIT_ENTRIES);
+    memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * entries);
 
     pmm = new;
     pmm_free(initial.bitmap, sizeof(*initial.bitmap) * PMM_INIT_ENTRIES);
