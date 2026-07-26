@@ -65,9 +65,9 @@ static uint64_t pmm_init_bitmap(struct e820_info *info, struct pmm_bitmap *pmm)
     uint64_t total_blocks;
     uint64_t end;
     uint64_t i, j, k, l;
-    size_t  free_blocks;
-    size_t *bitmap;
-    uint8_t usable;
+    size_t   free_blocks;
+    size_t  *bitmap;
+    uint8_t  usable;
 
     if(!info || !pmm || !pmm->bitmap) panic("pmm_init_bitmap: NULL pointer!");
     if(pmm->max_entries > PMM_MAX_ENTRIES) {
