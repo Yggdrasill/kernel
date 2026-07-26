@@ -38,6 +38,12 @@
 #define PMM_MAX(a, b) ((a) > (b) ? (a) : (b))
 #define PMM_MIN(a, b) ((a) < (b) ? (a) : (b))
 
+struct e820_usable {
+    struct e820_map entries[MMAP_MAX_ENTRIES];
+    size_t nr_entries;
+    size_t max_nr_entries;
+};
+
 /* clang-format off */
 static SAFE_ADD_IMPLEMENT(uint64, uint64_t, UINT64_MAX)
 
@@ -55,64 +61,106 @@ static inline uint64_t pmm_align_down(uint64_t align)
     return align & PMM_MASK;
 }
 
-static uint64_t pmm_init_bitmap(struct e820_info *info, struct pmm_bitmap *pmm)
+static inline uint64_t
+pmm_align_base(const uint64_t base, const uint64_t end, const uint32_t type)
+{
+    uint64_t aligned;
+    aligned = type == MMAP_USABLE ? pmm_align_up(base) : pmm_align_down(base);
+    return PMM_MAX(aligned, end);
+}
+
+static inline uint64_t
+pmm_align_end(const uint64_t base, const uint64_t end, const uint32_t type)
+{
+    uint64_t aligned;
+    aligned = type == MMAP_USABLE ? pmm_align_down(end) : pmm_align_up(end);
+    return PMM_MAX(base, aligned);
+}
+
+static uint64_t
+pmm_parse_e820(struct e820_info *info, struct e820_usable *usable)
 {
     struct e820_map *e820;
 
     uint64_t align_base;
     uint64_t align_end;
-    uint64_t total_blocks;
+    size_t   i, j;
+
+    if(!info || !usable) panic("pmm_parse_e820: NULL pointer!");
+
+    align_end = 0;
+
+    j = 0;
+    for(i = 0; i < info->nr_entries; i++) {
+        e820   = info->base + i;
+
+        align_base = pmm_align_base(e820->base, align_end, e820->type);
+        if(align_base != align_end) {
+            panic("pmm_parse_e820: non-contiguous memory map!");
+        }
+
+        align_end = e820->base;
+        if(safe_add_uint64(&align_end, e820->base, e820->size)) {
+            panic("pmm_parse_e820: integer overflow!");
+        }
+        align_end = pmm_align_end(align_base, align_end, e820->type);
+
+        if(e820->type == MMAP_USABLE && j < usable->max_nr_entries) {
+            usable->entries[j++] = (struct e820_map) {
+                .base = align_base,
+                .size = align_end - align_base,
+                .type = e820->type,
+                .attrib = e820->attrib,
+            };
+        }
+
+    }
+    usable->nr_entries = j;
+
+    /* detected memory limit 16TiB with 4K pages */
+    if((align_end / PMM_ALIGN) > SIZE_MAX) {
+        panic("pmm_init_bitmap: too many memory blocks!");
+    }
+
+    return align_end / PMM_ALIGN;
+}
+
+static size_t
+pmm_init_bitmap(struct pmm_bitmap *pmm, struct e820_usable *usable)
+{
+    struct e820_map *e820;
+
+    uint64_t base;
+    uint64_t end;
     uint64_t entry;
     uint64_t bit;
-    uint64_t end;
-    uint64_t i, j;
+    uint64_t j;
+    size_t   i;
     size_t   free_blocks;
     size_t  *bitmap;
-    uint8_t  usable;
 
-    if(!info || !pmm || !pmm->bitmap) panic("pmm_init_bitmap: NULL pointer!");
+    if(!pmm || !pmm->bitmap || !usable) panic("pmm_init_bitmap: NULL pointer!");
     if(pmm->max_entries > PMM_MAX_ENTRIES) {
         panic("pmm_init_bitmap: max_entries exceeds limit!");
     }
 
     const uint64_t bits_max = pmm->max_entries * PMM_BITS;
 
+    free_blocks     = 0;
+    if(!pmm->max_entries) goto pmm_init_bitmap_exit;
+
     bitmap = pmm->bitmap;
     memset(bitmap, 0xFF, sizeof(*bitmap) * pmm->max_entries);
 
-    align_end   = 0;
-    free_blocks = 0;
+    for(i = 0; i < usable->nr_entries; i++) {
+        e820 = usable->entries + i;
+        base = e820->base;  
+        end  = e820->base + e820->size;
 
-    entry = 0;
-    for(i = 0; i < info->nr_entries; i++) {
-        e820  = info->base + i;
-        usable = e820->type == MMAP_USABLE;
-
-        align_base = e820->base;
-        align_base =
-            usable ? pmm_align_up(align_base) : pmm_align_down(align_base);
-        align_base = PMM_MAX(align_base, align_end);
-
-        if(align_base != align_end) {
-            panic("pmm_init_bitmap: non-contiguous memory map!");
-        }
-
-        align_end = e820->base;
-        if(safe_add_uint64(&align_end, e820->base, e820->size)) {
-            panic("pmm_init_bitmap: integer overflow!");
-        }
-
-        align_end =
-            usable ? pmm_align_down(align_end) : pmm_align_up(align_end);
-        align_end = PMM_MAX(align_base, align_end);
-
-        if(!usable) continue;
-
-        j     = (align_base / PMM_ALIGN);
-        end   = (align_end / PMM_ALIGN);
-        entry = (align_base / PMM_ALIGN) / PMM_BITS;
-        bit   = (align_base / PMM_ALIGN) % PMM_BITS;
-        while(j < bits_max && j < end) {
+        j     = (base / PMM_ALIGN);
+        entry = (base / PMM_ALIGN) / PMM_BITS;
+        bit   = (base / PMM_ALIGN) % PMM_BITS;
+        while(j < bits_max && j < (end / PMM_ALIGN)) {
             bitmap[entry] &= ~(1UL << bit);
             if(++bit >= PMM_BITS) {
                 bit = 0;
@@ -123,35 +171,18 @@ static uint64_t pmm_init_bitmap(struct e820_info *info, struct pmm_bitmap *pmm)
         }
     }
 
-    total_blocks = align_end / PMM_ALIGN;
-
-    pmm->nr_entries = 0;
-    pmm->available  = 0;
-    if(!pmm->max_entries) goto pmm_init_bitmap_exit;
-
     /*
      * The zero block is used as a null pointer in allocation code, so
      * explicitly reserve it in case the E820 sanitizer didn't. This also
      * makes an overflow impossible when multiplying by PMM_ALIGN, as a block of
      * that size has been removed from the bitmap.
      */
-    if(free_blocks > 0 && !(pmm->bitmap[0] & 1)) free_blocks--;
+    if(!(pmm->bitmap[0] & 1)) free_blocks--;
     pmm->bitmap[0] |= 1;
 
-    /* detected memory limit 16TiB with 4K pages */
-    if((align_end / PMM_ALIGN) > SIZE_MAX) {
-        panic("pmm_init_bitmap: too many memory blocks!");
-    }
-    pmm->available  = free_blocks * (size_t)PMM_ALIGN;
-
-    pmm->nr_entries = (size_t)(align_end / (PMM_BITS * PMM_ALIGN));
-    pmm->nr_entries += (size_t)((align_end % (PMM_BITS * PMM_ALIGN)) > 0);
-    if(pmm->nr_entries > pmm->max_entries) pmm->nr_entries = pmm->max_entries;
-
 pmm_init_bitmap_exit:
-    return total_blocks;
+    return free_blocks * PMM_ALIGN;
 }
-
 
 static inline size_t pmm_select_entry(uintptr_t addr)
 {
@@ -355,14 +386,20 @@ void pmm_free(void *p, size_t size)
 }
 
 extern size_t     pmm_initial[PMM_INIT_ENTRIES];
-struct pmm_bitmap initial;
 
 int pmm_init(struct e820_info *info)
 {
+    struct e820_usable usable;
+    struct pmm_bitmap initial;
     struct pmm_bitmap *new;
 
     uint64_t blocks;
     size_t   entries;
+
+    usable = (struct e820_usable) {
+        .nr_entries = 0,
+        .max_nr_entries = MMAP_MAX_ENTRIES,
+    };
 
     initial = (struct pmm_bitmap){
         .bitmap      = pmm_initial,
@@ -371,7 +408,13 @@ int pmm_init(struct e820_info *info)
     };
     pmm = &initial;
 
-    blocks = pmm_init_bitmap(info, pmm);
+    blocks  = pmm_parse_e820(info, &usable);
+    entries = (size_t)(blocks / (PMM_BITS * PMM_ALIGN));
+    entries += (size_t)((blocks % (PMM_BITS * PMM_ALIGN)) > 0);
+
+    pmm->nr_entries = entries;
+    pmm->nr_entries = PMM_MIN(entries, pmm->max_entries);
+    pmm->available = pmm_init_bitmap(pmm, &usable);
 
     puthex(&blocks, sizeof(blocks), 1);
     puts(" 4K blocks discovered");
@@ -381,20 +424,16 @@ int pmm_init(struct e820_info *info)
         panic("pmm: no space to allocate new pmm!");
     }
 
-    entries = (size_t)(blocks / (PMM_BITS) + ((blocks % PMM_BITS) > 0));
-    entries = PMM_MIN(entries, PMM_MAX_ENTRIES);
-
     new->bitmap      = pmm_alloc(sizeof(*new->bitmap) * entries);
     new->nr_entries  = 0;
-    new->max_entries = entries;
+    new->max_entries = PMM_MIN(entries, PMM_MAX_ENTRIES);
     if(!new->bitmap) {
         panic("pmm: no space to allocate new bitmap!");
     }
-
-    pmm_init_bitmap(info, new);
+    new->available = pmm_init_bitmap(new, &usable);
     entries = PMM_MIN(PMM_INIT_ENTRIES, entries);
-    memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * entries);
 
+    memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * entries);
     pmm = new;
     pmm_free(initial.bitmap, sizeof(*initial.bitmap) * PMM_INIT_ENTRIES);
     puthex(&pmm->available, sizeof(pmm->available), 1);
