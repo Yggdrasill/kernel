@@ -350,12 +350,12 @@ void *pmm_alloc(size_t size)
     size_t    alloc_bytes;
 
     if(!pmm || !size) return NULL;
-    if(size > SIZE_MAX / (size_t)PMM_ALIGN) return NULL;
 
     alloc_blocks = size / PMM_ALIGN;
     alloc_blocks = alloc_blocks + ((size % PMM_ALIGN) > 0);
-    alloc_bytes  = alloc_blocks * PMM_ALIGN;
+    if(alloc_blocks > SIZE_MAX / (size_t)PMM_ALIGN) return NULL;
 
+    alloc_bytes = alloc_blocks * PMM_ALIGN;
     if(pmm->available < alloc_bytes) return NULL;
 
     addr = pmm_find_n_free(pmm, alloc_blocks);
@@ -372,10 +372,10 @@ void pmm_free(void *p, size_t size)
     size_t    alloc_blocks;
 
     if(!pmm || !p || !size) return;
-    if(size > SIZE_MAX / (size_t)PMM_ALIGN) return;
 
     alloc_blocks = size / (size_t)PMM_ALIGN;
     alloc_blocks += (size % (size_t)PMM_ALIGN) > 0;
+    if(alloc_blocks > SIZE_MAX / (size_t)PMM_ALIGN) return;
 
     addr = (uintptr_t)p;
     pmm_set_n_free(pmm, alloc_blocks, addr);
@@ -435,8 +435,9 @@ int pmm_init(struct e820_info *info)
     new->available = pmm_init_bitmap(new, &usable);
     entries        = PMM_MIN(PMM_INIT_ENTRIES, entries);
 
-    memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * entries);
+    memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * pmm->nr_entries);
     pmm = new;
+
     pmm_free(initial.bitmap, sizeof(*initial.bitmap) * PMM_INIT_ENTRIES);
     pmm->available -= d_available;
 
