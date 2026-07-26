@@ -39,9 +39,11 @@
 
 #define PMM_ADDR(i, b) ((i * PMM_BITS + b) * (size_t)PMM_ALIGN)
 
+/* clang-format off */
 static SAFE_ADD_IMPLEMENT(uint64, uint64_t, UINT64_MAX)
 
-    static inline uint64_t pmm_align_up(uint64_t align)
+static inline uint64_t pmm_align_up(uint64_t align)
+/* clang-format on */
 {
     if(safe_add_uint64(&align, align, PMM_ALIGN - 1)) {
         panic("pmm_align_up: integer overflow!");
@@ -63,14 +65,16 @@ static uint64_t pmm_init_bitmap(struct e820_info *info, struct pmm_bitmap *pmm)
     uint64_t total_blocks;
     uint64_t end;
     uint64_t i, j, k, l;
-
-    const uint64_t bits_max = pmm->max_entries * PMM_BITS;
-
     size_t  free_blocks;
     size_t *bitmap;
     uint8_t usable;
 
-    if(!info || !pmm || !pmm->bitmap) panic("pmm: NULL pointer!");
+    if(!info || !pmm || !pmm->bitmap) panic("pmm_init_bitmap: NULL pointer!");
+    if(pmm->max_entries > PMM_MAX_ENTRIES) {
+        panic("pmm_init_bitmap: max_entries exceeds limit!");
+    }
+
+    const uint64_t bits_max = pmm->max_entries * PMM_BITS;
 
     bitmap = pmm->bitmap;
     memset(bitmap, 0xFF, sizeof(*bitmap) * pmm->max_entries);
@@ -113,8 +117,9 @@ static uint64_t pmm_init_bitmap(struct e820_info *info, struct pmm_bitmap *pmm)
             free_blocks++;
         }
     }
-    /* memory limit 16TiB with 4K pages */
-    if((align_end / (PMM_BITS * PMM_ALIGN)) > SIZE_MAX) {
+    /* detected memory limit 16TiB with 4K pages */
+    if((align_end / PMM_ALIGN) > SIZE_MAX ||
+       free_blocks > (SIZE_MAX / PMM_ALIGN)) {
         panic("pmm_init_bitmap: too many memory blocks!");
     }
     total_blocks = align_end / PMM_ALIGN;
