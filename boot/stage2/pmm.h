@@ -29,7 +29,11 @@
 
     #include <libk/mmap.h>
 
+struct pmm_map;
+
 struct pmm_bitmap {
+    struct pmm_map *map;
+
     size_t *bitmap;
     size_t  nr_entries;
     size_t  max_entries;

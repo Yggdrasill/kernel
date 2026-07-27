@@ -49,7 +49,7 @@ volatile const uint32_t ABI_MMAP_INFO_NR   = INFO_NR_ENT_OFFSET;
 volatile const uint32_t ABI_MMAP_INFO_MAX  = INFO_MAX_NR_OFFSET;
 
 volatile const uint32_t ABI_PMM_BM_PREALLOC =
-    PMM_INIT_ENTRIES * sizeof(pmm_bitmap_sym.bitmap);
+    PMM_INIT_ENTRIES * sizeof(*pmm_bitmap_sym.bitmap);
 
 volatile const uint32_t ABI_LINK_TIME_TOTAL =
     ALIGN_END(GDT_ENTRY_SIZE * GDT_MAX_ENTRIES) +
