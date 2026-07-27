@@ -142,13 +142,13 @@ pmm_parse_e820(struct pmm_map *map, const struct e820_info *info)
                 .start = (uintptr_t)align_base,
                 .end   = open_end,
             };
-            j += (align_end - align_base) > 0;
+            if(align_end > align_base) j++;
         } else if(!usable_type && k < map->max_nr_unusable) {
             unusable[k] = (struct pmm_range){
                 .start = (uintptr_t)align_base,
                 .end   = open_end,
             };
-            k += (align_end - align_base) > 0;
+            if(align_end > align_base) k++;
         }
     }
     map->nr_usable   = j;
