@@ -69,8 +69,7 @@ pmm_align_base(uint64_t base, uint64_t end, uint32_t type)
     return PMM_MAX(aligned, end);
 }
 
-static inline uint64_t
-pmm_align_end(uint64_t base, uint64_t end, uint32_t type)
+static inline uint64_t pmm_align_end(uint64_t base, uint64_t end, uint32_t type)
 {
     uint64_t aligned;
     aligned = type == MMAP_USABLE ? pmm_align_down(end) : pmm_align_up(end);
@@ -327,8 +326,8 @@ pmm_set_n_free(struct pmm_bitmap *pmm, const size_t n, const uintptr_t addr)
     return;
 }
 
-static void pmm_print_map(
-    const struct pmm_bitmap *pmm, size_t entry, const size_t end)
+static void
+pmm_print_map(const struct pmm_bitmap *pmm, size_t entry, const size_t end)
 {
     while(entry < end) {
         puthex(&pmm->bitmap[entry], sizeof(*pmm->bitmap), 0);
