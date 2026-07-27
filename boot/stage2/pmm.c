@@ -61,6 +61,11 @@ static inline uint64_t pmm_align_down(uint64_t align)
     return align & PMM_MASK;
 }
 
+static inline int pmm_is_unaligned(uint64_t align)
+{
+    return align & (PMM_ALIGN - 1);
+}
+
 static inline uint64_t
 pmm_align_base(uint64_t base, uint64_t end, uint32_t type)
 {
@@ -202,9 +207,10 @@ pmm_chunk_not_contiguous(const struct pmm_bitmap *pmm, size_t entry)
 }
 */
 
-static size_t pmm_chunk_first_free(const struct pmm_bitmap *pmm, size_t entry)
+static size_t pmm_chunk_first_free(
+    const struct pmm_bitmap *pmm, size_t entry, const size_t end)
 {
-    while(entry < pmm->nr_entries && pmm->bitmap[entry] == SIZE_MAX) entry++;
+    while(entry < end && pmm->bitmap[entry] == SIZE_MAX) entry++;
     return entry;
 }
 
@@ -253,7 +259,7 @@ pmm_find_n_free_at(const struct pmm_bitmap *pmm, const size_t n, size_t entry)
 
     addr = 0;
     while((free = pmm_block_contiguous_free(bitmap, bit)) < PMM_BITS - bit) {
-        if(n <= free) goto pmm_exit_free_at;
+        if(n <= free) break;
         bit += free + 1;
     }
 
@@ -263,26 +269,26 @@ pmm_find_n_free_at(const struct pmm_bitmap *pmm, const size_t n, size_t entry)
         free += new_free;
         if(n > free && new_free < PMM_BITS) break;
     }
-pmm_exit_free_at:
+
     if(n <= free) addr = pmm_calc_addr(entry, bit);
     return addr;
 }
 
-static uintptr_t pmm_find_n_free(const struct pmm_bitmap *pmm, const size_t n)
+static uintptr_t pmm_find_n_free(
+    const struct pmm_bitmap *pmm,
+    size_t                   entry,
+    const size_t             end,
+    const size_t             n)
 {
     uintptr_t addr;
 
-    size_t i;
-
-    addr = 0;
-    i    = pmm_chunk_first_free(pmm, 0);
-    if(i >= pmm->nr_entries) goto pmm_no_free;
-    while(i < pmm->nr_entries) {
-        addr = pmm_find_n_free_at(pmm, n, i);
+    addr  = 0;
+    entry = pmm_chunk_first_free(pmm, entry, end);
+    while(entry < end) {
+        addr = pmm_find_n_free_at(pmm, n, entry);
         if(addr) break;
-        i++;
+        entry++;
     }
-pmm_no_free:
     return addr;
 }
 
@@ -339,11 +345,18 @@ pmm_print_map(const struct pmm_bitmap *pmm, size_t entry, const size_t end)
 
 static struct pmm_bitmap *pmm = NULL;
 
-void *pmm_alloc(size_t size)
+/*
+ * Half-open range [base, end), discarding the bit offset of base and end. This
+ * is technically slightly incorrect, but will be fine for the moment.
+ * TODO: Fix this.
+ */
+void *pmm_alloc_range(size_t size, const uintptr_t base, const uintptr_t end)
 {
     uintptr_t addr;
     size_t    alloc_blocks;
     size_t    alloc_bytes;
+    size_t    from;
+    size_t    to;
 
     if(!pmm || !size) return NULL;
 
@@ -354,12 +367,23 @@ void *pmm_alloc(size_t size)
     alloc_bytes = alloc_blocks * PMM_ALIGN;
     if(pmm->available < alloc_bytes) return NULL;
 
-    addr = pmm_find_n_free(pmm, alloc_blocks);
+    from = pmm_select_entry(base);
+    if(from >= pmm->nr_entries) return NULL;
+    to   = pmm_select_entry(end);
+    if(pmm_is_unaligned(end)) to++;
+    to   = PMM_MIN(pmm->nr_entries, to);
+
+    addr = pmm_find_n_free(pmm, from, to, alloc_blocks);
     if(!addr) return NULL;
 
     pmm_set_n_used(pmm, alloc_blocks, addr);
     pmm->available -= alloc_bytes;
     return (void *)addr;
+}
+
+void *pmm_alloc(size_t size)
+{
+    return pmm_alloc_range(size, 0, (uintptr_t)0xFFFFFFFFUL);
 }
 
 void pmm_free(void *p, size_t size)
