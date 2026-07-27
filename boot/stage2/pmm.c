@@ -383,7 +383,7 @@ void *pmm_alloc_range(size_t size, const uintptr_t base, const uintptr_t end)
 
 void *pmm_alloc(size_t size)
 {
-    return pmm_alloc_range(size, 0, (uintptr_t)0xFFFFFFFFUL);
+    return pmm_alloc_range(size, 0, UINTPTR_MAX);
 }
 
 void pmm_free(void *p, size_t size)

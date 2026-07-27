@@ -65,4 +65,8 @@ typedef unsigned long uintptr_t;
 #define SSIZE_MAX INT32_MAX
 #define SIZE_MAX  UINT32_MAX
 
+#define INTPTR_MIN  INT32_MIN
+#define INTPTR_MAX  INT32_MAX
+#define UINTPTR_MAX UINT32_MAX
+
 #endif
