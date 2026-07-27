@@ -312,7 +312,7 @@ pmm_set_n_used(struct pmm_bitmap *pmm, const size_t n, const uintptr_t addr)
     return;
 }
 
-static void
+static int
 pmm_set_n_free(struct pmm_bitmap *pmm, const size_t n, const uintptr_t addr)
 {
     size_t entry;
@@ -321,6 +321,8 @@ pmm_set_n_free(struct pmm_bitmap *pmm, const size_t n, const uintptr_t addr)
 
     entry = pmm_select_entry(addr);
     bit   = pmm_select_bit(addr);
+
+    if(!(pmm->bitmap[entry] & ((size_t)1 << bit))) return -1;
     for(i = 0; i < n; i++) {
         pmm->bitmap[entry] &= ~((size_t)1 << bit);
         if(++bit >= PMM_BITS) {
@@ -329,7 +331,7 @@ pmm_set_n_free(struct pmm_bitmap *pmm, const size_t n, const uintptr_t addr)
         }
     }
 
-    return;
+    return 0;
 }
 
 static void
@@ -358,7 +360,10 @@ void *pmm_alloc_range(size_t size, const uintptr_t base, const uintptr_t end)
     size_t    from;
     size_t    to;
 
-    if(!pmm || !size) return NULL;
+    if(!pmm) {
+        panic("pmm_alloc_range: memory manager uninitialised!");
+    }
+    if(!size) return NULL;
 
     alloc_blocks = size / PMM_ALIGN;
     alloc_blocks = alloc_blocks + ((size % PMM_ALIGN) > 0);
@@ -369,9 +374,9 @@ void *pmm_alloc_range(size_t size, const uintptr_t base, const uintptr_t end)
 
     from = pmm_select_entry(base);
     if(from >= pmm->nr_entries) return NULL;
-    to   = pmm_select_entry(end);
-    if(pmm_is_unaligned(end)) to++;
-    to   = PMM_MIN(pmm->nr_entries, to);
+    to = pmm_select_entry(end);
+    to = to + (pmm_is_unaligned(end) ? 1 : 0);
+    to = PMM_MIN(pmm->nr_entries, to);
 
     addr = pmm_find_n_free(pmm, from, to, alloc_blocks);
     if(!addr) return NULL;
@@ -391,14 +396,34 @@ void pmm_free(void *p, size_t size)
     uintptr_t addr;
     size_t    alloc_blocks;
 
-    if(!pmm || !p || !size) return;
+    int status;
+
+    if(!pmm) {
+        panic("pmm_free: memory manager uninitialised!");
+    }
+
+    if(!size) return;
 
     alloc_blocks = size / (size_t)PMM_ALIGN;
     alloc_blocks += (size % (size_t)PMM_ALIGN) > 0;
     if(alloc_blocks > SIZE_MAX / (size_t)PMM_ALIGN) return;
 
+    /*
+     * Definitely broken state if the input is an unaligned pointer, since alloc
+     * only returns aligned ones. Since there's no memory protection the panic
+     * is mandatory.
+     */
+    if(!p || pmm_is_unaligned((uintptr_t)p)) {
+        panic("pmm_free: unaligned pointer!");
+    }
+
+    /* The same goes for double-free. */
     addr = (uintptr_t)p;
-    pmm_set_n_free(pmm, alloc_blocks, addr);
+    status = pmm_set_n_free(pmm, alloc_blocks, addr);
+    if(status) {
+        panic("pmm_free: double-free");
+    }
+
     pmm->available += (alloc_blocks * (size_t)PMM_ALIGN);
 
     return;
