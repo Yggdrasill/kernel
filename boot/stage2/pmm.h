@@ -36,7 +36,7 @@ struct pmm_bitmap {
     size_t  available;
 };
 
-int pmm_init(struct e820_info *);
+int pmm_init(const struct e820_info *);
 
 #endif
 

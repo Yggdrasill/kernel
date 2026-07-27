@@ -62,7 +62,7 @@ static inline uint64_t pmm_align_down(uint64_t align)
 }
 
 static inline uint64_t
-pmm_align_base(const uint64_t base, const uint64_t end, const uint32_t type)
+pmm_align_base(uint64_t base, uint64_t end, uint32_t type)
 {
     uint64_t aligned;
     aligned = type == MMAP_USABLE ? pmm_align_up(base) : pmm_align_down(base);
@@ -70,7 +70,7 @@ pmm_align_base(const uint64_t base, const uint64_t end, const uint32_t type)
 }
 
 static inline uint64_t
-pmm_align_end(const uint64_t base, const uint64_t end, const uint32_t type)
+pmm_align_end(uint64_t base, uint64_t end, uint32_t type)
 {
     uint64_t aligned;
     aligned = type == MMAP_USABLE ? pmm_align_down(end) : pmm_align_up(end);
@@ -78,10 +78,8 @@ pmm_align_end(const uint64_t base, const uint64_t end, const uint32_t type)
 }
 
 static uint64_t
-pmm_parse_e820(struct e820_info *info, struct e820_usable *usable)
+pmm_parse_e820(const struct e820_info *info, struct e820_usable *usable)
 {
-    struct e820_map *e820;
-
     uint64_t align_base;
     uint64_t align_end;
     size_t   i, j;
@@ -92,7 +90,7 @@ pmm_parse_e820(struct e820_info *info, struct e820_usable *usable)
 
     j = 0;
     for(i = 0; i < info->nr_entries; i++) {
-        e820 = info->base + i;
+        const struct e820_map *e820 = info->base + i;
 
         align_base = pmm_align_base(e820->base, align_end, e820->type);
         if(align_base != align_end) {
@@ -125,10 +123,8 @@ pmm_parse_e820(struct e820_info *info, struct e820_usable *usable)
 }
 
 static size_t
-pmm_init_bitmap(struct pmm_bitmap *pmm, struct e820_usable *usable)
+pmm_init_bitmap(const struct e820_usable *usable, struct pmm_bitmap *pmm)
 {
-    struct e820_map *e820;
-
     uint64_t base;
     uint64_t end;
     uint64_t entry;
@@ -152,7 +148,8 @@ pmm_init_bitmap(struct pmm_bitmap *pmm, struct e820_usable *usable)
     memset(bitmap, 0xFF, sizeof(*bitmap) * pmm->max_entries);
 
     for(i = 0; i < usable->nr_entries; i++) {
-        e820 = usable->entries + i;
+        const struct e820_map *e820 = usable->entries + i;
+
         base = e820->base;
         end  = e820->base + e820->size;
 
@@ -290,8 +287,8 @@ pmm_no_free:
     return addr;
 }
 
-static void pmm_set_n_used(
-    const struct pmm_bitmap *pmm, const size_t n, const uintptr_t addr)
+static void
+pmm_set_n_used(struct pmm_bitmap *pmm, const size_t n, const uintptr_t addr)
 {
     size_t entry;
     size_t bit;
@@ -310,8 +307,8 @@ static void pmm_set_n_used(
     return;
 }
 
-static void pmm_set_n_free(
-    const struct pmm_bitmap *pmm, const size_t n, const uintptr_t addr)
+static void
+pmm_set_n_free(struct pmm_bitmap *pmm, const size_t n, const uintptr_t addr)
 {
     size_t entry;
     size_t bit;
@@ -330,13 +327,13 @@ static void pmm_set_n_free(
     return;
 }
 
-static void
-pmm_print_map(struct pmm_bitmap *pmm, const size_t start, const size_t end)
+static void pmm_print_map(
+    const struct pmm_bitmap *pmm, size_t entry, const size_t end)
 {
-    size_t i;
-    for(i = start; i < end; i++) {
-        puthex(&pmm->bitmap[i], sizeof(*pmm->bitmap), 0);
+    while(entry < end) {
+        puthex(&pmm->bitmap[entry], sizeof(*pmm->bitmap), 0);
         putchar('\n');
+        entry++;
     }
     return;
 }
@@ -386,7 +383,7 @@ void pmm_free(void *p, size_t size)
 
 extern size_t pmm_initial[PMM_INIT_ENTRIES];
 
-int pmm_init(struct e820_info *info)
+int pmm_init(const struct e820_info *info)
 {
     struct e820_usable usable;
     struct pmm_bitmap  initial;
@@ -413,7 +410,7 @@ int pmm_init(struct e820_info *info)
     entries += (size_t)((blocks % PMM_BITS) > 0);
 
     pmm->nr_entries = PMM_MIN(entries, pmm->max_entries);
-    pmm->available  = pmm_init_bitmap(pmm, &usable);
+    pmm->available  = pmm_init_bitmap(&usable, pmm);
     d_available     = pmm->available;
 
     puthex(&blocks, sizeof(blocks), 1);
@@ -432,7 +429,7 @@ int pmm_init(struct e820_info *info)
         panic("pmm: no space to allocate new bitmap!");
     }
 
-    new->available = pmm_init_bitmap(new, &usable);
+    new->available = pmm_init_bitmap(&usable, new);
     entries        = PMM_MIN(PMM_INIT_ENTRIES, entries);
 
     memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * pmm->nr_entries);
