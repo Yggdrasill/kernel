@@ -421,9 +421,9 @@ void *pmm_alloc(size_t size)
 
 void pmm_free_internal(void *p, size_t size, const int override)
 {
-    size_t    alloc_blocks;
-    size_t    from;
-    size_t    to;
+    size_t alloc_blocks;
+    size_t from;
+    size_t to;
 
     int status;
 
@@ -449,7 +449,8 @@ void pmm_free_internal(void *p, size_t size, const int override)
         panic("pmm_free: attempt to free out of range!");
     }
 
-    if(!override && pmm_invalid_free(pmm->map, (uintptr_t)p, (uintptr_t)p + size)) {
+    if(!override &&
+       pmm_invalid_free(pmm->map, (uintptr_t)p, (uintptr_t)p + size)) {
         panic("pmm_free: attempt to free reserved region!");
     }
 
@@ -512,7 +513,7 @@ int pmm_init(const struct e820_info *info)
     entries += (size_t)((blocks % PMM_BITS) > 0);
 
     pmm_init_bitmap(pmm);
-    d_available     = pmm->available;
+    d_available = pmm->available;
 
     puthex(&blocks, sizeof(blocks), 1);
     puts(" 4K blocks discovered");
