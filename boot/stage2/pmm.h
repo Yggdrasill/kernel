@@ -38,7 +38,7 @@ struct pmm_bitmap {
     size_t  nr_entries;
     size_t  max_entries;
     size_t  available;
-    size_t  blocks_end;
+    size_t  usable_end;
 };
 
 int pmm_init(const struct e820_info *);
