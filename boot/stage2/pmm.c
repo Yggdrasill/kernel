@@ -206,10 +206,10 @@ static size_t pmm_init_bitmap(struct pmm_bitmap *pmm)
         base = usable[i].start;
         end  = usable[i].end;
 
-        block = (base / PMM_ALIGN);
+        block = (base / (uintptr_t)PMM_ALIGN);
         while(block < max_blocks && block <= (end / PMM_ALIGN)) {
-            entry = block / PMM_BITS;
-            bit   = block % PMM_BITS;
+            entry = block / (size_t)PMM_BITS;
+            bit   = block % (size_t)PMM_BITS;
             bitmap[entry] &= ~(size_t)(1UL << bit);
             free_blocks++;
             block++;
@@ -227,6 +227,8 @@ static size_t pmm_init_bitmap(struct pmm_bitmap *pmm)
 
 pmm_init_bitmap_exit:
     pmm->usable_end = entry * PMM_BITS + bit + 1;
+    pmm->nr_entries = entry + ((bit % PMM_BITS) > 0);
+    pmm->available  = free_blocks;
     return free_blocks;
 }
 
@@ -357,11 +359,13 @@ pmm_print_map(const struct pmm_bitmap *pmm, size_t entry, const size_t end)
     return;
 }
 
-static int pmm_invalid_free(const struct pmm_map *map, const uintptr_t addr)
+static int pmm_invalid_free(
+    const struct pmm_map *map, const uintptr_t start, const uintptr_t end)
 {
     uint8_t i;
     for(i = 0; i < map->nr_unusable; i++) {
-        if(addr >= map->unusable[i].start && addr <= map->unusable[i].end) {
+        if((start >= map->unusable[i].start && start <= map->unusable[i].end) ||
+           (end >= map->unusable[i].start && end <= map->unusable[i].end)) {
             return -1;
         }
     }
@@ -386,11 +390,12 @@ void *pmm_alloc_range(size_t size, const uintptr_t base, const uintptr_t end)
     alloc_blocks = size / PMM_ALIGN;
     alloc_blocks = alloc_blocks + ((size % PMM_ALIGN) > 0);
 
-    from = base / PMM_ALIGN;
-    to   = end / PMM_ALIGN + ((end % PMM_ALIGN) > 0);
+    from = base / (size_t)PMM_ALIGN;
+    to   = end / (size_t)PMM_ALIGN + (end == SIZE_MAX ? 1 : 0);
     to   = PMM_MIN(to, pmm->usable_end);
+
     if(from >= pmm->usable_end || (from + alloc_blocks) > pmm->usable_end) {
-        panic("pmm_alloc_range: attempt to alloc past available memory!");
+        return NULL;
     }
 
     if(pmm->available < alloc_blocks) return NULL;
@@ -409,21 +414,16 @@ void *pmm_alloc(size_t size)
 {
     void *ret;
 
-    if(!pmm) return NULL;
-
-    ret = NULL;
-    if(PMM_1M_BLOCK < pmm->usable_end) {
-        ret = pmm_alloc_range(size, PMM_1M_ADDR, SIZE_MAX);
-    }
+    ret = pmm_alloc_range(size, PMM_1M_ADDR, SIZE_MAX);
     if(!ret) ret = pmm_alloc_range(size, 0, SIZE_MAX);
     return ret;
 }
 
 void pmm_free_internal(void *p, size_t size, const int override)
 {
-    size_t alloc_blocks;
-    size_t from;
-    size_t to;
+    size_t    alloc_blocks;
+    size_t    from;
+    size_t    to;
 
     int status;
 
@@ -445,14 +445,18 @@ void pmm_free_internal(void *p, size_t size, const int override)
     alloc_blocks = size / PMM_ALIGN;
     alloc_blocks = alloc_blocks + ((size % PMM_ALIGN) > 0);
 
-    from = (uintptr_t)p / PMM_ALIGN;
+    if(size > UINTPTR_MAX - (uintptr_t)p) {
+        panic("pmm_free: attempt to free out of range!");
+    }
+
+    if(!override && pmm_invalid_free(pmm->map, (uintptr_t)p, (uintptr_t)p + size)) {
+        panic("pmm_free: attempt to free reserved region!");
+    }
+
+    from = (uintptr_t)p / (uintptr_t)PMM_ALIGN;
     to   = from + alloc_blocks;
     if(from >= pmm->usable_end || to > pmm->usable_end) {
         panic("pmm_free: attempt to free past available memory!");
-    }
-
-    if(!override && pmm_invalid_free(pmm->map, (uintptr_t)p)) {
-        panic("pmm_free: attempt to free reserved region!");
     }
 
     /* The same goes for double-free. */
@@ -507,8 +511,7 @@ int pmm_init(const struct e820_info *info)
     entries = (size_t)(blocks / PMM_BITS);
     entries += (size_t)((blocks % PMM_BITS) > 0);
 
-    pmm->nr_entries = PMM_MIN(entries, pmm->max_entries);
-    pmm->available  = pmm_init_bitmap(pmm);
+    pmm_init_bitmap(pmm);
     d_available     = pmm->available;
 
     puthex(&blocks, sizeof(blocks), 1);
@@ -522,7 +525,6 @@ int pmm_init(const struct e820_info *info)
     }
 
     new->max_entries = PMM_MAX_ENTRIES;
-    new->nr_entries  = PMM_MIN(entries, PMM_MAX_ENTRIES);
     new->bitmap      = pmm_alloc(sizeof(*new->bitmap) * new->max_entries);
     if(!new->bitmap) {
         panic("pmm: no space to allocate new bitmap!");
@@ -553,10 +555,10 @@ int pmm_init(const struct e820_info *info)
         sizeof(*unusable) * new->map->nr_unusable);
 
     d_available -= pmm->available;
-    new->available = pmm_init_bitmap(new);
-    entries        = PMM_MIN(PMM_INIT_ENTRIES, entries);
+    pmm_init_bitmap(new);
+    entries = PMM_MIN(pmm->nr_entries, new->nr_entries);
 
-    memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * pmm->nr_entries);
+    memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * entries);
     pmm = new;
 
     pmm_free_internal(pmm_initial, sizeof(pmm_initial), 1);
