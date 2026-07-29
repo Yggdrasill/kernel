@@ -33,8 +33,7 @@
 #define PMM_LOG   (12)
 #define PMM_ALIGN (1ULL << PMM_LOG)
 #define PMM_MASK  (~(PMM_ALIGN - 1ULL))
-
-#define PMM_BITS (bits_sizeof(*((struct pmm_bitmap *)0)->bitmap))
+#define PMM_BITS  (bits_sizeof(*((struct pmm_bitmap *)0)->bitmap))
 
 #define PMM_1M_ADDR   (1 << 20)
 #define PMM_1M_BLOCK  (PMM_1M_ADDR >> PMM_LOG)
@@ -363,6 +362,7 @@ static int pmm_search_map(const struct pmm_map *map, const size_t start, const s
 {
     int i;
     for(i = 0; i < map->nr_unusable; i++) {
+        if(map->unusable[i].start == map->unusable[i].end) continue;
         if(start < map->unusable[i].end && end > map->unusable[i].start) {
             return i;
         }
@@ -414,7 +414,7 @@ void *pmm_alloc(size_t size)
     return ret;
 }
 
-void pmm_free_internal(void *p, size_t size, const int override)
+void pmm_free(void *p, size_t size)
 {
     size_t block;
     size_t alloc;
@@ -456,10 +456,73 @@ void pmm_free_internal(void *p, size_t size, const int override)
     return;
 }
 
-void pmm_free(void *p, size_t size)
+int pmm_reclaim_unusable(struct pmm_map *map, void *p, const size_t size)
 {
-    pmm_free_internal(p, size, 0);
-    return;
+    struct pmm_range *old;
+    struct pmm_range *new;
+
+    size_t  p_off;
+    size_t  s_off;
+    size_t  from;
+    size_t  to;
+    int     i;
+
+    if(!map || !map->unusable) return -1;
+    if(!size) return 0;
+
+    from  = (uintptr_t)p / PMM_ALIGN;
+    p_off = (uintptr_t)p % PMM_ALIGN;
+    s_off = size % PMM_ALIGN;
+    to    = from + size / (size_t)PMM_ALIGN;
+    to   += ((p_off + s_off) % PMM_ALIGN) > 0;
+    to   += (p_off + s_off) / PMM_ALIGN;
+
+    old = map->unusable;
+
+    i = pmm_search_map(map, from, to);
+    if(i < 0) return 0;
+
+    /* Zero-sized entries are fine. */
+    if(from <= old[i].start && to >= old[i].end) {
+        old[i].start = old[i].end;
+        return 0;
+    }
+
+    if(to >= old[i].end) {
+        old[i].end = from;
+        return 0;
+    }
+
+    if(from <= old[i].start && to > old[i].start) {
+        old[i].start = to;
+        return 0;
+    }
+
+    if(map->nr_unusable == map->max_nr_unusable) return -2;
+
+    new = pmm_alloc(sizeof(*old) * (map->nr_unusable + 1));
+    if(!new) return -3;
+
+    memcpy(new, old, sizeof(*old) * (size_t)i);
+    memcpy(
+        new + i + 2,
+        old + i + 1,
+        sizeof(*old) * (map->nr_unusable - (size_t)i - 1));
+
+    new[i] = (struct pmm_range) {
+        .start = old[i].start,
+        .end   = from,
+    };
+    new[i + 1] = (struct pmm_range) {
+        .start = to,
+        .end   = old[i].end,
+    };
+
+    pmm_free(old, sizeof(*old) * map->nr_unusable);
+    map->unusable = new;
+    map->nr_unusable++;
+
+    return 0;
 }
 
 extern size_t pmm_initial[PMM_INIT_ENTRIES];
@@ -522,9 +585,9 @@ int pmm_init(const struct e820_info *info)
     }
 
     new->map->nr_usable       = pmm->map->nr_usable;
-    new->map->max_nr_usable   = pmm->map->nr_usable;
+    new->map->max_nr_usable   = MMAP_MAX_ENTRIES;
     new->map->nr_unusable     = pmm->map->nr_unusable;
-    new->map->max_nr_unusable = pmm->map->nr_unusable;
+    new->map->max_nr_unusable = MMAP_MAX_ENTRIES;
 
     new->map->usable   = pmm_alloc(sizeof(*usable) * new->map->nr_usable);
     new->map->unusable = pmm_alloc(sizeof(*unusable) * new->map->nr_unusable);
@@ -547,7 +610,10 @@ int pmm_init(const struct e820_info *info)
     memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * entries);
     pmm = new;
 
-    pmm_free_internal(pmm_initial, sizeof(pmm_initial), 1);
+    if(pmm_reclaim_unusable(new->map, pmm_initial, sizeof(pmm_initial))) {
+        puts("WARN pmm_init: unable to delete unusable entry");
+    }
+    pmm_free(pmm_initial, sizeof(pmm_initial));
     pmm->available -= d_available;
 
     puthex(&pmm->available, sizeof(pmm->available), 1);
