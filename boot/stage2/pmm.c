@@ -35,8 +35,8 @@
 #define PMM_MASK  (~(PMM_ALIGN - 1ULL))
 #define PMM_BITS  (bits_sizeof(*((struct pmm_bitmap *)0)->bitmap))
 
-#define PMM_1M_ADDR   (1 << 20)
-#define PMM_1M_BLOCK  (PMM_1M_ADDR >> PMM_LOG)
+#define PMM_1M_ADDR    (1 << 20)
+#define PMM_1M_BLOCK   (PMM_1M_ADDR >> PMM_LOG)
 #define PMM_MAX_BLOCKS ((SIZE_MAX >> PMM_LOG) + 1)
 
 #define PMM_MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -62,6 +62,9 @@ struct pmm_map {
     uint8_t max_nr_usable;
     uint8_t max_nr_unusable;
 };
+
+static void *pmm_alloc(size_t);
+static void  pmm_free(void *, size_t);
 
 /* clang-format off */
 static SAFE_ADD_IMPLEMENT(uint64, uint64_t, UINT64_MAX)
@@ -106,12 +109,12 @@ pmm_parse_e820(struct pmm_map *map, const struct e820_info *info)
     struct pmm_range *usable;
     struct pmm_range *unusable;
 
-    uint64_t  align_base;
-    uint64_t  align_end;
-    size_t    end;
-    size_t    i;
-    uint8_t   j, k;
-    uint8_t   usable_type;
+    uint64_t align_base;
+    uint64_t align_end;
+    size_t   end;
+    size_t   i;
+    uint8_t  j, k;
+    uint8_t  usable_type;
 
     if(!info || !map || !map->usable || !map->unusable) {
         panic("pmm_parse_e820: NULL pointer!");
@@ -358,7 +361,8 @@ pmm_print_map(const struct pmm_bitmap *pmm, size_t entry, const size_t end)
     return;
 }
 
-static int pmm_search_map(const struct pmm_map *map, const size_t start, const size_t end)
+static int
+pmm_search_map(const struct pmm_map *map, const size_t start, const size_t end)
 {
     int i;
     for(i = 0; i < map->nr_unusable; i++) {
@@ -368,6 +372,75 @@ static int pmm_search_map(const struct pmm_map *map, const size_t start, const s
         }
     }
     return -1;
+}
+
+static int pmm_reclaim_unusable(struct pmm_map *map, void *p, const size_t size)
+{
+    struct pmm_range *old;
+    struct pmm_range *new;
+
+    size_t p_off;
+    size_t s_off;
+    size_t from;
+    size_t to;
+    int    i;
+
+    if(!map || !map->unusable) return -1;
+    if(!size) return 0;
+
+    from  = (uintptr_t)p / PMM_ALIGN;
+    p_off = (uintptr_t)p % PMM_ALIGN;
+    s_off = size % PMM_ALIGN;
+    to    = from + size / (size_t)PMM_ALIGN;
+    to += ((p_off + s_off) % PMM_ALIGN) > 0;
+    to += (p_off + s_off) / PMM_ALIGN;
+
+    old = map->unusable;
+
+    i = pmm_search_map(map, from, to);
+    if(i < 0) return 0;
+
+    /* Zero-sized entries are fine. */
+    if(from <= old[i].start && to >= old[i].end) {
+        old[i].start = old[i].end;
+        return 0;
+    }
+
+    if(to >= old[i].end) {
+        old[i].end = from;
+        return 0;
+    }
+
+    if(from <= old[i].start && to > old[i].start) {
+        old[i].start = to;
+        return 0;
+    }
+
+    if(map->nr_unusable == map->max_nr_unusable) return -2;
+
+    new = pmm_alloc(sizeof(*old) * (map->nr_unusable + 1));
+    if(!new) return -3;
+
+    memcpy(new, old, sizeof(*old) * (size_t)i);
+    memcpy(
+        new + i + 2,
+        old + i + 1,
+        sizeof(*old) * (map->nr_unusable - (size_t)i - 1));
+
+    new[i] = (struct pmm_range){
+        .start = old[i].start,
+        .end   = from,
+    };
+    new[i + 1] = (struct pmm_range){
+        .start = to,
+        .end   = old[i].end,
+    };
+
+    pmm_free(old, sizeof(*old) * map->nr_unusable);
+    map->unusable = new;
+    map->nr_unusable++;
+
+    return 0;
 }
 
 static struct pmm_bitmap *pmm = NULL;
@@ -419,6 +492,8 @@ void pmm_free(void *p, size_t size)
     size_t block;
     size_t alloc;
 
+    if(!size) return;
+
     if(!pmm || !pmm->map || !pmm->map->unusable) {
         panic("pmm_free: memory manager uninitialised!");
     }
@@ -432,8 +507,6 @@ void pmm_free(void *p, size_t size)
     if(pmm_is_unaligned((uintptr_t)p)) {
         panic("pmm_free: unaligned pointer!");
     }
-
-    if(!size) return;
 
     block = (uintptr_t)p / PMM_ALIGN;
     alloc = size / PMM_ALIGN;
@@ -456,88 +529,66 @@ void pmm_free(void *p, size_t size)
     return;
 }
 
-int pmm_reclaim_unusable(struct pmm_map *map, void *p, const size_t size)
-{
-    struct pmm_range *old;
-    struct pmm_range *new;
-
-    size_t  p_off;
-    size_t  s_off;
-    size_t  from;
-    size_t  to;
-    int     i;
-
-    if(!map || !map->unusable) return -1;
-    if(!size) return 0;
-
-    from  = (uintptr_t)p / PMM_ALIGN;
-    p_off = (uintptr_t)p % PMM_ALIGN;
-    s_off = size % PMM_ALIGN;
-    to    = from + size / (size_t)PMM_ALIGN;
-    to   += ((p_off + s_off) % PMM_ALIGN) > 0;
-    to   += (p_off + s_off) / PMM_ALIGN;
-
-    old = map->unusable;
-
-    i = pmm_search_map(map, from, to);
-    if(i < 0) return 0;
-
-    /* Zero-sized entries are fine. */
-    if(from <= old[i].start && to >= old[i].end) {
-        old[i].start = old[i].end;
-        return 0;
-    }
-
-    if(to >= old[i].end) {
-        old[i].end = from;
-        return 0;
-    }
-
-    if(from <= old[i].start && to > old[i].start) {
-        old[i].start = to;
-        return 0;
-    }
-
-    if(map->nr_unusable == map->max_nr_unusable) return -2;
-
-    new = pmm_alloc(sizeof(*old) * (map->nr_unusable + 1));
-    if(!new) return -3;
-
-    memcpy(new, old, sizeof(*old) * (size_t)i);
-    memcpy(
-        new + i + 2,
-        old + i + 1,
-        sizeof(*old) * (map->nr_unusable - (size_t)i - 1));
-
-    new[i] = (struct pmm_range) {
-        .start = old[i].start,
-        .end   = from,
-    };
-    new[i + 1] = (struct pmm_range) {
-        .start = to,
-        .end   = old[i].end,
-    };
-
-    pmm_free(old, sizeof(*old) * map->nr_unusable);
-    map->unusable = new;
-    map->nr_unusable++;
-
-    return 0;
-}
-
 extern size_t pmm_initial[PMM_INIT_ENTRIES];
+
+static struct pmm_bitmap *pmm_init_new(const struct pmm_bitmap *old)
+{
+    struct pmm_bitmap *new;
+    struct pmm_range  *usable;
+    struct pmm_range  *unusable;
+
+    new = pmm_alloc(sizeof(*new));
+    if(!new) {
+        panic("pmm: no space to allocate new pmm!");
+    }
+
+    new->max_entries = PMM_MAX_ENTRIES;
+    new->bitmap      = pmm_alloc(sizeof(*new->bitmap) * new->max_entries);
+    if(!new->bitmap) {
+        panic("pmm: no space to allocate new bitmap!");
+    }
+
+    new->map = pmm_alloc(sizeof(*new->map));
+    if(!new->map) {
+        panic("pmm: no space to allocate new memory map!");
+    }
+
+    new->map->nr_usable       = old->map->nr_usable;
+    new->map->max_nr_usable   = MMAP_MAX_ENTRIES;
+    new->map->nr_unusable     = old->map->nr_unusable;
+    new->map->max_nr_unusable = MMAP_MAX_ENTRIES;
+
+    new->map->usable   = pmm_alloc(sizeof(*usable) * new->map->nr_usable);
+    new->map->unusable = pmm_alloc(sizeof(*unusable) * new->map->nr_unusable);
+    if(!new->map->usable || !new->map->unusable) {
+        panic("pmm: no space to allocate memory extents!");
+    }
+    memcpy(
+        new->map->usable,
+        old->map->usable,
+        sizeof(*usable) * new->map->nr_usable);
+    memcpy(
+        new->map->unusable,
+        old->map->unusable,
+        sizeof(*unusable) * new->map->nr_unusable);
+
+    pmm_init_bitmap(new);
+    new->nr_entries = PMM_MIN(old->nr_entries, new->nr_entries);
+
+    memcpy(new->bitmap, old->bitmap, sizeof(*old->bitmap) * new->nr_entries);
+
+    return new;
+}
 
 int pmm_init(const struct e820_info *info)
 {
-    struct pmm_bitmap  initial;
-    struct pmm_range   usable[MMAP_MAX_ENTRIES];
-    struct pmm_range   unusable[MMAP_MAX_ENTRIES];
-    struct pmm_map     map;
-    struct pmm_bitmap *new;
+    struct pmm_bitmap initial;
+    struct pmm_range  usable[MMAP_MAX_ENTRIES];
+    struct pmm_range  unusable[MMAP_MAX_ENTRIES];
+    struct pmm_map    map;
 
     uint64_t blocks;
     size_t   d_available;
-    size_t   entries;
 
     map = (struct pmm_map){
         .usable          = usable,
@@ -556,61 +607,19 @@ int pmm_init(const struct e820_info *info)
     };
     pmm = &initial;
 
-    blocks  = pmm_parse_e820(&map, info);
-    entries = (size_t)(blocks / PMM_BITS);
-    entries += (size_t)((blocks % PMM_BITS) > 0);
-
+    blocks = pmm_parse_e820(&map, info);
     pmm_init_bitmap(pmm);
-    d_available = pmm->available;
 
     puthex(&blocks, sizeof(blocks), 1);
     puts(" 4K blocks discovered");
     puthex(&pmm->available, sizeof(pmm->available), 1);
     puts(" 4K blocks available");
 
-    new = pmm_alloc(sizeof(*new));
-    if(!new) {
-        panic("pmm: no space to allocate new pmm!");
-    }
+    d_available = pmm->available;
+    pmm         = pmm_init_new(&initial);
+    d_available -= initial.available;
 
-    new->max_entries = PMM_MAX_ENTRIES;
-    new->bitmap      = pmm_alloc(sizeof(*new->bitmap) * new->max_entries);
-    if(!new->bitmap) {
-        panic("pmm: no space to allocate new bitmap!");
-    }
-
-    new->map = pmm_alloc(sizeof(*new->map));
-    if(!new->map) {
-        panic("pmm: no space to allocate new memory map!");
-    }
-
-    new->map->nr_usable       = pmm->map->nr_usable;
-    new->map->max_nr_usable   = MMAP_MAX_ENTRIES;
-    new->map->nr_unusable     = pmm->map->nr_unusable;
-    new->map->max_nr_unusable = MMAP_MAX_ENTRIES;
-
-    new->map->usable   = pmm_alloc(sizeof(*usable) * new->map->nr_usable);
-    new->map->unusable = pmm_alloc(sizeof(*unusable) * new->map->nr_unusable);
-    if(!new->map->usable || !new->map->unusable) {
-        panic("pmm: no space to allocate memory extents!");
-    }
-    memcpy(
-        new->map->usable,
-        pmm->map->usable,
-        sizeof(*usable) * new->map->nr_usable);
-    memcpy(
-        new->map->unusable,
-        pmm->map->unusable,
-        sizeof(*unusable) * new->map->nr_unusable);
-
-    d_available -= pmm->available;
-    pmm_init_bitmap(new);
-    entries = PMM_MIN(pmm->nr_entries, new->nr_entries);
-
-    memcpy(new->bitmap, pmm->bitmap, sizeof(*pmm->bitmap) * entries);
-    pmm = new;
-
-    if(pmm_reclaim_unusable(new->map, pmm_initial, sizeof(pmm_initial))) {
+    if(pmm_reclaim_unusable(pmm->map, pmm_initial, sizeof(pmm_initial))) {
         puts("WARN pmm_init: unable to delete unusable entry");
     }
     pmm_free(pmm_initial, sizeof(pmm_initial));
