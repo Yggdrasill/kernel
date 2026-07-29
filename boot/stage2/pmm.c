@@ -537,21 +537,19 @@ static struct pmm_bitmap *pmm_init_new(const struct pmm_bitmap *old)
     struct pmm_range  *usable;
     struct pmm_range  *unusable;
 
+    size_t entries;
+
+    if(!old) panic("pmm_init_new: NULL pointer!");
+
     new = pmm_alloc(sizeof(*new));
-    if(!new) {
-        panic("pmm: no space to allocate new pmm!");
-    }
+    if(!new) panic("pmm: no space to allocate new pmm!");
 
     new->max_entries = PMM_MAX_ENTRIES;
     new->bitmap      = pmm_alloc(sizeof(*new->bitmap) * new->max_entries);
-    if(!new->bitmap) {
-        panic("pmm: no space to allocate new bitmap!");
-    }
+    if(!new->bitmap) panic("pmm: no space to allocate new bitmap!");
 
     new->map = pmm_alloc(sizeof(*new->map));
-    if(!new->map) {
-        panic("pmm: no space to allocate new memory map!");
-    }
+    if(!new->map) panic("pmm: no space to allocate new memory map!");
 
     new->map->nr_usable       = old->map->nr_usable;
     new->map->max_nr_usable   = MMAP_MAX_ENTRIES;
@@ -563,6 +561,7 @@ static struct pmm_bitmap *pmm_init_new(const struct pmm_bitmap *old)
     if(!new->map->usable || !new->map->unusable) {
         panic("pmm: no space to allocate memory extents!");
     }
+
     memcpy(
         new->map->usable,
         old->map->usable,
@@ -573,9 +572,8 @@ static struct pmm_bitmap *pmm_init_new(const struct pmm_bitmap *old)
         sizeof(*unusable) * new->map->nr_unusable);
 
     pmm_init_bitmap(new);
-    new->nr_entries = PMM_MIN(old->nr_entries, new->nr_entries);
-
-    memcpy(new->bitmap, old->bitmap, sizeof(*old->bitmap) * new->nr_entries);
+    entries = PMM_MIN(old->nr_entries, new->nr_entries);
+    memcpy(new->bitmap, old->bitmap, sizeof(*old->bitmap) * entries);
 
     return new;
 }
