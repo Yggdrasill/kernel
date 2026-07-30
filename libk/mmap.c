@@ -70,91 +70,6 @@ static uint32_t mmap_compare_type(const uint32_t t1, const uint32_t t2)
     return t1 > t2 ? t1 : t2;
 }
 
-/*
- * mmap_sanitize() is roughly based on the Linux implementation, using a
- * line-sweeping type algorithm to resolve overlapping memory regions.
- */
-
-int mmap_sanitize(struct e820_info *dst_info, struct e820_info *src_info)
-{
-    struct e820_point e820_points[2 * MMAP_MAX_ENTRIES];
-
-    struct e820_map   *dst;
-    struct e820_map   *src;
-    struct e820_map   *overlap_map[MMAP_MAX_ENTRIES];
-    struct e820_point *prev_point;
-
-    uint64_t mmap_tail;
-
-    size_t new_nr_entries;
-    size_t nr_overlaps;
-    size_t i, j;
-
-    uint32_t type;
-    uint32_t prev_type;
-    uint32_t attrib;
-    uint32_t prev_attrib;
-
-    if(!dst_info || !src_info || !dst_info->base || !src_info->base) return -1;
-
-    dst                  = dst_info->base;
-    src                  = src_info->base;
-    dst_info->nr_entries = 0;
-
-    const size_t nr_entries      = src_info->nr_entries;
-    const size_t dst_max_entries = dst_info->max_nr_entries;
-
-    if(!nr_entries) return -2;
-    if(nr_entries > dst_max_entries || dst_max_entries > MMAP_MAX_ENTRIES) {
-        return -3;
-    }
-
-    /*
-     * Break down the E820 structure into a sorted list of points that can be
-     * traversed. From these points the memory map will be rebuilt from scratch,
-     * since it can be messy when the BIOS provides it.
-     */
-
-    j = 0;
-    for(i = 0; i < nr_entries; i++) {
-        if(!src[i].size) continue;
-        mmap_tail = 0;
-        if(safe_add_uint64(&mmap_tail, src[i].base, src[i].size)) {
-            panic("mmap: integer overflow!");
-        }
-        e820_points[j++] = (struct e820_point){src + i, src[i].base};
-        e820_points[j++] = (struct e820_point){src + i, mmap_tail};
-    }
-
-    const size_t NR_POINTS = j;
-    if(!NR_POINTS) return -4;
-
-    isort_mmap(e820_points, NR_POINTS, mmap_cmp);
-    new_nr_entries             = 0;
-    nr_overlaps                = 0;
-    prev_point                 = e820_points;
-    prev_type                  = prev_point->entry->type;
-    prev_attrib                = prev_point->entry->attrib;
-    overlap_map[nr_overlaps++] = prev_point->entry;
-
-    for(i = 1; i < NR_POINTS && new_nr_entries < dst_max_entries; i++) {
-
-        /*
-         * Build a map of possibly overlapping entries. If the point is a base
-         * address entry, add it to the overlap map. If not, remove it.
-         */
-
-        if(mmap_is_base(e820_points + i)) {
-            overlap_map[nr_overlaps++] = e820_points[i].entry;
-        } else {
-            for(j = 0; j < nr_overlaps; j++) {
-                if(overlap_map[j] == e820_points[i].entry) {
-                    overlap_map[j] = overlap_map[--nr_overlaps];
-                    break;
-                }
-            }
-        }
-
         /*
          * Compare type precedence and pick the worst type. It is roughly in the
          * order of greatest type. the possible types are:
@@ -179,39 +94,6 @@ int mmap_sanitize(struct e820_info *dst_info, struct e820_info *src_info)
          * It may not be desired to always reclaim usable memory, hence why they
          * have greater precedence than type 1.
          */
-
-        type   = nr_overlaps > 0 ? overlap_map[0]->type : MMAP_RESERVED;
-        attrib = nr_overlaps > 0 ? overlap_map[0]->attrib : 0;
-        for(j = 1; j < nr_overlaps; j++) {
-            type = mmap_compare_type(overlap_map[j]->type, type);
-            if(type == overlap_map[j]->type) attrib = overlap_map[j]->attrib;
-        }
-
-        /*
-         * Reconstruct the map from the previous entry if type changes, or if we
-         * are at the last element of the array.
-         */
-
-        if(type != prev_type || attrib != prev_attrib || i == NR_POINTS - 1) {
-            dst[new_nr_entries] = (struct e820_map){
-                prev_point->addr,
-                e820_points[i].addr - prev_point->addr,
-                prev_type,
-                prev_attrib,
-            };
-            prev_point  = e820_points + i;
-            prev_type   = type;
-            prev_attrib = attrib;
-            new_nr_entries += dst[new_nr_entries].size > 0;
-        }
-    }
-
-    dst_info->nr_entries = new_nr_entries;
-
-    if(i < NR_POINTS && new_nr_entries == dst_max_entries) return -5;
-
-    return 0;
-}
 
 char *mmap_sanitize_error(int status)
 {
