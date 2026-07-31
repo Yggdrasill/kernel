@@ -131,9 +131,6 @@ pmm_parse_e820(struct pmm_map *map, const struct e820_info *info)
 
         usable_type = e820->type == MMAP_USABLE;
         align_base  = pmm_align_base(e820->base, align_end, e820->type);
-        if(align_base != align_end) {
-            panic("pmm_parse_e820: non-contiguous memory map!");
-        }
 
         align_end = e820->base;
         if(safe_add_uint64(&align_end, e820->base, e820->size)) {
