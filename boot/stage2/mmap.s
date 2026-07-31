@@ -55,8 +55,9 @@ mmap_loop:
     mov   ecx, -4
     jmp   mmap_done
 mmap_e820:
-    ; clear ACPI 3.0 attribute field if BIOS doesn't fill in
-    mov   dword [es:edi+0x14], 0x00 
+    ; Set ACPI 3.0 attribute field to
+    ; valid if BIOS doesn't fill in
+    mov   dword [es:edi+0x14], 0x01
     mov   eax, 0x0000E820
     mov   ecx, 0x00000018
     mov   edx, 0x534D4150

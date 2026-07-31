@@ -26,8 +26,6 @@
 
 #include "mmap.h"
 
-#define MMAP_REGION_SIZE(start, end) ((uintptr_t)&end - (uintptr_t)&start)
-
 extern char __BIOS_START;
 extern char __BIOS_END;
 extern char __BOOTLOADER_START;
@@ -51,53 +49,103 @@ extern struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
 static struct e820_map *const old_map = __mmap_old_map;
 static struct e820_map *const new_map = __mmap_new_map;
 
-static size_t mmap_clobber(struct e820_info *info)
+static size_t mmap_clobber(struct e820_events *info)
 {
-    struct e820_map *mmap;
-    size_t           nr_entries;
+    struct e820_event *events;
 
-    mmap       = info->base;
-    nr_entries = info->nr_entries;
+    uint8_t nr_events;
 
-    mmap[nr_entries++] = (struct e820_map){
-        .base   = (uintptr_t)&__BIOS_START,
-        .size   = (uintptr_t)&__BIOS_END - (uintptr_t)&__BIOS_START,
-        .type   = MMAP_RESERVED,
-        .attrib = 0,
-    };
-    mmap[nr_entries++] = (struct e820_map){
-        .base   = (uintptr_t)&__BOOTLOADER_START,
-        .size   = (uintptr_t)&__BOOTLOADER_END - (uintptr_t)&__BOOTLOADER_START,
-        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-        .attrib = 0,
-    };
-    mmap[nr_entries++] = (struct e820_map){
-        .base   = (uintptr_t)&__PREALLOC_START,
-        .size   = MMAP_REGION_SIZE(__PREALLOC_START, __PREALLOC_END),
-        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-        .attrib = 0,
-    };
-    mmap[nr_entries++] = (struct e820_map){
-        .base   = (uintptr_t)&__STACK_START,
-        .size   = MMAP_REGION_SIZE(__STACK_START, __STACK_END),
-        .type   = MMAP_BOOTLOADER_RECLAIMABLE,
-        .attrib = 0,
-    };
-    mmap[nr_entries++] = (struct e820_map){
-        .base   = (uintptr_t)&FB_ADDR,
-        .size   = (uintptr_t)&FB_END - (uintptr_t)&FB_ADDR,
-        .type   = MMAP_FRAMEBUFFER,
-        .attrib = 0,
-    };
-    mmap[nr_entries++] = (struct e820_map){
-        .base   = (uintptr_t)&__UPPER_START,
-        .size   = (uintptr_t)&__UPPER_END - (uintptr_t)&__UPPER_START,
-        .type   = MMAP_RESERVED,
-        .attrib = 0,
-    };
+    events    = info->events;
+    nr_events = (uint8_t)info->nr_events;
 
-    info->nr_entries = nr_entries;
-    return nr_entries;
+    events[nr_events] = (struct e820_event){
+        .addr = (uintptr_t)&__BIOS_START,
+        .type = MMAP_RESERVED,
+        .id   = nr_events,
+        .base = MMAP_EVENT_BASE,
+    };
+    events[nr_events + 1] = (struct e820_event){
+        .addr = (uintptr_t)&__BIOS_END,
+        .type = MMAP_RESERVED,
+        .id   = nr_events,
+        .base = MMAP_EVENT_END,
+    };
+    nr_events += 2;
+
+    events[nr_events] = (struct e820_event){
+        .addr = (uintptr_t)&__BOOTLOADER_START,
+        .type = MMAP_BOOT_RECLAIMABLE,
+        .id   = nr_events,
+        .base = MMAP_EVENT_BASE,
+
+    };
+    events[nr_events + 1] = (struct e820_event){
+        .addr = (uintptr_t)&__BOOTLOADER_END,
+        .type = MMAP_BOOT_RECLAIMABLE,
+        .id   = nr_events,
+        .base = MMAP_EVENT_END,
+
+    };
+    nr_events += 2;
+
+    events[nr_events] = (struct e820_event){
+        .addr = (uintptr_t)&__PREALLOC_START,
+        .type = MMAP_BOOT_RECLAIMABLE,
+        .id   = nr_events,
+        .base = MMAP_EVENT_BASE,
+    };
+    events[nr_events + 1] = (struct e820_event){
+        .addr = (uintptr_t)&__PREALLOC_END,
+        .type = MMAP_BOOT_RECLAIMABLE,
+        .id   = nr_events,
+        .base = MMAP_EVENT_END,
+    };
+    nr_events += 2;
+
+    events[nr_events] = (struct e820_event){
+        .addr = (uintptr_t)&__STACK_START,
+        .type = MMAP_BOOT_RECLAIMABLE,
+        .id   = nr_events,
+        .base = MMAP_EVENT_BASE,
+    };
+    events[nr_events + 1] = (struct e820_event){
+        .addr = (uintptr_t)&__STACK_END,
+        .type = MMAP_BOOT_RECLAIMABLE,
+        .id   = nr_events,
+        .base = MMAP_EVENT_END,
+    };
+    nr_events += 2;
+
+    events[nr_events] = (struct e820_event){
+        .addr = (uintptr_t)&FB_ADDR,
+        .type = MMAP_FRAMEBUFFER,
+        .id   = nr_events,
+        .base = MMAP_EVENT_BASE,
+    };
+    events[nr_events + 1] = (struct e820_event){
+        .addr = (uintptr_t)&FB_END,
+        .type = MMAP_FRAMEBUFFER,
+        .id   = nr_events,
+        .base = MMAP_EVENT_END,
+    };
+    nr_events += 2;
+
+    events[nr_events] = (struct e820_event){
+        .addr = (uintptr_t)&__UPPER_START,
+        .type = MMAP_RESERVED,
+        .id   = nr_events,
+        .base = MMAP_EVENT_BASE,
+    };
+    events[nr_events + 1] = (struct e820_event){
+        .addr = (uintptr_t)&__UPPER_END,
+        .type = MMAP_RESERVED,
+        .id   = nr_events,
+        .base = MMAP_EVENT_END,
+    };
+    nr_events += 2;
+
+    info->nr_events = nr_events;
+    return nr_events;
 }
 
 static void mmap_print(struct e820_info *info)
@@ -109,7 +157,9 @@ static void mmap_print(struct e820_info *info)
         putchar(' ');
         puthex(&info->base[i].size, sizeof(info->base[i].size), 0);
         putchar(' ');
-        puthex(&info->base[i].type, sizeof(info->base[i].type), 0);
+        puthex(&info->base[i].type, sizeof(info->base[i].type), 1);
+        putchar(' ');
+        puthex(&info->base[i].attrib, sizeof(info->base[i].attrib), 1);
         putchar('\n');
     }
 
@@ -128,29 +178,40 @@ static struct e820_info new_mmap_info = {
     .max_nr_entries = MMAP_MAX_ENTRIES,
 };
 
-struct e820_info *boot_mmap_init(void)
+struct e820_info *boot_mmap_ptr(void)
 {
-    struct e820_info *info;
-
-    info = &old_mmap_info;
-    mmap_clobber(info);
-
-    return info;
+    return &old_mmap_info;
 }
 
-struct e820_info *boot_mmap_setup(struct e820_info *old_info)
+struct e820_info *boot_mmap_init(struct e820_info *old_info)
 {
+    struct e820_event  events[2 * MMAP_MAX_ENTRIES];
+    struct e820_events event_info;
+
     struct e820_info *new_info;
 
     char *error;
     int   status;
 
+    event_info = (struct e820_events){
+        .events        = events,
+        .nr_events     = 0,
+        .max_nr_events = 2 * MMAP_MAX_ENTRIES,
+    };
+    mmap_clobber(&event_info);
+    if(mmap_transform_map(&event_info, old_info)) {
+        panic("boot_mmap_init: Could not transform E820 memory map!");
+    }
+
     new_info = &new_mmap_info;
-    status   = mmap_sanitize(new_info, old_info);
-    if(status) {
+    status   = mmap_sanitize(new_info, &event_info);
+    if(status && status > -3) {
         error = mmap_sanitize_error(status);
         panic(error);
+    } else if(status == -3) {
+        puts("boot_mmap_init WARN: Exhausted capacity, E820 map truncated.");
     }
     mmap_print(new_info);
+
     return new_info;
 }

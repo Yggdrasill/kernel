@@ -29,13 +29,15 @@
     #include <stdint.h>
 
 enum MMAP_TYPES {
-    MMAP_USABLE = 1,
-    MMAP_RESERVED,
-    MMAP_ACPI_RECLAIMABLE,
-    MMAP_ACPI_NVS,
-    MMAP_BAD_MEMORY,
-    MMAP_BOOTLOADER_RECLAIMABLE,
-    MMAP_FRAMEBUFFER
+    MMAP_USABLE           = 1,
+    MMAP_RESERVED         = 2,
+    MMAP_ACPI_RECLAIMABLE = 3,
+    MMAP_ACPI_NVS         = 4,
+    MMAP_BAD_MEMORY       = 5,
+    MMAP_ATTR_INVALID     = 0xFC,
+    MMAP_ATTR_NVS         = 0xFD,
+    MMAP_BOOT_RECLAIMABLE = 0xFE,
+    MMAP_FRAMEBUFFER      = 0xFF,
 };
 
 struct e820_map {
@@ -51,6 +53,19 @@ struct e820_info {
     size_t           max_nr_entries;
 };
 
+struct e820_event {
+    uint64_t addr;
+    uint32_t type;
+    uint8_t  id;
+    int8_t   base;
+};
+
+struct e820_events {
+    struct e820_event *events;
+    size_t             nr_events;
+    size_t             max_nr_events;
+};
+
     #define MMAP_ENTRY_SIZE  (sizeof(struct e820_map))
     #define MMAP_BASE_OFFSET (offsetof(struct e820_map, base))
     #define MMAP_SIZE_OFFSET (offsetof(struct e820_map, size))
@@ -60,6 +75,9 @@ struct e820_info {
     #define INFO_BASE_OFFSET   (offsetof(struct e820_info, base))
     #define INFO_NR_ENT_OFFSET (offsetof(struct e820_info, nr_entries))
     #define INFO_MAX_NR_OFFSET (offsetof(struct e820_info, max_nr_entries))
+
+    #define MMAP_EVENT_BASE -1
+    #define MMAP_EVENT_END  1
 #endif
 
 #endif

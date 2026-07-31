@@ -28,7 +28,11 @@
 struct e820_info;
 struct e820_map;
 
-int   mmap_sanitize(struct e820_info *, struct e820_info *);
+struct e820_event;
+struct e820_events;
+
+int   mmap_transform_map(struct e820_events *, const struct e820_info *);
+int   mmap_sanitize(struct e820_info *, const struct e820_events *);
 char *mmap_sanitize_error(int);
 
 #endif

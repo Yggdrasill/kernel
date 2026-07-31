@@ -64,10 +64,10 @@ static struct boot_info boot_init(void)
     nmi_enable();
     ints_flag_set();
 
-    mmap = boot_mmap_init();
+    mmap = boot_mmap_ptr();
     /* Panics if error */
     bios_mmap(mmap);
-    mmap = boot_mmap_setup(mmap);
+    mmap = boot_mmap_init(mmap);
 
     return (struct boot_info){
         .gdt  = gdt,
