@@ -56,7 +56,6 @@ struct e820_info {
 struct e820_event {
     uint64_t addr;
     uint32_t type;
-    uint8_t  id;
     int8_t   base;
 };
 

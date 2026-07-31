@@ -49,6 +49,19 @@ extern struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
 static struct e820_map *const old_map = __mmap_old_map;
 static struct e820_map *const new_map = __mmap_new_map;
 
+#define NEW_EVENT(start, end, event_type)                                      \
+    events[nr_events] = (struct e820_event){                                   \
+        .addr = (uintptr_t)&start,                                             \
+        .type = event_type,                                                    \
+        .base = MMAP_EVENT_BASE,                                               \
+    };                                                                         \
+    events[nr_events + 1] = (struct e820_event){                               \
+        .addr = (uintptr_t)&end,                                               \
+        .type = event_type,                                                    \
+        .base = MMAP_EVENT_END,                                                \
+    };                                                                         \
+    nr_events += 2
+
 static size_t mmap_clobber(struct e820_events *info)
 {
     struct e820_event *events;
@@ -58,91 +71,12 @@ static size_t mmap_clobber(struct e820_events *info)
     events    = info->events;
     nr_events = (uint8_t)info->nr_events;
 
-    events[nr_events] = (struct e820_event){
-        .addr = (uintptr_t)&__BIOS_START,
-        .type = MMAP_RESERVED,
-        .id   = nr_events,
-        .base = MMAP_EVENT_BASE,
-    };
-    events[nr_events + 1] = (struct e820_event){
-        .addr = (uintptr_t)&__BIOS_END,
-        .type = MMAP_RESERVED,
-        .id   = nr_events,
-        .base = MMAP_EVENT_END,
-    };
-    nr_events += 2;
-
-    events[nr_events] = (struct e820_event){
-        .addr = (uintptr_t)&__BOOTLOADER_START,
-        .type = MMAP_BOOT_RECLAIMABLE,
-        .id   = nr_events,
-        .base = MMAP_EVENT_BASE,
-
-    };
-    events[nr_events + 1] = (struct e820_event){
-        .addr = (uintptr_t)&__BOOTLOADER_END,
-        .type = MMAP_BOOT_RECLAIMABLE,
-        .id   = nr_events,
-        .base = MMAP_EVENT_END,
-
-    };
-    nr_events += 2;
-
-    events[nr_events] = (struct e820_event){
-        .addr = (uintptr_t)&__PREALLOC_START,
-        .type = MMAP_BOOT_RECLAIMABLE,
-        .id   = nr_events,
-        .base = MMAP_EVENT_BASE,
-    };
-    events[nr_events + 1] = (struct e820_event){
-        .addr = (uintptr_t)&__PREALLOC_END,
-        .type = MMAP_BOOT_RECLAIMABLE,
-        .id   = nr_events,
-        .base = MMAP_EVENT_END,
-    };
-    nr_events += 2;
-
-    events[nr_events] = (struct e820_event){
-        .addr = (uintptr_t)&__STACK_START,
-        .type = MMAP_BOOT_RECLAIMABLE,
-        .id   = nr_events,
-        .base = MMAP_EVENT_BASE,
-    };
-    events[nr_events + 1] = (struct e820_event){
-        .addr = (uintptr_t)&__STACK_END,
-        .type = MMAP_BOOT_RECLAIMABLE,
-        .id   = nr_events,
-        .base = MMAP_EVENT_END,
-    };
-    nr_events += 2;
-
-    events[nr_events] = (struct e820_event){
-        .addr = (uintptr_t)&FB_ADDR,
-        .type = MMAP_FRAMEBUFFER,
-        .id   = nr_events,
-        .base = MMAP_EVENT_BASE,
-    };
-    events[nr_events + 1] = (struct e820_event){
-        .addr = (uintptr_t)&FB_END,
-        .type = MMAP_FRAMEBUFFER,
-        .id   = nr_events,
-        .base = MMAP_EVENT_END,
-    };
-    nr_events += 2;
-
-    events[nr_events] = (struct e820_event){
-        .addr = (uintptr_t)&__UPPER_START,
-        .type = MMAP_RESERVED,
-        .id   = nr_events,
-        .base = MMAP_EVENT_BASE,
-    };
-    events[nr_events + 1] = (struct e820_event){
-        .addr = (uintptr_t)&__UPPER_END,
-        .type = MMAP_RESERVED,
-        .id   = nr_events,
-        .base = MMAP_EVENT_END,
-    };
-    nr_events += 2;
+    NEW_EVENT(__BIOS_START, __BIOS_END, MMAP_RESERVED);
+    NEW_EVENT(__BOOTLOADER_START, __BOOTLOADER_END, MMAP_BOOT_RECLAIMABLE);
+    NEW_EVENT(__PREALLOC_START, __PREALLOC_END, MMAP_BOOT_RECLAIMABLE);
+    NEW_EVENT(__STACK_START, __STACK_END, MMAP_BOOT_RECLAIMABLE);
+    NEW_EVENT(FB_ADDR, FB_END, MMAP_FRAMEBUFFER);
+    NEW_EVENT(__UPPER_START, __UPPER_END, MMAP_RESERVED);
 
     info->nr_events = nr_events;
     return nr_events;

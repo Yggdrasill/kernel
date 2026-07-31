@@ -160,13 +160,11 @@ int mmap_transform_map(struct e820_events *event_info, const struct e820_info *s
         events[j] = (struct e820_event) {
             .addr = src[i].base,
             .type = type,
-            .id   = (uint8_t)j,
             .base = MMAP_EVENT_BASE,
         };
         events[j + 1] = (struct e820_event) {
             .addr = end,
             .type = type,
-            .id   = (uint8_t)j,
             .base = MMAP_EVENT_END,
         };
         j += 2;
@@ -206,7 +204,8 @@ int mmap_sanitize(struct e820_info *dst_info, const struct e820_events *event_in
     events = event_info->events;
 
     prev_addr = events[0].addr;
-    prev_type = events[0].type;
+    prev_type = mmap_convert_type(events[0].type);
+    prev_type = mmap_types[prev_type];
 
     effective_type = mmap_convert_type(prev_type);
     active_types[effective_type] = 1;
