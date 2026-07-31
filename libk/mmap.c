@@ -150,6 +150,8 @@ int mmap_transform_map(struct e820_events *event_info, const struct e820_info *s
     end  = 0;
     j    = event_info->nr_events;
     for(i = 0; i < src_info->nr_entries && j < max_nr_events; i++) {
+        if(!src[i].size) continue;
+
         if(!ignore_attr) type = mmap_map_attribute(src[i].type, src[i].attrib);
         else type = src[i].type;
 
@@ -215,7 +217,7 @@ int mmap_sanitize(struct e820_info *dst_info, const struct e820_events *event_in
         if(events[i].base == MMAP_EVENT_BASE) active_types[effective_type]++;
         else active_types[effective_type]--;
 
-        effective_type = MMAP_RESERVED;
+        effective_type = mmap_convert_type(MMAP_RESERVED);
         for(j = 0; j < MMAP_NR_TYPES; j++) {
             if(active_types[j] > 0) {
                 effective_type = j;
