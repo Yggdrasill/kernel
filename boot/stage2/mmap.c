@@ -66,10 +66,10 @@ static size_t mmap_clobber(struct e820_events *info)
 {
     struct e820_event *events;
 
-    uint8_t nr_events;
+    uint16_t nr_events;
 
     events    = info->events;
-    nr_events = (uint8_t)info->nr_events;
+    nr_events = info->nr_events;
 
     NEW_EVENT(__BIOS_START, __BIOS_END, MMAP_RESERVED);
     NEW_EVENT(__BOOTLOADER_START, __BOOTLOADER_END, MMAP_BOOT_RECLAIMABLE);
@@ -133,17 +133,17 @@ struct e820_info *boot_mmap_init(struct e820_info *old_info)
         .max_nr_events = 2 * MMAP_MAX_ENTRIES,
     };
     mmap_clobber(&event_info);
-    if(mmap_transform_map(&event_info, old_info)) {
-        panic("boot_mmap_init: Could not transform E820 memory map!");
+    status = mmap_transform_map(&event_info, old_info);
+    if(status) {
+        error = mmap_sanitize_error(status);
+        panic(error);
     }
 
     new_info = &new_mmap_info;
     status   = mmap_sanitize(new_info, &event_info);
-    if(status && status > -3) {
+    if(status) {
         error = mmap_sanitize_error(status);
         panic(error);
-    } else if(status == -3) {
-        puts("boot_mmap_init WARN: Exhausted capacity, E820 map truncated.");
     }
     mmap_print(new_info);
 

@@ -61,8 +61,8 @@ struct e820_event {
 
 struct e820_events {
     struct e820_event *events;
-    size_t             nr_events;
-    size_t             max_nr_events;
+    uint16_t           nr_events;
+    uint16_t           max_nr_events;
 };
 
     #define MMAP_ENTRY_SIZE  (sizeof(struct e820_map))
