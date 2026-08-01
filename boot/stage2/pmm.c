@@ -231,7 +231,6 @@ pmm_init_bitmap_exit:
     return free_blocks;
 }
 
-/*
 static size_t pmm_block_search_empty(
     const struct pmm_bitmap *pmm, const size_t start, const size_t end)
 {
@@ -239,7 +238,10 @@ static size_t pmm_block_search_empty(
     size_t entry;
     size_t bit;
 
-    block = start;
+    entry = start / PMM_BITS;
+    if(!pmm->bitmap[entry]) return start;
+
+    block = start + PMM_BITS;
     while(block < end) {
         entry = block / PMM_BITS;
         if(!pmm->bitmap[entry]) break;
@@ -256,7 +258,6 @@ static size_t pmm_block_search_empty(
 
     return block;
 }
-*/
 
 static size_t pmm_block_search_free(
     const struct pmm_bitmap *pmm, size_t block, const size_t end)
@@ -296,7 +297,9 @@ static size_t pmm_find_n_free(
     empty   = 0;
     nr_free = 0;
     while(block < end) {
-        block = pmm_block_search_free(pmm, block, end);
+        if(n >= 2 * PMM_BITS) empty = pmm_block_search_empty(pmm, block, end);
+        if(!empty) block = pmm_block_search_free(pmm, block, end);
+        else block = empty;
 
         if(!block) return 0;
 
