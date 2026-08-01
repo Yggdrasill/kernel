@@ -232,44 +232,54 @@ pmm_init_bitmap_exit:
 }
 
 /*
-static inline int
-pmm_chunk_not_contiguous(const struct pmm_bitmap *pmm, size_t entry)
+static size_t pmm_block_search_empty(
+    const struct pmm_bitmap *pmm, const size_t start, const size_t end)
 {
-    return entry < pmm->nr_entries ? (int)(pmm->bitmap[entry] & 1) : -1;
+    size_t block;
+    size_t entry;
+    size_t bit;
+
+    block = start;
+    while(block < end) {
+        entry = block / PMM_BITS;
+        if(!pmm->bitmap[entry]) break;
+        block = (entry + 1) * PMM_BITS;
+    }
+    if(block >= end) return 0;
+
+    while(block > start) {
+        entry = (block - 1) / PMM_BITS;
+        bit   = (block - 1) % PMM_BITS;
+        if(pmm->bitmap[entry] & ((size_t)1 << bit)) break;
+        block--;
+    }
+
+    return block;
 }
 */
 
-static size_t pmm_block_first_free(
+static size_t pmm_block_search_free(
     const struct pmm_bitmap *pmm, size_t block, const size_t end)
 {
     size_t entry;
     size_t bit;
 
-    bit = block % PMM_BITS;
     while(block < end) {
         entry = block / PMM_BITS;
         if(pmm->bitmap[entry] != SIZE_MAX) break;
         block = (entry + 1) * PMM_BITS;
     }
-    while(block < end && pmm->bitmap[entry] & ((size_t)1 << bit)) {
+
+    while(block < end) {
+        entry = block / PMM_BITS;
+        bit   = block % PMM_BITS;
         if(!(pmm->bitmap[entry] & ((size_t)1 << bit))) break;
-        bit++;
+        block++;
     }
 
-    if(block >= end || block >= pmm->usable_end) return 0;
-    return entry * PMM_BITS + bit;
+    if(block >= end) return 0;
+    return block;
 }
-
-/*
-static int
-pmm_chunk_first_empty(const struct pmm_bitmap *pmm, size_t entry, size_t
-*result)
-{
-    while(entry < pmm->nr_entries && pmm->bitmap[entry] != 0) entry++;
-    *result = entry;
-    return entry < pmm->nr_entries ? 0 : -1;
-}
-*/
 
 static size_t pmm_find_n_free(
     const struct pmm_bitmap *pmm,
@@ -277,16 +287,20 @@ static size_t pmm_find_n_free(
     const size_t             end,
     const size_t             n)
 {
+    size_t empty;
     size_t nr_free;
     size_t entry;
     size_t bit;
     size_t i;
 
+    empty   = 0;
     nr_free = 0;
     while(block < end) {
-        block = pmm_block_first_free(pmm, block, end);
+        block = pmm_block_search_free(pmm, block, end);
+
         if(!block) return 0;
 
+        nr_free = 0;
         for(i = block; n > nr_free && i < end; i++) {
             entry = i / PMM_BITS;
             bit   = i % PMM_BITS;
