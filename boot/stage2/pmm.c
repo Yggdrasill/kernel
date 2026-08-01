@@ -36,7 +36,6 @@
 #define PMM_BITS  (bits_sizeof(*((struct pmm_bitmap *)0)->bitmap))
 
 #define PMM_1M_ADDR    (1 << 20)
-#define PMM_1M_BLOCK   (PMM_1M_ADDR >> PMM_LOG)
 #define PMM_MAX_BLOCKS ((SIZE_MAX >> PMM_LOG) + 1)
 
 #define PMM_MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -160,10 +159,8 @@ pmm_parse_e820(struct pmm_map *map, const struct e820_info *info)
     map->nr_usable   = j;
     map->nr_unusable = k;
 
-    /* detected memory limit 16TiB with 4K pages */
-    if((align_end / PMM_ALIGN) > SIZE_MAX) {
-        panic("pmm_parse_e820: too many memory blocks!");
-    }
+    /* Detected memory limit 16TiB with 4K pages, just truncate */
+    if((align_end / PMM_ALIGN) > SIZE_MAX) align_end = SIZE_MAX * PMM_ALIGN;
 
     return align_end / PMM_ALIGN;
 }
@@ -211,7 +208,7 @@ static size_t pmm_init_bitmap(struct pmm_bitmap *pmm)
         while(block < max_blocks && block < end) {
             entry = block / (size_t)PMM_BITS;
             bit   = block % (size_t)PMM_BITS;
-            bitmap[entry] &= ~(size_t)(1UL << bit);
+            bitmap[entry] &= ~((size_t)1 << bit);
             free_blocks++;
             block++;
         }
@@ -353,6 +350,8 @@ pmm_set_n_free(struct pmm_bitmap *pmm, size_t block, const size_t end)
     return 0;
 }
 
+#if 0
+
 static void
 pmm_print_map(const struct pmm_bitmap *pmm, size_t entry, const size_t end)
 {
@@ -363,6 +362,8 @@ pmm_print_map(const struct pmm_bitmap *pmm, size_t entry, const size_t end)
     }
     return;
 }
+
+#endif
 
 static int
 pmm_search_map(const struct pmm_map *map, const size_t start, const size_t end)
@@ -588,8 +589,7 @@ int pmm_init(const struct e820_info *info)
     struct pmm_range  unusable[MMAP_MAX_ENTRIES];
     struct pmm_map    map;
 
-    uint64_t blocks;
-    size_t   d_available;
+    size_t d_available;
 
     map = (struct pmm_map){
         .usable          = usable,
@@ -608,26 +608,19 @@ int pmm_init(const struct e820_info *info)
     };
     pmm = &initial;
 
-    blocks = pmm_parse_e820(&map, info);
+    pmm_parse_e820(&map, info);
     pmm_init_bitmap(pmm);
-
-    puthex(&blocks, sizeof(blocks), 1);
-    puts(" 4K blocks discovered");
-    puthex(&pmm->available, sizeof(pmm->available), 1);
-    puts(" 4K blocks available");
 
     d_available = pmm->available;
     pmm         = pmm_init_new(&initial);
     d_available -= initial.available;
 
-    if(pmm_reclaim_unusable(pmm->map, pmm_initial, sizeof(pmm_initial))) {
-        puts("WARN pmm_init: unable to delete unusable entry");
+    if(!pmm_reclaim_unusable(pmm->map, pmm_initial, sizeof(pmm_initial))) {
+        pmm_free(pmm_initial, sizeof(pmm_initial));
+    } else {
+        puts("WARN pmm_init: cannot free initial bitmap");
     }
-    pmm_free(pmm_initial, sizeof(pmm_initial));
     pmm->available -= d_available;
-
-    puthex(&pmm->available, sizeof(pmm->available), 1);
-    puts(" 4K blocks available");
 
     return 0;
 }

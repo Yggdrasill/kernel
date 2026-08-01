@@ -127,7 +127,7 @@ int mmap_transform_map(struct e820_events *event_info, const struct e820_info *s
     if(!event_info || !src_info || !event_info->events || !src_info->base) {
         return -1;
     }
-    if(event_info->max_nr_events & 1) return -2;
+    if(event_info->nr_events & 1 || event_info->max_nr_events & 1) return -2;
 
     const size_t max_nr_events = event_info->max_nr_events;
 
