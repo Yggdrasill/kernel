@@ -39,11 +39,11 @@
 extern struct gdt_ptr __GDTR_DATA;
 extern struct idt_ptr __IDTR_DATA;
 
-extern struct gdt_entry __GDT_ENTRIES[];
-extern struct idt_entry __IDT_ENTRIES[];
+extern struct gdt_entry __GDT_ENTRIES[GDT_MAX_ENTRIES];
+extern struct idt_entry __IDT_ENTRIES[IDT_MAX_ENTRIES];
 
-extern struct e820_map __mmap_old_map[];
-extern struct e820_map __mmap_new_map[];
+extern struct e820_map __mmap_old_map[MMAP_MAX_ENTRIES];
+extern struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
 
 extern int16_t __framebuffer[];
 
