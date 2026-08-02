@@ -496,7 +496,7 @@ void pmm_free(void *p, size_t size)
     if(!pmm || !pmm->map || !pmm->map->unusable) {
         panic("pmm_free: memory manager uninitialised!");
     }
-    if(!p) panic("pmm_free: NULL pointer!");
+    if(!p) return;
 
     /*
      * Definitely broken state if the input is an unaligned pointer, since alloc
@@ -543,7 +543,8 @@ static struct pmm_bitmap *pmm_init_new(const struct pmm_bitmap *old)
     new = pmm_alloc(sizeof(*new));
     if(!new) panic("pmm: no space to allocate new pmm!");
 
-    new->max_entries = PMM_MAX_ENTRIES;
+    new->max_entries = old->map->usable[old->map->nr_usable - 1].end;
+    new->max_entries = new->max_entries / PMM_BITS;
     new->bitmap      = pmm_alloc(sizeof(*new->bitmap) * new->max_entries);
     if(!new->bitmap) panic("pmm: no space to allocate new bitmap!");
 

@@ -47,8 +47,6 @@ extern struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
 
 extern int16_t __framebuffer[];
 
-/* Just info structures. */
-
 static struct gdt_info  gdt_info;
 static struct idt_info  idt_info;
 static struct e820_info old_mmap_info;
