@@ -46,7 +46,7 @@ void *memsetw(int16_t *s, int16_t c, size_t n)
     i   = 0;
     ptr = s;
     while(i < n) {
-        *(ptr + i) = (unsigned char)c;
+        *(ptr + i) = c;
         i++;
     }
 
