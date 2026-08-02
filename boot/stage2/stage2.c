@@ -21,11 +21,11 @@
 
 #include <string.h>
 
-#include "gdt.h"
-#include "idt.h"
 #include "mmap.h"
 #include "pmm.h"
 #include "rmode.h"
+#include "stage2.h"
+#include "vga.h"
 
 #include <libk/gdt.h>
 #include <libk/idt.h>
@@ -33,6 +33,26 @@
 #include <libk/irq.h>
 #include <libk/mmap.h>
 #include <libk/util.h>
+
+/* Preallocated bootstrap storage from boot/common/linker.lds.S. */
+
+extern struct gdt_ptr __GDTR_DATA;
+extern struct idt_ptr __IDTR_DATA;
+
+extern struct gdt_entry __GDT_ENTRIES[];
+extern struct idt_entry __IDT_ENTRIES[];
+
+extern struct e820_map __mmap_old_map[];
+extern struct e820_map __mmap_new_map[];
+
+extern int16_t __framebuffer[];
+
+/* Just info structures. */
+
+static struct gdt_info  gdt_info;
+static struct idt_info  idt_info;
+static struct e820_info old_mmap_info;
+static struct e820_info new_mmap_info;
 
 struct boot_info {
     struct gdt_info  *gdt;
@@ -42,37 +62,56 @@ struct boot_info {
 
 static struct boot_info boot_init(void)
 {
-    struct gdt_info  *gdt;
-    struct idt_info  *idt;
-    struct e820_info *mmap;
-
     if(irq_read_imr() != 0xFFFF) irq_mask_all();
     if(!nmi_status()) nmi_disable();
 
-    gdt = gdt_info_init();
-    gdt_init(gdt);
+    fb_init(__framebuffer);
 
-    memsetw((int16_t *)&FB_ADDR, 0x0720, 0x7D0);
+    gdt_info = (struct gdt_info){
+        .gdtr           = &__GDTR_DATA,
+        .entries        = __GDT_ENTRIES,
+        .nr_entries     = 0,
+        .max_nr_entries = GDT_MAX_ENTRIES,
+    };
 
-    idt = idt_info_init();
-    idt_init(idt);
-    exception_idt_init(idt);
-    irq_idt_init(idt);
+    gdt_init(&gdt_info);
+
+    idt_info = (struct idt_info){
+        .idtr           = &__IDTR_DATA,
+        .entries        = __IDT_ENTRIES,
+        .nr_entries     = 0,
+        .max_nr_entries = IDT_MAX_ENTRIES,
+    };
+
+    idt_init(&idt_info);
+    exception_idt_init(&idt_info);
+    irq_idt_init(&idt_info);
 
     irq_init();
     irq_mask_all();
     nmi_enable();
     ints_flag_set();
 
-    mmap = boot_mmap_ptr();
+    old_mmap_info = (struct e820_info){
+        .base           = __mmap_old_map,
+        .nr_entries     = 0,
+        .max_nr_entries = MMAP_MAX_ENTRIES,
+    };
+
+    new_mmap_info = (struct e820_info){
+        .base           = __mmap_new_map,
+        .nr_entries     = 0,
+        .max_nr_entries = MMAP_MAX_ENTRIES,
+    };
+
     /* Panics if error */
-    bios_mmap(mmap);
-    mmap = boot_mmap_init(mmap);
+    bios_mmap(&old_mmap_info);
+    boot_mmap_init(&new_mmap_info, &old_mmap_info);
 
     return (struct boot_info){
-        .gdt  = gdt,
-        .idt  = idt,
-        .mmap = mmap,
+        .gdt  = &gdt_info,
+        .idt  = &idt_info,
+        .mmap = &new_mmap_info,
     };
 }
 

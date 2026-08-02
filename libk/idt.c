@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include <libk/idt.h>
-#include <libk/internal/idt.h>
 #include <libk/irq.h>
 
 extern void exception_unknown(void);

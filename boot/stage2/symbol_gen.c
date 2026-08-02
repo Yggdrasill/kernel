@@ -21,9 +21,9 @@
 
 #include "pmm.h"
 
-#include <libk/internal/gdt.h>
-#include <libk/internal/idt.h>
-#include <libk/internal/mmap.h>
+#include <libk/gdt.h>
+#include <libk/idt.h>
+#include <libk/mmap.h>
 #include <stddef.h>
 #include <stdint.h>
 

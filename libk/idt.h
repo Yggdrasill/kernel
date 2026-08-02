@@ -22,12 +22,54 @@
 #ifndef IDT_H
 #define IDT_H
 
-#include <stddef.h>
-#include <stdint.h>
+#define IDT_MAX_ENTRIES 256
 
-struct idt_ptr;
-struct idt_entry;
-struct idt_info;
+#if !defined(LD_BOOT_STAGE1) && !defined(LD_BOOT_STAGE2)
+
+    #include <limits.h>
+    #include <stddef.h>
+    #include <stdint.h>
+
+    #define IDT_BITMAP_NR(x) (IDT_MAX_ENTRIES / (sizeof(x) * CHAR_BIT))
+
+/*
+ * Little endian byte alignment follows. These structures are manually packed
+ * because it avoids using compiler pragmas. I do not know of any x86 compiler
+ * that would pad a struct that contains only byte-aligned types.
+ *
+ * Both of these structs will be 8-byte aligned manually.
+ */
+
+struct idt_ptr {
+    unsigned char limit_0;
+    unsigned char limit_8;
+    unsigned char base_0;
+    unsigned char base_8;
+    unsigned char base_16;
+    unsigned char base_24;
+};
+
+struct idt_entry {
+    unsigned char offset_0;
+    unsigned char offset_8;
+    unsigned char selector_0;
+    unsigned char selector_8;
+    unsigned char zero;
+    unsigned char flags;
+    unsigned char offset_16;
+    unsigned char offset_24;
+};
+
+struct idt_info {
+    struct idt_ptr   *idtr;
+    struct idt_entry *entries;
+    size_t            nr_entries;
+    size_t            max_nr_entries;
+    uint32_t          present[IDT_BITMAP_NR(uint32_t)];
+};
+
+    #define IDT_PTR_SIZE   (sizeof(struct idt_ptr))
+    #define IDT_ENTRY_SIZE (sizeof(struct idt_entry))
 
 extern void idt_install(struct idt_info *);
 
@@ -41,5 +83,7 @@ int idt_entry_add(struct idt_info *, void (*)(void), uint16_t, uint8_t);
 
 void exception_idt_init(struct idt_info *entries);
 void irq_idt_init(struct idt_info *entries);
+
+#endif
 
 #endif

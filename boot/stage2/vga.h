@@ -19,12 +19,15 @@
  *
  */
 
-#ifndef BOOT_IDT_H
-#define BOOT_IDT_H
+#ifndef STRIO_H
+#define STRIO_H
 
-#include <libk/idt.h>
-#include <libk/internal/idt.h>
+#include <stddef.h>
+#include <stdint.h>
 
-struct idt_info *idt_info_init(void);
+void fb_init(int16_t *);
+void putchar(char);
+void puthex(void *, size_t, uint8_t);
+void puts(const char *);
 
 #endif

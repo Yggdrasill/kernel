@@ -19,7 +19,7 @@
  *
  */
 
-#include <string.h>
+#include <stdint.h>
 
 #include <libk/idt.h>
 #include <libk/interrupt.h>

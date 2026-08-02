@@ -20,7 +20,6 @@
  */
 
 #include <stdint.h>
-#include <string.h>
 
 #include <libk/util.h>
 

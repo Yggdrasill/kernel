@@ -19,9 +19,9 @@
  *
  */
 
-#include <libk/internal/gdt.h>
-#include <libk/internal/idt.h>
-#include <libk/internal/mmap.h>
+#include <libk/gdt.h>
+#include <libk/idt.h>
+#include <libk/mmap.h>
 
 #ifdef LD_BOOT_STAGE1
 #define STAGE1_PHDR   P_STAGE1
@@ -223,6 +223,7 @@ SECTIONS {
 
     . = FBR_ADDR;
     .fbr (NOLOAD) : {
+        __framebuffer = .;
         __FB_ADDR = .;
     } > fbr : NONE
     . = FBR_ADDR + FBR_SIZE;

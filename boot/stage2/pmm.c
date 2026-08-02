@@ -20,9 +20,10 @@
  */
 
 #include "pmm.h"
+#include "vga.h"
 
-#include <libk/internal/mmap.h>
 #include <libk/util.h>
+
 #include <limits.h>
 #include <math.h>
 #include <stdint.h>
@@ -40,12 +41,6 @@
 
 #define PMM_MAX(a, b) ((a) > (b) ? (a) : (b))
 #define PMM_MIN(a, b) ((a) < (b) ? (a) : (b))
-
-struct e820_usable {
-    struct e820_map entries[MMAP_MAX_ENTRIES];
-    size_t          nr_entries;
-    size_t          max_nr_entries;
-};
 
 struct pmm_range {
     size_t start;

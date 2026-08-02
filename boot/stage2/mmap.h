@@ -24,7 +24,6 @@
 
 #include <libk/mmap.h>
 
-struct e820_info *boot_mmap_ptr(void);
-struct e820_info *boot_mmap_init(struct e820_info *old_info);
+struct e820_info *boot_mmap_init(struct e820_info *, const struct e820_info *);
 
 #endif

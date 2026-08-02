@@ -19,22 +19,35 @@
  *
  */
 
-#include "gdt.h"
-#include <libk/gdt.h>
-#include <libk/internal/gdt.h>
+#ifndef STAGE2_H
+#define STAGE2_H
 
-extern struct gdt_ptr   __GDTR_DATA;
-extern struct gdt_entry __GDT_ENTRIES[];
+#include <stddef.h>
+#include <stdint.h>
 
-static struct gdt_info gdt_info;
+struct mem_extent {
+    size_t start;
+    size_t end;
+};
 
-struct gdt_info *gdt_info_init(void)
-{
-    gdt_info = (struct gdt_info){
-        .gdtr           = &__GDTR_DATA,
-        .entries        = __GDT_ENTRIES,
-        .max_nr_entries = GDT_MAX_ENTRIES,
-        .nr_entries     = 0,
-    };
-    return &gdt_info;
-}
+/*
+ * Preallocated memory regions for various sections, once again see
+ * boot/common/linker.lds.S.
+ */
+
+extern char __BIOS_START;
+extern char __BIOS_END;
+extern char __BOOTLOADER_START;
+extern char __BOOTLOADER_END;
+
+extern char __PREALLOC_START;
+extern char __PREALLOC_END;
+extern char __STACK_START;
+extern char __STACK_END;
+
+extern char __FB_ADDR;
+extern char __FB_END;
+extern char __UPPER_START;
+extern char __UPPER_END;
+
+#endif

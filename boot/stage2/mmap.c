@@ -19,35 +19,12 @@
  *
  */
 
-#include <libk/internal/mmap.h>
+#include "mmap.h"
+#include "stage2.h"
+#include "vga.h"
+
 #include <libk/mmap.h>
 #include <libk/util.h>
-#include <string.h>
-
-#include "mmap.h"
-
-extern char __BIOS_START;
-extern char __BIOS_END;
-extern char __BOOTLOADER_START;
-extern char __BOOTLOADER_END;
-
-extern char __PREALLOC_START;
-extern char __PREALLOC_END;
-extern char __STACK_START;
-extern char __STACK_END;
-
-extern char __UPPER_START;
-extern char __UPPER_END;
-
-/*
- * As in every other source file: This type of global state is bootloader only.
- */
-
-extern struct e820_map __mmap_old_map[MMAP_MAX_ENTRIES];
-extern struct e820_map __mmap_new_map[MMAP_MAX_ENTRIES];
-
-static struct e820_map *const old_map = __mmap_old_map;
-static struct e820_map *const new_map = __mmap_new_map;
 
 #define NEW_EVENT(start, end, event_type)                                      \
     events[nr_events] = (struct e820_event){                                   \
@@ -75,7 +52,7 @@ static size_t mmap_clobber(struct e820_events *info)
     NEW_EVENT(__BOOTLOADER_START, __BOOTLOADER_END, MMAP_BOOT_RECLAIMABLE);
     NEW_EVENT(__PREALLOC_START, __PREALLOC_END, MMAP_BOOT_RECLAIMABLE);
     NEW_EVENT(__STACK_START, __STACK_END, MMAP_BOOT_RECLAIMABLE);
-    NEW_EVENT(FB_ADDR, FB_END, MMAP_FRAMEBUFFER);
+    NEW_EVENT(__FB_ADDR, __FB_END, MMAP_FRAMEBUFFER);
     NEW_EVENT(__UPPER_START, __UPPER_END, MMAP_RESERVED);
 
     info->nr_events = nr_events;
@@ -100,29 +77,11 @@ static void mmap_print(struct e820_info *info)
     return;
 }
 
-static struct e820_info old_mmap_info = {
-    .base           = old_map,
-    .nr_entries     = 0,
-    .max_nr_entries = MMAP_MAX_ENTRIES,
-};
-
-static struct e820_info new_mmap_info = {
-    .base           = new_map,
-    .nr_entries     = 0,
-    .max_nr_entries = MMAP_MAX_ENTRIES,
-};
-
-struct e820_info *boot_mmap_ptr(void)
-{
-    return &old_mmap_info;
-}
-
-struct e820_info *boot_mmap_init(struct e820_info *old_info)
+struct e820_info *
+boot_mmap_init(struct e820_info *dst, const struct e820_info *src)
 {
     struct e820_event  events[2 * MMAP_MAX_ENTRIES];
     struct e820_events event_info;
-
-    struct e820_info *new_info;
 
     char *error;
     int   status;
@@ -133,19 +92,18 @@ struct e820_info *boot_mmap_init(struct e820_info *old_info)
         .max_nr_events = 2 * MMAP_MAX_ENTRIES,
     };
     mmap_clobber(&event_info);
-    status = mmap_transform_map(&event_info, old_info);
+    status = mmap_transform_map(&event_info, src);
     if(status) {
         error = mmap_sanitize_error(status);
         panic(error);
     }
 
-    new_info = &new_mmap_info;
-    status   = mmap_sanitize(new_info, &event_info);
+    status = mmap_sanitize(dst, &event_info);
     if(status) {
         error = mmap_sanitize_error(status);
         panic(error);
     }
-    mmap_print(new_info);
+    mmap_print(dst);
 
-    return new_info;
+    return dst;
 }

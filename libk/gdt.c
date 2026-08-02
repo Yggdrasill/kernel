@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include <libk/gdt.h>
-#include <libk/internal/gdt.h>
 #include <libk/util.h>
 
 #define GDT_DEFAULT_CODE 0x08

@@ -22,10 +22,15 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 extern void hcf(void);
 extern void halt(void);
+
+extern void putchar(const char);
+extern void puthex(void *, size_t, uint8_t);
+extern void puts(const char *);
 
 void stack_trace(void);
 void panic(char *);

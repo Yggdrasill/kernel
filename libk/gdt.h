@@ -22,8 +22,12 @@
 #ifndef GDT_H
 #define GDT_H
 
-#include <stddef.h>
-#include <stdint.h>
+#define GDT_MAX_ENTRIES 8192
+
+#if !defined(LD_BOOT_STAGE1) && !defined(LD_BOOT_STAGE2)
+
+    #include <stddef.h>
+    #include <stdint.h>
 
 enum GDT_ACCESS {
     GDT_ACCESSED   = 1,
@@ -45,13 +49,43 @@ enum GDT_FLAGS {
     GDT_GRAN     = 1 << 3
 };
 
-struct gdt_ptr;
+struct gdt_ptr {
+    uint8_t size_0;
+    uint8_t size_8;
+    uint8_t base_0;
+    uint8_t base_8;
+    uint8_t base_16;
+    uint8_t base_24;
+};
+
+struct gdt_entry {
+    uint8_t limit_0;
+    uint8_t limit_8;
+    uint8_t base_0;
+    uint8_t base_8;
+    uint8_t base_16;
+    uint8_t access;
+    uint8_t limit_flags;
+    uint8_t base_24;
+};
+
+struct gdt_info {
+    struct gdt_ptr   *gdtr;
+    struct gdt_entry *entries;
+    size_t            nr_entries;
+    size_t            max_nr_entries;
+};
+
 struct gdt_entry;
-struct gdt_info;
+
+    #define GDT_PTR_SIZE   (sizeof(struct gdt_ptr))
+    #define GDT_ENTRY_SIZE (sizeof(struct gdt_entry))
 
 extern void gdt_install(struct gdt_info *);
 
 void gdt_init(struct gdt_info *);
 int  gdt_entry_add(struct gdt_info *, void *, uint32_t, uint8_t, uint8_t);
+
+#endif
 
 #endif
