@@ -6,7 +6,7 @@ OBJ_STAGE2=$(patsubst %.s,%_asm.o,$(patsubst %.c,%.o,\
 LD_STAGE2=-T $(OBJDIR_STAGE2)/linker.lds
 
 $(OBJDIR_GEN)/symbol_gen: $(SRCDIR_STAGE2)/symbol_gen.c | $(OBJDIR_GEN)
-	$(CC) $(CF_HOST) -no-pie -O0 -MMD -MP -MF $@.d -MT $@ \
+	$(CC) $(CF_ALL) $(INCLUDE_PATH) -no-pie -O0 -MMD -MP -MF $@.d -MT $@ \
 		-I ./ -o $@ $< -Wl,--no-gc-sections,-Ttext-segment=0
 
 $(OBJDIR_GEN)/mmap_generated.s: $(OBJDIR_GEN)/symbol_gen

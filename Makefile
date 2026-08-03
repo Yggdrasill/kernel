@@ -35,12 +35,11 @@ DEPENDS=$(wildcard $(OBJDIR_STAGE1)/*.d) \
 AS=nasm
 MKDIR=mkdir -p
 
-INCLUDE_PATH=-I ./ -I klibc/
-CF_HOST=-m32 -march=i386 -std=c99 -Wall -Wextra -Wpedantic -Wconversion \
-		-Wstrict-aliasing -Wmaybe-uninitialized -Wstrict-overflow=5 -fno-common \
-		-static -ffreestanding -fno-pic -nodefaultlibs -nostdlib
-CF_ALL=$(CF_HOST) -fno-exceptions -fno-asynchronous-unwind-tables \
-	   -fno-omit-frame-pointer -masm=intel
+INCLUDE_PATH=-I $(abspath ./) -I $(abspath klibc/)
+CF_ALL=-m32 -march=i386 -std=c99 -Wall -Wextra -Wpedantic -Wconversion \
+	   -Wstrict-aliasing -Wmaybe-uninitialized -Wstrict-overflow=5 -fno-common \
+	   -static -ffreestanding -fno-pic -nostdlib -nostdinc -fno-builtin \
+	   -fno-exceptions -fno-asynchronous-unwind-tables -fno-omit-frame-pointer
 CF_DEP=-MMD -MP -MF $(@:.o=.d) -MT $@
 LD_ALL=-m elf_i386 -z noexecstack --nmagic
 LD_BOOT=-L boot/common/
