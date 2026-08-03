@@ -34,13 +34,12 @@
 
 #define NULL ((void *)0)
 
-#ifdef __i386__
+#define node_container(type, node, name)                                       \
+    ((type *)((char *)node - offsetof(type, name)))
 
 typedef unsigned long size_t;
 typedef signed long   ptrdiff_t;
 
 typedef int wchar_t;
 
-#endif /* __i386__ */
-
-#endif /* STDDEF_H */
+#endif
