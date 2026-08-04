@@ -47,11 +47,10 @@ struct mm_list {
 };
 
 struct mm_used {
-    uint32_t magic;
-    uint8_t  type;
+    uint32_t       magic;
+    uint8_t        type;
     struct mm_list used;
 };
-
 
 struct mm_info {
     struct list_root free;
