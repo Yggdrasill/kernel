@@ -31,6 +31,7 @@
 #include <libk/idt.h>
 #include <libk/interrupt.h>
 #include <libk/irq.h>
+#include <libk/mm.h>
 #include <libk/mmap.h>
 #include <libk/util.h>
 
@@ -143,6 +144,7 @@ int main(void)
     info = boot_init();
     irq_unmask(IRQ_NUM_KBD);
     pmm_init(info.mmap);
+    mm_init(pmm_available_bytes());
 
     halt();
     hcf();
