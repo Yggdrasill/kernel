@@ -36,10 +36,22 @@ extern void *pmm_alloc(size_t);
 #define INIT_NR_NODES   32
 #define HEAP_ALLOC_SIZE (256 * (1 << 10))
 
+enum MM_TYPES {
+    MM_INTERNAL = 1,
+    MM_ALLOCD   = 2,
+};
+
 struct mm_list {
     struct list_node node;
     struct extent    range;
 };
+
+struct mm_used {
+    uint32_t magic;
+    uint8_t  type;
+    struct mm_list used;
+};
+
 
 struct mm_info {
     struct list_root free;
@@ -55,6 +67,7 @@ void mm_init(const size_t available)
 {
     struct mm_list *free;
     struct mm_list *used;
+    struct mm_used *header;
 
     void  *mem;
     size_t list_size;
@@ -67,17 +80,20 @@ void mm_init(const size_t available)
     mm.total_size = 0;
     mm.used_size  = 0;
 
-    list_size = sizeof(*used) + sizeof(*free) * INIT_NR_NODES;
+    list_size = sizeof(*header) + sizeof(*free) * INIT_NR_NODES;
     bytes     = HEAP_ALLOC_SIZE + list_size;
     if(available < bytes) bytes = available;
     mem = alloc(bytes);
     if(!mem) panic("mm_init: Unable to allocate initial heap!");
 
-    used = mem;
+    header = mem;
+    used   = &header->used;
 
     used->range.start = (size_t)((uintptr_t)mem / PAGE_ALIGN);
     used->range.end   = (size_t)((uintptr_t)mem + bytes);
     used->range.end   = (used->range.end + PAGE_ALIGN - 1) / PAGE_ALIGN;
+    header->magic     = MAGIC_HEADER;
+    header->type      = MM_INTERNAL;
     list_push(&allocd, &used->node);
 
     free = (struct mm_list *)((char *)mem + sizeof(*used));
