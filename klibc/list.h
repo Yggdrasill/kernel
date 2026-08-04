@@ -33,9 +33,7 @@ struct list_root {
     struct list_node *head;
     struct list_node *tail;
     size_t            nr_entries;
-    /*
-    size_t max_nr_entries;
-    */
+    size_t            max_nr_entries;
 };
 
 struct list_root *list_init(struct list_root *);

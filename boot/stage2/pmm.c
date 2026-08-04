@@ -22,6 +22,7 @@
 #include "pmm.h"
 #include "vga.h"
 
+#include <libk/common.h>
 #include <libk/util.h>
 
 #include <limits.h>
@@ -29,27 +30,14 @@
 #include <stdint.h>
 #include <string.h>
 
-#define bits_sizeof(x) (sizeof(x) * CHAR_BIT)
-
-#define PMM_LOG   (12)
-#define PMM_ALIGN (1ULL << PMM_LOG)
-#define PMM_MASK  (~(PMM_ALIGN - 1ULL))
-#define PMM_BITS  (bits_sizeof(*((struct pmm_bitmap *)0)->bitmap))
+#define PMM_BITS (bits_sizeof(*((struct pmm_bitmap *)0)->bitmap))
 
 #define PMM_1M_ADDR    (1 << 20)
-#define PMM_MAX_BLOCKS ((SIZE_MAX >> PMM_LOG) + 1)
-
-#define PMM_MAX(a, b) ((a) > (b) ? (a) : (b))
-#define PMM_MIN(a, b) ((a) < (b) ? (a) : (b))
-
-struct pmm_range {
-    size_t start;
-    size_t end;
-};
+#define PMM_MAX_BLOCKS ((SIZE_MAX >> PAGE_LOG) + 1)
 
 struct pmm_map {
-    struct pmm_range *usable;
-    struct pmm_range *unusable;
+    struct extent *usable;
+    struct extent *unusable;
 
     uint8_t nr_usable;
     uint8_t nr_unusable;
@@ -57,29 +45,26 @@ struct pmm_map {
     uint8_t max_nr_unusable;
 };
 
-static void *pmm_alloc(size_t);
-static void  pmm_free(void *, size_t);
-
 /* clang-format off */
 static SAFE_ADD_IMPLEMENT(uint64, uint64_t, UINT64_MAX)
 
 static inline uint64_t pmm_align_up(uint64_t align)
 /* clang-format on */
 {
-    if(safe_add_uint64(&align, align, PMM_ALIGN - 1)) {
+    if(safe_add_uint64(&align, align, PAGE_ALIGN - 1)) {
         panic("pmm_align_up: integer overflow!");
     }
-    return align & PMM_MASK;
+    return align & PAGE_MASK;
 }
 
 static inline uint64_t pmm_align_down(uint64_t align)
 {
-    return align & PMM_MASK;
+    return align & PAGE_MASK;
 }
 
 static inline int pmm_is_unaligned(uint64_t align)
 {
-    return align & (PMM_ALIGN - 1);
+    return align & (PAGE_ALIGN - 1);
 }
 
 static inline uint64_t
@@ -87,21 +72,21 @@ pmm_align_base(uint64_t base, uint64_t end, uint32_t type)
 {
     uint64_t aligned;
     aligned = type == MMAP_USABLE ? pmm_align_up(base) : pmm_align_down(base);
-    return PMM_MAX(aligned, end);
+    return MAX(aligned, end);
 }
 
 static inline uint64_t pmm_align_end(uint64_t base, uint64_t end, uint32_t type)
 {
     uint64_t aligned;
     aligned = type == MMAP_USABLE ? pmm_align_down(end) : pmm_align_up(end);
-    return PMM_MAX(base, aligned);
+    return MAX(base, aligned);
 }
 
 static uint64_t
 pmm_parse_e820(struct pmm_map *map, const struct e820_info *info)
 {
-    struct pmm_range *usable;
-    struct pmm_range *unusable;
+    struct extent *usable;
+    struct extent *unusable;
 
     uint64_t align_base;
     uint64_t align_end;
@@ -134,18 +119,18 @@ pmm_parse_e820(struct pmm_map *map, const struct e820_info *info)
 
         if(align_base > SIZE_MAX) continue;
 
-        end = (size_t)(align_end / PMM_ALIGN);
+        end = (size_t)(align_end / PAGE_ALIGN);
         if(align_end >= SIZE_MAX) end = PMM_MAX_BLOCKS;
 
         if(usable_type && j < map->max_nr_usable) {
-            usable[j] = (struct pmm_range){
-                .start = (size_t)(align_base / PMM_ALIGN),
+            usable[j] = (struct extent){
+                .start = (size_t)(align_base / PAGE_ALIGN),
                 .end   = end,
             };
             if(align_end > align_base) j++;
         } else if(!usable_type && k < map->max_nr_unusable) {
-            unusable[k] = (struct pmm_range){
-                .start = (size_t)(align_base / PMM_ALIGN),
+            unusable[k] = (struct extent){
+                .start = (size_t)(align_base / PAGE_ALIGN),
                 .end   = end,
             };
             if(align_end > align_base) k++;
@@ -155,15 +140,15 @@ pmm_parse_e820(struct pmm_map *map, const struct e820_info *info)
     map->nr_unusable = k;
 
     /* Detected memory limit 16TiB with 4K pages, just truncate */
-    if((align_end / PMM_ALIGN) > SIZE_MAX) align_end = SIZE_MAX * PMM_ALIGN;
+    if((align_end / PAGE_ALIGN) > SIZE_MAX) align_end = SIZE_MAX * PAGE_ALIGN;
 
-    return align_end / PMM_ALIGN;
+    return align_end / PAGE_ALIGN;
 }
 
 static size_t pmm_init_bitmap(struct pmm_bitmap *pmm)
 {
-    struct pmm_map   *map;
-    struct pmm_range *usable;
+    struct pmm_map *map;
+    struct extent  *usable;
 
     size_t *bitmap;
     size_t  block;
@@ -375,8 +360,8 @@ pmm_search_map(const struct pmm_map *map, const size_t start, const size_t end)
 
 static int pmm_reclaim_unusable(struct pmm_map *map, void *p, const size_t size)
 {
-    struct pmm_range *old;
-    struct pmm_range *new;
+    struct extent *old;
+    struct extent *new;
 
     size_t p_off;
     size_t s_off;
@@ -387,12 +372,12 @@ static int pmm_reclaim_unusable(struct pmm_map *map, void *p, const size_t size)
     if(!map || !map->unusable) return -1;
     if(!size) return 0;
 
-    from  = (uintptr_t)p / PMM_ALIGN;
-    p_off = (uintptr_t)p % PMM_ALIGN;
-    s_off = size % PMM_ALIGN;
-    to    = from + size / (size_t)PMM_ALIGN;
-    to += ((p_off + s_off) % PMM_ALIGN) > 0;
-    to += (p_off + s_off) / PMM_ALIGN;
+    from  = (uintptr_t)p / PAGE_ALIGN;
+    p_off = (uintptr_t)p % PAGE_ALIGN;
+    s_off = size % PAGE_ALIGN;
+    to    = from + size / (size_t)PAGE_ALIGN;
+    to += ((p_off + s_off) % PAGE_ALIGN) > 0;
+    to += (p_off + s_off) / PAGE_ALIGN;
 
     old = map->unusable;
 
@@ -426,11 +411,11 @@ static int pmm_reclaim_unusable(struct pmm_map *map, void *p, const size_t size)
         old + i + 1,
         sizeof(*old) * (map->nr_unusable - (size_t)i - 1));
 
-    new[i] = (struct pmm_range){
+    new[i] = (struct extent){
         .start = old[i].start,
         .end   = from,
     };
-    new[i + 1] = (struct pmm_range){
+    new[i + 1] = (struct extent){
         .start = to,
         .end   = old[i].end,
     };
@@ -457,12 +442,12 @@ void *pmm_alloc_range(size_t size, const uintptr_t base, const uintptr_t end)
     }
     if(!size || end <= base) return NULL;
 
-    alloc = size / PMM_ALIGN;
-    alloc = alloc + ((size % PMM_ALIGN) > 0);
+    alloc = size / PAGE_ALIGN;
+    alloc = alloc + ((size % PAGE_ALIGN) > 0);
 
-    from = base / (size_t)PMM_ALIGN + ((base % (size_t)PMM_ALIGN) > 0);
-    to   = end / (size_t)PMM_ALIGN + (end == UINTPTR_MAX ? 1 : 0);
-    to   = PMM_MIN(to, pmm->usable_end);
+    from = base / (size_t)PAGE_ALIGN + ((base % (size_t)PAGE_ALIGN) > 0);
+    to   = end / (size_t)PAGE_ALIGN + (end == UINTPTR_MAX ? 1 : 0);
+    to   = MIN(to, pmm->usable_end);
 
     if(from + alloc > pmm->usable_end) return NULL;
     if(pmm->available < alloc) return NULL;
@@ -473,7 +458,7 @@ void *pmm_alloc_range(size_t size, const uintptr_t base, const uintptr_t end)
     pmm_set_n_used(pmm, free, free + alloc);
     pmm->available -= alloc;
 
-    addr = (uintptr_t)(free * PMM_ALIGN);
+    addr = (uintptr_t)(free * PAGE_ALIGN);
     return (void *)addr;
 }
 
@@ -507,9 +492,9 @@ void pmm_free(void *p, size_t size)
         panic("pmm_free: unaligned pointer!");
     }
 
-    block = (uintptr_t)p / PMM_ALIGN;
-    alloc = size / PMM_ALIGN;
-    alloc = alloc + ((size % PMM_ALIGN) > 0);
+    block = (uintptr_t)p / PAGE_ALIGN;
+    alloc = size / PAGE_ALIGN;
+    alloc = alloc + ((size % PAGE_ALIGN) > 0);
 
     if(block + alloc > pmm->usable_end) {
         panic("pmm_free: attempt to free past available memory!");
@@ -528,13 +513,18 @@ void pmm_free(void *p, size_t size)
     return;
 }
 
+size_t pmm_available_bytes(void)
+{
+    return pmm->available * PAGE_ALIGN;
+}
+
 extern size_t pmm_initial[PMM_INIT_ENTRIES];
 
 static struct pmm_bitmap *pmm_init_new(const struct pmm_bitmap *old)
 {
     struct pmm_bitmap *new;
-    struct pmm_range  *usable;
-    struct pmm_range  *unusable;
+    struct extent     *usable;
+    struct extent     *unusable;
 
     size_t entries;
 
@@ -572,7 +562,7 @@ static struct pmm_bitmap *pmm_init_new(const struct pmm_bitmap *old)
         sizeof(*unusable) * new->map->nr_unusable);
 
     pmm_init_bitmap(new);
-    entries = PMM_MIN(old->nr_entries, new->nr_entries);
+    entries = MIN(old->nr_entries, new->nr_entries);
     memcpy(new->bitmap, old->bitmap, sizeof(*old->bitmap) * entries);
 
     return new;
@@ -581,8 +571,8 @@ static struct pmm_bitmap *pmm_init_new(const struct pmm_bitmap *old)
 int pmm_init(const struct e820_info *info)
 {
     struct pmm_bitmap initial;
-    struct pmm_range  usable[MMAP_MAX_ENTRIES];
-    struct pmm_range  unusable[MMAP_MAX_ENTRIES];
+    struct extent     usable[MMAP_MAX_ENTRIES];
+    struct extent     unusable[MMAP_MAX_ENTRIES];
     struct pmm_map    map;
 
     size_t d_available;

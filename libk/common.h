@@ -19,34 +19,26 @@
  *
  */
 
-#ifndef BOOT_PMM_H
-#define BOOT_PMM_H
+#ifndef COMMON_H
+#define COMMON_H
 
-#define PMM_MAX_ENTRIES  32768
-#define PMM_INIT_ENTRIES 1024
+/* Common definitions, structs etc. that are widely applicable. */
 
-#if !defined(LD_BOOT_STAGE1) && !defined(LD_BOOT_STAGE2)
+#include <limits.h>
+#include <stddef.h>
 
-    #include <libk/mmap.h>
+#define bits_sizeof(x) (sizeof(x) * CHAR_BIT)
 
-struct pmm_map;
+#define PAGE_LOG   (12)
+#define PAGE_ALIGN (1ULL << PAGE_LOG)
+#define PAGE_MASK  (~(PAGE_ALIGN - 1ULL))
 
-struct pmm_bitmap {
-    struct pmm_map *map;
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-    size_t *bitmap;
-    size_t  nr_entries;
-    size_t  max_entries;
-    size_t  available;
-    size_t  usable_end;
+struct extent {
+    size_t start;
+    size_t end;
 };
-
-void  *pmm_alloc_range(size_t, const uintptr_t, const uintptr_t);
-void  *pmm_alloc(size_t);
-void   pmm_free(void *, size_t);
-size_t pmm_available_bytes(void);
-int    pmm_init(const struct e820_info *);
-
-#endif
 
 #endif
