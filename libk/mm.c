@@ -31,78 +31,62 @@ extern void *pmm_alloc(size_t);
     #define alloc pmm_alloc
 #endif
 
-#define MAGIC_HEADER 0x807FAA55
-
-#define INIT_NR_NODES   32
+#define INIT_NR_NODES   (PAGE_ALIGN / sizeof(struct list_node) - 2)
 #define HEAP_ALLOC_SIZE (256 * (1 << 10))
-
-enum MM_TYPES {
-    MM_INTERNAL = 1,
-    MM_ALLOCD   = 2,
-};
-
-struct mm_list {
-    struct list_node node;
-    struct extent    range;
-};
+#define MAGIC_HEADER    0x807FAA55
 
 struct mm_used {
-    uint32_t       magic;
-    uint8_t        type;
-    struct mm_list used;
+    struct list_node node;
+    struct mm_arena *arena;
+    size_t           size;
 };
 
-struct mm_info {
-    struct list_root free;
-    size_t           total_size;
-    size_t           used_size;
+struct mm_free {
+    struct list_node node;
+    struct mm_arena *arena;
+    size_t           size;
 };
 
-static struct list_root unused;
-static struct list_root allocd;
-static struct mm_info   mm;
+struct mm_arena {
+    struct list_node node;
+    size_t           size;
+    size_t           used;
+};
 
-void mm_init(const size_t available)
+struct mm_state {
+    struct list_root arenas;
+    struct list_root memory;
+    size_t           size;
+    size_t           used;
+};
+
+static struct mm_state mm;
+
+int mm_init(const size_t available)
 {
-    struct mm_list *free;
-    struct mm_list *used;
-    struct mm_used *header;
+    struct mm_arena *arena;
+    struct mm_free  *free;
 
-    void  *mem;
-    size_t list_size;
-    size_t bytes;
-    size_t i;
+    void *mem;
 
-    list_init(&unused);
-    list_init(&allocd);
-    list_init(&mm.free);
-    mm.total_size = 0;
-    mm.used_size  = 0;
+    list_init(&mm.arenas);
+    list_init(&mm.memory);
 
-    list_size = sizeof(*header) + sizeof(*free) * INIT_NR_NODES;
-    bytes     = HEAP_ALLOC_SIZE + list_size;
-    if(available < bytes) bytes = available;
-    mem = alloc(bytes);
-    if(!mem) panic("mm_init: Unable to allocate initial heap!");
+    mem = alloc(HEAP_ALLOC_SIZE);
+    if(!mem) return -1;
 
-    header = mem;
-    used   = &header->used;
+    arena = mem;
+    list_push(&mm.arenas, &arena->node);
+    arena->size = HEAP_ALLOC_SIZE;
+    arena->used = sizeof(*arena) + sizeof(*free);
 
-    used->range.start = (size_t)((uintptr_t)mem / PAGE_ALIGN);
-    used->range.end   = (size_t)((uintptr_t)mem + bytes);
-    used->range.end   = (used->range.end + PAGE_ALIGN - 1) / PAGE_ALIGN;
-    header->magic     = MAGIC_HEADER;
-    header->type      = MM_INTERNAL;
-    list_push(&allocd, &used->node);
+    free = (struct mm_free *)((char *)mem + sizeof(*arena));
+    list_push(&mm.memory, &free->node);
+    free->arena = arena;
+    free->size  = arena->size - arena->used - sizeof(*free);
 
-    free = (struct mm_list *)((char *)mem + sizeof(*used));
-    for(i = INIT_NR_NODES; i > 0; i--) {
-        list_push(&unused, &free[i - 1].node);
-    }
-    free = node_container(struct mm_list, list_pop(&unused), node);
+    mm.size = arena->size;
+    mm.used = arena->size - free->size;
 
-    free->range.start = (size_t)((uintptr_t)mem + list_size);
-    free->range.start = (free->range.start + PAGE_ALIGN - 1) / PAGE_ALIGN;
-    free->range.end   = ((uintptr_t)mem + bytes - list_size) / PAGE_ALIGN;
-    list_push(&mm.free, &free->node);
+    return 0;
 }
