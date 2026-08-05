@@ -25,5 +25,7 @@
 #include <stddef.h>
 
 void mm_init(const size_t);
+void *kalloc(size_t);
+void kfree(void *);
 
 #endif

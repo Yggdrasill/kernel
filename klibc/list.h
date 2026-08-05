@@ -51,5 +51,6 @@ struct list_node *list_delete(struct list_root *, struct list_node *);
 struct list_node *
 list_insert_at(struct list_root *, struct list_node *, const size_t n);
 struct list_node *list_delete_at(struct list_root *, const size_t n);
+struct list_node *list_peek_head(const struct list_root *);
 
 #endif

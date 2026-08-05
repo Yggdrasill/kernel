@@ -169,3 +169,9 @@ struct list_node *list_delete_at(struct list_root *root, const size_t n)
     node = list_traverse(root, n);
     return list_delete(root, node);
 }
+
+struct list_node *list_peek_head(const struct list_root *root)
+{
+    if(!root) return NULL;
+    return root->head;
+}
