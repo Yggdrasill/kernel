@@ -144,7 +144,6 @@ int main(void)
     info = boot_init();
     irq_unmask(IRQ_NUM_KBD);
     pmm_init(info.mmap);
-    mm_init(pmm_available_bytes());
 
     halt();
     hcf();

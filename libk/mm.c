@@ -25,11 +25,14 @@
 #include <list.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <math.h>
 
 #ifdef BOOTLOADER_COMPILE
 extern void *pmm_alloc(size_t);
     #define alloc pmm_alloc
 #endif
+
+SAFE_ADD_IMPLEMENT(size, size_t, SIZE_MAX)
 
 /*
  * This is just a simple linked list allocator for now. Ideally the kernel would
@@ -37,9 +40,10 @@ extern void *pmm_alloc(size_t);
  * self-balancing BST. A linked list allocator is sufficient for now.
  */
 
-#define HEAP_ALLOC_SIZE  (256 * (1 << 10))
-#define HEAP_ALLOC_ALIGN (sizeof(struct mm_header))
-#define HEAP_ALLOC_MASK  (~(sizeof(struct mm_header) - 1))
+#define HEAP_ALLOC_SIZE (256UL * (1 << 10))
+#define HEAP_ALLOC_MASK (~(HEAP_ALLOC_SIZE - 1))
+#define HEAP_ALIGN_SIZE (sizeof(struct mm_header))
+#define HEAP_ALIGN_MASK (~(HEAP_ALIGN_SIZE - 1))
 
 #define HEADER_MAGIC 0x807FAA55
 
@@ -72,36 +76,7 @@ struct mm_state {
 
 static struct mm_state mm;
 
-int mm_init(const size_t available)
-{
-    struct mm_arena  *arena;
-    struct mm_header *free;
-
-    void *mem;
-
-    list_init(&mm.arenas);
-    list_init(&mm.memory);
-
-    mem = alloc(HEAP_ALLOC_SIZE);
-    if(!mem) return -1;
-
-    arena = mem;
-    list_push(&mm.arenas, &arena->node);
-    arena->size = HEAP_ALLOC_SIZE;
-    arena->used = sizeof(*arena) + sizeof(*free);
-
-    free = (struct mm_header *)((char *)mem + sizeof(*arena));
-    list_push(&mm.memory, &free->prefix.node);
-    free->arena = arena;
-    free->size  = arena->size - arena->used;
-
-    mm.size = arena->size;
-    mm.used = arena->size - free->size;
-
-    return 0;
-}
-
-static struct list_node *mm_search_addr_lt(void *ptr)
+static struct list_node *mm_search_addr_gt(void *ptr)
 {
     struct mm_header *ptr_header;
     struct mm_header *header;
@@ -119,40 +94,82 @@ static struct list_node *mm_search_addr_lt(void *ptr)
     return node;
 }
 
+static struct list_node *mm_alloc_arena(size_t size)
+{
+    struct list_node *node;
+    struct mm_arena  *arena;
+    struct mm_header *free;
+
+    size_t pad;
+    void  *mem;
+
+    if(safe_add_size(&size, size, sizeof(*arena))) return NULL;
+    pad  = size & (HEAP_ALLOC_SIZE - 1) ? HEAP_ALLOC_SIZE : 0;
+    size = size & HEAP_ALLOC_MASK;
+    if(safe_add_size(&size, size, pad)) return NULL;
+
+    mem = alloc(size);
+    if(!mem) return NULL;
+
+    arena = mem;
+    list_push(&mm.arenas, &arena->node);
+    arena->size = size;
+    arena->used = sizeof(*arena);
+
+    free = (struct mm_header *)((char *)mem + sizeof(*arena));
+    node = mm_search_addr_gt(free);
+    if(!node) list_push(&mm.memory, &free->prefix.node);
+    else list_insert_pre(&mm.memory, &free->prefix.node, node);
+    free->arena = arena;
+    free->size  = arena->size - sizeof(*arena);
+
+    mm.size += size;
+    mm.used += sizeof(*arena);
+
+    return &free->prefix.node;
+}
+
 void *kalloc(size_t size)
 {
-
     struct mm_header *header;
     struct mm_header *new_header;
     struct list_node *node;
     struct list_node *new_node;
     struct mm_magic  *magic;
 
-    void *ptr;
+    size_t pad;
+    void  *ptr;
+
+    if(!size) return NULL;
+
+    pad  = size & (HEAP_ALIGN_SIZE - 1) ? HEAP_ALIGN_SIZE : 0;
+    pad += sizeof(*header);
+    size = size & HEAP_ALIGN_MASK;
+    if(safe_add_size(&size, size, pad)) return NULL;
 
     node = list_peek_head(&mm.memory);
-    if(!node) return NULL;
-    if(size & (HEAP_ALLOC_ALIGN - 1)) {
-        size = (size & HEAP_ALLOC_MASK) + HEAP_ALLOC_ALIGN;
-    }
-    size += sizeof(*header);
-
-    do {
+    while(node) {
         header = node_container(struct mm_header, node, prefix.node);
-        node   = list_next(node);
-    } while(node && size > header->size);
-    if(size > header->size) return NULL;
+        if(size <= header->size) break;
+        node = list_next(node);
+    }
+    if(!node) {
+        if(!(node = mm_alloc_arena(size))) return NULL;
+        header = node_container(struct mm_header, node, prefix.node);
+    }
 
-    node = &header->prefix.node;
     ptr  = ((char *)header + sizeof(*header));
+    if(header->size - size >= sizeof(*header) + HEAP_ALIGN_SIZE) {
+        new_header = (struct mm_header *)((char *)header + size);
+        new_node   = &new_header->prefix.node;
+        new_header->size  = header->size - size;
+        new_header->arena = header->arena;
+        list_insert_post(&mm.memory, new_node, node);
+    } else {
+        size = header->size;
+    }
 
-    new_header = (struct mm_header *)((char *)header + size);
-    new_node   = &new_header->prefix.node;
-    list_insert_post(&mm.memory, new_node, node);
     list_delete(&mm.memory, node);
-    new_header->size  = header->size - size;
-    new_header->arena = header->arena;
-
     magic        = &header->prefix.magic;
     magic->magic = HEADER_MAGIC;
     magic->ptr   = ptr;
@@ -171,11 +188,12 @@ void kfree(void *ptr)
 
     header = (struct mm_header *)ptr - 1;
     magic  = &header->prefix.magic;
+    /* Probably not the best for the kernel, but for now... */
     if(magic->magic != HEADER_MAGIC || magic->ptr != ptr) {
         panic("kfree: Invalid free!");
     }
 
-    node = mm_search_addr_lt(header);
+    node = mm_search_addr_gt(header);
     if(!node) list_push(&mm.memory, &header->prefix.node);
     else list_insert_pre(&mm.memory, &header->prefix.node, node);
 
