@@ -23,13 +23,13 @@
 #include <libk/util.h>
 
 #include <list.h>
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <math.h>
 
 #ifdef BOOTLOADER_COMPILE
 extern void *pmm_alloc(size_t);
-extern void pmm_free(void *, size_t);
+extern void  pmm_free(void *, size_t);
     #define palloc pmm_alloc
     #define pfree  pmm_free
 #endif
@@ -138,6 +138,38 @@ static void mm_free_arena(struct mm_arena *arena)
     pfree(arena, arena->size);
 }
 
+static struct list_node *mm_merge_free(struct mm_header *header)
+{
+    struct list_node *prev;
+    struct list_node *node;
+    struct mm_header *new_header;
+
+    void *end;
+
+    prev = &header->prefix.node;
+    node = list_prev(prev);
+    while(node) {
+        new_header = node_container(struct mm_header, node, prefix.node);
+        end        = ((char *)new_header + new_header->size);
+        if(end != header || header->arena != new_header->arena) break;
+        header = new_header;
+        prev   = node;
+        node   = list_prev(&header->prefix.node);
+    }
+
+    header = node_container(struct mm_header, prev, prefix.node);
+    node   = list_next(prev);
+    while(node) {
+        new_header = node_container(struct mm_header, node, prefix.node);
+        end        = ((char *)header + header->size);
+        if(end != new_header || header->arena != new_header->arena) break;
+        header->size += new_header->size;
+        node = list_next(list_delete(&mm.memory, node));
+    }
+
+    return prev;
+}
+
 void *kalloc(size_t size)
 {
     struct mm_header *header;
@@ -151,7 +183,7 @@ void *kalloc(size_t size)
 
     if(!size) return NULL;
 
-    pad  = size & (HEAP_ALIGN_SIZE - 1) ? HEAP_ALIGN_SIZE : 0;
+    pad = size & (HEAP_ALIGN_SIZE - 1) ? HEAP_ALIGN_SIZE : 0;
     pad += sizeof(*header);
     size = size & HEAP_ALIGN_MASK;
     if(safe_add_size(&size, size, pad)) return NULL;
@@ -167,10 +199,10 @@ void *kalloc(size_t size)
         header = node_container(struct mm_header, node, prefix.node);
     }
 
-    ptr  = ((char *)header + sizeof(*header));
+    ptr = ((char *)header + sizeof(*header));
     if(header->size - size >= sizeof(*header) + HEAP_ALIGN_SIZE) {
-        new_header = (struct mm_header *)((char *)header + size);
-        new_node   = &new_header->prefix.node;
+        new_header        = (struct mm_header *)((char *)header + size);
+        new_node          = &new_header->prefix.node;
         new_header->size  = header->size - size;
         new_header->arena = header->arena;
         list_insert_post(&mm.memory, new_node, node);
@@ -210,8 +242,9 @@ void kfree(void *ptr)
 
     mm.used -= header->size;
     header->arena->used -= header->size;
-
+    node = mm_merge_free(header);
     if(header->arena->used == sizeof(*header->arena)) {
+        list_delete(&mm.memory, node);
         mm_free_arena(header->arena);
     }
 
