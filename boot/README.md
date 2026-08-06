@@ -1,5 +1,186 @@
-This is the readme for the ./boot/ directory. Filenames should be searchable with
-a case-insensitive search.
+Overview
+--------
+
+The overall architecture of the bootloader is as follows:
+
+- **Stage 1**
+    - Relocate boot code from 0x7C00 to 0x7E00.
+    - Initialise segment registers.
+    - Initialise 80x25 VGA text mode.
+    - Read the disk and load stage 1.5 and 2 into memory.
+- **Stage 1.5**
+    - Set up all prerequisites for 32-bit protected mode.
+    - Store relevant machine state required for later usage.
+    - Implement mode switching, including a 32-bit/16-bit trampoline.
+    - Enter 32-bit protected mode.
+    - Read the stage 2 ELF from memory and jump to its entry point.
+- **Stage 2**
+    - Everything else e.g. memory management, I/O, filesystems, kernel loading.
+
+Stage 1 and 1.5 are limited to the first 2048 bytes of disk space, where stage 2
+will consume the remainder of the DOS compatibility (29.5KiB). The rationale is
+that I would like to limit real-mode x86 assembly to as little as possible, and
+write most of the bootloader in C.
+
+Stage 2 can use stage 1.5's real-mode trampoline for performing BIOS calls, and
+for that reason is linked against the binary objects produced by stage 1. The
+way this is done is by leaving stage 1 code as a resident program in memory, but
+it is not actually loaded into the program headers of the stage 2 ELF.
+
+There is a linker script found in `./common/linker.lds.S` which is preprocessed
+by the C preprocessors for specific stage linker configuration which should
+serve as a good reference. This linker script does more than just linking the
+binaries, as it also serves as a template for static memory allocation. The
+linker exports a selection of symbols, which defines certain critical memory
+regions. Examples of this are things like the E820 memory map, GDT, IDT, and
+other machine-defined things such as common BIOS reserved areas.
+
+Memory layout
+-------------
+
+This is based on the contents of `./common/linker.lds.S`, which remains the
+authoritative source. The memory layout only describes memory <=1MiB, as any
+other memory is more accurately described by the BIOS-provided memory map.
+
+```
+| Base address | End address | Description                  |
+|--------------|-------------|------------------------------|
+|       0x0000 |      0x0500 | BIOS interrupt vector table  |
+|       0x0500 |      0x7C00 | Free memory                  |
+|       0x7C00 |      0x7E00 | Stage 1, initial boot sector |
+|       0x7E00 |      0x8000 | Boot relocation site         |
+|       0x8000 |      0x8600 | Stage 1.5                    |
+|       0x8600 |     0x10000 | Stage 2 (initially ELF load) |
+|      0x10000 |     0x17800 | ELF relocation site          |
+|      0x17800 |    Flexible | Statically allocated memory  |
+|     Flexible |     0x70000 | Free memory                  |
+|      0x70000 |     0x80000 | Execution stack              |
+|      0x80000 |     0xA0000 | Extended BIOS data area      |
+|      0xA0000 |     0xC0000 | VGA framebuffer              |
+|      0xC0000 |    0x100000 | Upper memory reserved area   |
+|--------------|-------------|------------------------------|
+```
+
+Trampoline
+----------
+
+This is specifically documentation with regards to the trampoline itself.
+Further documentation of the trampoline can be found below, which I highly
+recommend reading to understand its significant set of preconditions.
+
+The real-mode trampoline is found within `./common/mode_switch.s`, and
+implements a transition layer so that BIOS services can be called from stage 2,
+which generally operates in 32-bit protected mode. This trampoline passes
+arguments to the target function on the stack using an adapted version of the
+SystemV 32-bit ABI. Its use of a union as a return type invokes Sret behaviour.
+
+In implementing this adapted SystemV 32-bit ABI it saves callee-saved registers,
+all relevant 32-bit protected mode machine state, and configures it according
+to the real-mode machine state expected by the BIOS. When returning to 32-bit
+protected mode it restores the protected-mode state and all callee-saved
+registers. In order to make this work the trampoline performs some pretty
+specific stack surgery.
+
+The trampoline takes the callee function pointer as an argument, along with
+whatever arguments the callee-function takes. Its C declaration is:
+
+```C
+extern union rmode_ret_t rmode_trampoline(void (*)(void), ...);
+```
+
+The trampoline is non-reentrant and supports data anywhere within the first 1MiB
+of memory, but code is limited to the first 64KiB of memory. To understand its
+stack behaviour the following diagrams may be helpful:
+
+```
+| Stack     | Description              |
+|-----------|--------------------------|
+| esp + 0   | Return pointer           |
+| esp + 4   | Structure return pointer |
+| esp + 8   | Callee function pointer  |
+| esp + 12  | Callee argument n        |
+| esp + 16  | Callee argument ...      |
+|-----------|--------------------------|
+```
+
+The core of the trampoline is the following sequence of instructions:
+
+```as
+1  bits 16
+2      pop  dword [resume]
+3      pop  dword [sret_ptr]
+4      pop  dword [callee]
+5      push rmode_return
+6      push word  [callee]
+7      sti
+8      ret
+9  rmode_return:
+10     cli
+```
+
+The lines 2-4 rewrite the stack, then lines 5-6 pushes 16-bit data:
+
+```
+| Stack   | Description         | => | Stack    | Description             |
+|-------------------------------| => |-------------------------------------
+| esp + 0 | Callee argument n   | => | esp + 0  | Callee function pointer |
+| esp + 4 | Callee argument ... | => | esp + 2  | rmode_return pointer    |
+|         |                     | => | esp + 4  | Callee argument n       |
+|         |                     | => | esp + 8  | Callee argument ...     |
+|---------|---------------------| => |----------|-------------------------|
+```
+
+There is more stack surgery performed within `rmode_trampoline`, but also
+`pmode_exit` and `pmode_init`. This only documents the core sequence for the
+trampoline itself.
+
+MBR disk usage
+--------------
+
+There are certain limits that the size of our MBR bootloader can be. Stage 1
+should consume as little space as possible, certainly no more than 31.5KiB, and
+I can explain this number. It comes from what's called the DOS compatibility
+region, which while originally for MS-DOS compatibility, is actually otherwise a
+useful construct.
+
+The disk addressing system on MBR systems is CHS, which means
+cylinder-head-sector. The addressing mode here is related to disk geometry, and
+since I cannot adequately represent this graphically in a text file, I would
+suggest you read about it elsewhere. However, I can explain the concept of
+tracks and how cylinders and heads fit into it. 
+
+On hard drives a track is composed of 63 sectors, which are 512 bytes each. This
+means that each track is 31.5KiB in size. These tracks are read by a particular
+head, as an example reading from:
+
+Cylinder = 1
+Head = 1
+Sector = 1
+
+This reads the first 512 bytes of track 1 on head 1. The cylinder addresses the
+across *all* heads, and the head address determines exactly which cylinder is
+being read. The sector address determines which offset at that cylinder is read.
+
+MS-DOS required that all partitions start on cylinder boundaries. Since the MBR
+boot sector is the first 512 bytes of the disk, this means that MS-DOS could not
+partition the first track. This leaves an empty space on the disk between the
+MBR boot sector and the first possible partition for MS-DOS systems. This is
+typically referred to as the DOS compatibility region, and became endemic due to
+its usefulness. This is because 512 bytes of space is really not enough to do
+much of anything.
+
+Most bootloaders use this space for extra code, because it's practically
+impossible to boot an entire system from 512 bytes alone. This is especially the
+case considering many BIOSes assume that a BIOS Parameter Block exists and
+clobber it. This leaves bootloaders with little choice but to reserve this
+space, which narrows the room for code even more. Therefore most bootloaders
+will use this 31.5KiB region for other boot code. Other software can also live
+here, for instance rootkits may use this space.
+
+Specific documentation
+----------------------
+
+Filenames should be searchable with a case-insensitive search.
 
 -- common/print.s
 
@@ -8,7 +189,7 @@ a case-insensitive search.
     practical consideration as it consumes far less space than writing to the
     VGA framebuffer.
 
--- common/mode_switch.s
+-- common/mode\_switch.s
 
     This file implements CPU mode switching and all its prerequisites. That is,
     it installs a basic GDT and a null IDT, masking all interrupts in the
@@ -155,17 +336,17 @@ a case-insensitive search.
     What should be done in stage 2:
 
     - The bootloader should set up a relatively usable IDT, although the kernel
-    will very likely want to replace it later. This is needed to get device
-    interrupts working, e.g. the keyboard.
+      will very likely want to replace it later. This is needed to get device
+      interrupts working, e.g. the keyboard.
     - The bootloader should unmask some of the interrupts on the 8259 PICs, for
-    example the keyboard interrupt.
+      example the keyboard interrupt.
     - It should find the boot partition (partition table should be in memory at
-    0x7DBE) and read the hard drive.
+      0x7DBE) and read the hard drive.
     - The partition should be an ext2 partition and the bootloader should read
-    it, find a configuration file which will tell it what the kernel image is
-    called and what it should put on the kernel command line.
+      it, find a configuration file which will tell it what the kernel image is
+      called and what it should put on the kernel command line.
     - It should be able to parse ELF executables, because that's likely what the
-    kernel will use.
+      kernel will use.
 
     Preferably, the code for the ext2 driver should be shared with the kernel,
     although of course, it will be statically linked.
@@ -173,7 +354,7 @@ a case-insensitive search.
 -- stage2/rmode.c
     
     This file implements the actual bridging between C and the real mode
-    trampoline found in common/mode_switch.s. It uses inline assembly to push
+    trampoline found in common/mode\_switch.s. It uses inline assembly to push
     the arguments, target function pointer, and the return pointer with a call
     instruction. It implements an ABI between the real mode trampoline that
     allows one to transparently pass arguments to 16-bit real mode code, as if
@@ -213,46 +394,3 @@ a case-insensitive search.
     register, and the way we determine the end of the memory map is when ebx ==
     0. Unfortunately some BIOSes don't indicate this way and set the carry flag,
     so it must be tested.
-
-MBR disk usage
---------------
-
-There are certain limits that the size of our MBR bootloader can be. Stage 1
-should consume as little space as possible, certainly no more than 31.5KiB, and
-I can explain this number. It comes from what's called the DOS compatibility
-region, which while originally for MS-DOS compatibility, is actually otherwise a
-useful construct.
-
-The disk addressing system on MBR systems is CHS, which means
-cylinder-head-sector. The addressing mode here is related to disk geometry, and
-since I cannot adequately represent this graphically in a text file, I would
-suggest you read about it elsewhere. However, I can explain the concept of
-tracks and how cylinders and heads fit into it. 
-
-On hard drives a track is composed of 63 sectors, which are 512 bytes each. This
-means that each track is 31.5KiB in size. These tracks are read by a particular
-head, as an example reading from:
-
-Cylinder = 1
-Head = 1
-Sector = 1
-
-This reads the first 512 bytes of track 1 on head 1. The cylinder addresses the
-across *all* heads, and the head address determines exactly which cylinder is
-being read. The sector address determines which offset at that cylinder is read.
-
-MS-DOS required that all partitions start on cylinder boundaries. Since the MBR
-boot sector is the first 512 bytes of the disk, this means that MS-DOS could not
-partition the first track. This leaves an empty space on the disk between the
-MBR boot sector and the first possible partition for MS-DOS systems. This is
-typically referred to as the DOS compatibility region, and became endemic due to
-its usefulness. This is because 512 bytes of space is really not enough to do
-much of anything.
-
-Most bootloaders use this space for extra code, because it's practically
-impossible to boot an entire system from 512 bytes alone. This is especially the
-case considering many BIOSes assume that a BIOS Parameter Block exists and
-clobber it. This leaves bootloaders with little choice but to reserve this
-space, which narrows the room for code even more. Therefore most bootloaders
-will use this 31.5KiB region for other boot code. Other software can also live
-here, for instance rootkits may use this space.
