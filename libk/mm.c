@@ -29,7 +29,9 @@
 
 #ifdef BOOTLOADER_COMPILE
 extern void *pmm_alloc(size_t);
-    #define alloc pmm_alloc
+extern void pmm_free(void *, size_t);
+    #define palloc pmm_alloc
+    #define pfree  pmm_free
 #endif
 
 SAFE_ADD_IMPLEMENT(size, size_t, SIZE_MAX)
@@ -108,7 +110,7 @@ static struct list_node *mm_alloc_arena(size_t size)
     size = size & HEAP_ALLOC_MASK;
     if(safe_add_size(&size, size, pad)) return NULL;
 
-    mem = alloc(size);
+    mem = palloc(size);
     if(!mem) return NULL;
 
     arena = mem;
@@ -127,6 +129,13 @@ static struct list_node *mm_alloc_arena(size_t size)
     mm.used += sizeof(*arena);
 
     return &free->prefix.node;
+}
+
+static void mm_free_arena(struct mm_arena *arena)
+{
+    if(!arena) return;
+    list_delete(&mm.arenas, &arena->node);
+    pfree(arena, arena->size);
 }
 
 void *kalloc(size_t size)
@@ -186,6 +195,8 @@ void kfree(void *ptr)
     struct list_node *node;
     struct mm_magic  *magic;
 
+    if(!ptr) return;
+
     header = (struct mm_header *)ptr - 1;
     magic  = &header->prefix.magic;
     /* Probably not the best for the kernel, but for now... */
@@ -199,6 +210,10 @@ void kfree(void *ptr)
 
     mm.used -= header->size;
     header->arena->used -= header->size;
+
+    if(header->arena->used == sizeof(*header->arena)) {
+        mm_free_arena(header->arena);
+    }
 
     return;
 }
