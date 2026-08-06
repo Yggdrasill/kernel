@@ -80,7 +80,6 @@ static struct mm_state mm;
 
 static struct list_node *mm_search_addr_gt(void *ptr)
 {
-    struct mm_header *ptr_header;
     struct mm_header *header;
     struct list_node *node;
 
@@ -134,8 +133,13 @@ static struct list_node *mm_alloc_arena(size_t size)
 static void mm_free_arena(struct mm_arena *arena)
 {
     if(!arena) return;
+
     list_delete(&mm.arenas, &arena->node);
+    mm.size -= arena->size;
+    mm.used -= sizeof(*arena);
     pfree(arena, arena->size);
+
+    return;
 }
 
 static struct list_node *mm_merge_free(struct mm_header *header)
