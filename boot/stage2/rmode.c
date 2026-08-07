@@ -22,7 +22,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <rmode.h>
+#include "rmode.h"
+
+#include <boot/common/disk.h>
 
 #include <libk/idt.h>
 #include <libk/interrupt.h>
@@ -30,7 +32,8 @@
 #include <libk/util.h>
 
 extern int32_t __bios_mmap(struct e820_info *);
-extern void    __bios_print(uint16_t str, uint16_t len);
+extern void    __bios_print(uint16_t, uint16_t);
+extern int32_t __chs_geometry(struct disk_info *, uint32_t);
 
 extern union rmode_ret_t rmode_trampoline(void (*)(void), ...);
 
@@ -67,4 +70,13 @@ void bios_print(char *str, size_t len)
 {
     rmode_trampoline((void (*)(void))__bios_print, str, len);
     return;
+}
+
+uint32_t bios_disk_geometry(struct disk_info *disk, uint32_t id)
+{
+    union rmode_ret_t rv;
+    rv = rmode_trampoline((void (*)(void))__chs_geometry, disk, id);
+    puthex(&rv.i32, sizeof(rv.i32), 1);
+    putchar('\n');
+    return rv.u32;
 }

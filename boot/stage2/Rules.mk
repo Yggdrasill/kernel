@@ -5,11 +5,11 @@ OBJ_STAGE2=$(patsubst %.s,%_asm.o,$(patsubst %.c,%.o,\
 
 LD_STAGE2=-T $(OBJDIR_STAGE2)/linker.lds
 
-$(OBJDIR_GEN)/symbol_gen: $(SRCDIR_STAGE2)/symbol_gen.c | $(OBJDIR_GEN)
+$(OBJDIR_GEN)/s2_symbol_gen: $(SRCDIR_STAGE2)/symbol_gen.c | $(OBJDIR_GEN)
 	$(CC) $(CF_ALL) $(INCLUDE_PATH) -no-pie -O0 -MMD -MP -MF $@.d -MT $@ \
 		-I ./ -o $@ $< -Wl,--no-gc-sections,-Ttext-segment=0
 
-$(OBJDIR_GEN)/mmap_generated.s: $(OBJDIR_GEN)/symbol_gen
+$(OBJDIR_GEN)/s2_generated.s: $(OBJDIR_GEN)/s2_symbol_gen
 	for sym in $$(readelf -Ws $< | grep "ABI_\(MMAP\|INFO\)" \
 		| awk -v OFS=',' '{ print $$8,$$3,$$2 };'); \
 	do \
@@ -21,7 +21,7 @@ $(OBJDIR_GEN)/mmap_generated.s: $(OBJDIR_GEN)/symbol_gen
 		echo "$${name} equ 0x$${value}"; \
 	done > $@
 
-$(OBJDIR_GEN)/mmap_generated.h: $(OBJDIR_GEN)/symbol_gen
+$(OBJDIR_GEN)/s2_generated.h: $(OBJDIR_GEN)/s2_symbol_gen
 	for sym in $$(readelf -Ws $< | grep "ABI_\(MMAP\|INFO\|[GI]DT\|LINK\|PMM\)" \
 		| awk -v OFS=',' '{ print $$8,$$3,$$2 };'); \
 	do \
@@ -34,10 +34,10 @@ $(OBJDIR_GEN)/mmap_generated.h: $(OBJDIR_GEN)/symbol_gen
 	done > $@
 
 $(OBJDIR_STAGE2)/linker.lds: $(SRCDIR_BOOT_COMMON)/linker.lds.S \
-							 $(OBJDIR_GEN)/mmap_generated.h | $(OBJDIR_STAGE2)
+							 $(OBJDIR_GEN)/s2_generated.h | $(OBJDIR_STAGE2)
 	$(CC) -MMD -MP -MF $@.d -MT $@ $(INCLUDE_PATH) -DLD_BOOT_STAGE2 -E -P -x c -o $@ $<
 
-$(OBJDIR_STAGE2)/mmap_asm.o: $(SRCDIR_STAGE2)/mmap.s $(OBJDIR_GEN)/mmap_generated.s \
+$(OBJDIR_STAGE2)/mmap_asm.o: $(SRCDIR_STAGE2)/mmap.s $(OBJDIR_GEN)/s2_generated.s \
 						     | $(OBJDIR_STAGE2)
 	$(AS) -f elf32 -i $(OBJDIR_GEN) -o $@ $<
 

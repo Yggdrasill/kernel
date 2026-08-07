@@ -20,7 +20,7 @@ extern __MMAP_BASE_ADDR
 global __bios_mmap
 extern __bios_error
 
-%include "mmap_generated.s"
+%include "s2_generated.s"
 
 bits    16
 section .text

@@ -19,23 +19,22 @@
  *
  */
 
-#ifndef RMODE_H
-#define RMODE_H
+#ifndef DISK_H
+#define DISK_H
 
+#include <stddef.h>
 #include <stdint.h>
 
-#include <boot/common/disk.h>
-
-#include <libk/mmap.h>
-
-union rmode_ret_t {
-    void    *ptr;
-    int32_t  i32;
-    uint32_t u32;
+struct disk_info {
+    uint16_t nr_cylinders;
+    uint8_t  nr_heads;
+    uint8_t  nr_sectors;
+    uint8_t  nr_drives;
 };
 
-int32_t  bios_mmap(struct e820_info *);
-void     bios_print(char *, size_t);
-uint32_t bios_disk_geometry(struct disk_info *, uint32_t);
+#define DISK_CYLINDERS_OFFSET (offsetof(struct disk_info, nr_cylinders))
+#define DISK_HEADS_OFFSET     (offsetof(struct disk_info, nr_heads))
+#define DISK_SECTORS_OFFSET   (offsetof(struct disk_info, nr_sectors))
+#define DISK_DRIVES_OFFSET    (offsetof(struct disk_info, nr_drives))
 
 #endif

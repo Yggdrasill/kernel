@@ -21,6 +21,8 @@ global disk_geometry
 global reset
 global read
 
+global __chs_geometry
+
 global drive
 
 bits    16
@@ -51,8 +53,8 @@ geometry_done:
     shr   ah, 6
     and   cx, 0x3F
     mov   [disk_cylinders], ax
-    mov   [disk_sectors],   cl
     mov   [disk_heads],     dh
+    mov   [disk_sectors],   cl
     ret
 
 reset:
@@ -127,10 +129,42 @@ read_e:
 read_done:
     ret
 
-disk_cylinders        dw 0
-disk_sectors        db 0
-disk_heads            db 0
-drive               db 0
+disk_cylinders dw 0
+disk_heads     db 0
+disk_sectors   db 0
+drive          db 0
+
+section .stage15 alloc exec progbits nowrite
+
+%include "s1_generated.s"
+
+__chs_geometry:
+    push  bp
+    mov   bp, sp
+    mov   edx, [ss:bp + 8]
+    mov   edi, [ss:bp + 4]
+    pop   bp
+    push  edi
+    mov   si, int13_hook
+    mov   bx, geometry_hook
+    sub   bx, int13_ret
+    mov   [si + 1], bx
+    call  disk_geometry
+geometry_hook:
+    pop   esi
+    pop   edi
+    jc    geometry_return
+    push  geometry_save
+    jmp   geometry_done
+geometry_save:
+    mov   [edi + ABI_DISK_CYLINDERS], ax
+    mov   [edi + ABI_DISK_HEADS],     dh
+    mov   [edi + ABI_DISK_SECTORS],   cl
+    mov   [edi + ABI_DISK_DRIVES],    dl
+    xor   ah, ah
+geometry_return:
+    movzx eax, ah
+    ret
 
 section .boot.rodata alloc noexec progbits nowrite
 disk_err1    db "E: Disk reset",0x0D,0x0A

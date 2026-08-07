@@ -30,7 +30,7 @@
 #define STAGE2_NOLOAD (NOLOAD)
 OUTPUT_FORMAT(binary);
 #elif  LD_BOOT_STAGE2
-#include <build/generated/mmap_generated.h>
+#include <build/generated/s2_generated.h>
 #define STAGE1_PHDR   NONE
 #define STAGE2_PHDR   P_STAGE2
 #define STAGE1_NOLOAD (NOLOAD)

@@ -27,6 +27,8 @@
 #include "stage2.h"
 #include "vga.h"
 
+#include <boot/common/disk.h>
+
 #include <libk/gdt.h>
 #include <libk/idt.h>
 #include <libk/interrupt.h>
@@ -34,6 +36,8 @@
 #include <libk/mm.h>
 #include <libk/mmap.h>
 #include <libk/util.h>
+
+#define BUFFER_SIZE (64 * (1 << 10))
 
 /* Preallocated bootstrap storage from boot/common/linker.lds.S. */
 
@@ -57,10 +61,15 @@ struct boot_info {
     struct gdt_info  *gdt;
     struct idt_info  *idt;
     struct e820_info *mmap;
+
+    char  *buffer;
+    size_t size;
 };
 
 static struct boot_info boot_init(void)
 {
+    char *buffer;
+
     if(irq_read_imr() != 0xFFFF) irq_mask_all();
     if(!nmi_status()) nmi_disable();
 
@@ -107,10 +116,15 @@ static struct boot_info boot_init(void)
     bios_mmap(&old_mmap_info);
     boot_mmap_init(&new_mmap_info, &old_mmap_info);
 
+    pmm_init(&new_mmap_info);
+    buffer = pmm_alloc_range(BUFFER_SIZE, 0x0, 0x100000);
+
     return (struct boot_info){
-        .gdt  = &gdt_info,
-        .idt  = &idt_info,
-        .mmap = &new_mmap_info,
+        .gdt    = &gdt_info,
+        .idt    = &idt_info,
+        .mmap   = &new_mmap_info,
+        .buffer = buffer,
+        .size   = BUFFER_SIZE,
     };
 }
 
@@ -140,10 +154,12 @@ int main(void)
     };
 #endif
     struct boot_info info;
+    struct disk_info disk;
 
     info = boot_init();
     irq_unmask(IRQ_NUM_KBD);
-    pmm_init(info.mmap);
+    bios_disk_geometry(&disk, 0xFF);
+    bios_disk_geometry(&disk, 0x80);
 
     halt();
     hcf();
