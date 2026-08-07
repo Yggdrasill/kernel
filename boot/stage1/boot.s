@@ -248,16 +248,6 @@ header_ok:
     imul        ecx,  eax
     rep         movsb
 
-    ; Find e_shstrndx section
-
-    movzx       eax,  word [e_shstrndx]
-    movzx       ebx,  word [e_shentsize]
-    imul        ebx,  eax
-    add         ebx,  [ebp - 0x24]
-    add         ebx,  SH_FILE_OFFSET
-    mov         ebx,  [ebx]
-    add         ebx,  ei_mag
-
     mov         eax,  [ebp - 0x24]
     movzx       edx,  word [e_shnum]
 sh_reloc:
@@ -270,20 +260,6 @@ sh_reloc:
     add         edi,  _elf_header
     rep         movsb
     
-    ; Skip if ._init section found.
-
-    cmp         byte [init_found], byte 0x1
-    je          shr_cont
-    
-    ; String match section name with ._init.
-
-    lea         esi,  [ebx]
-    add         esi,  [eax]
-    mov         edi,  init_str
-    mov         ecx,  init_slen
-    rep         cmpsb
-    jne         shr_cont
-    mov         byte [init_found], byte 0x1
 shr_cont:
     movzx       ecx,  word [e_shentsize]
     add         eax,  ecx
@@ -299,16 +275,6 @@ shr_cont:
     mov         ebx,  _elf_header
     add         ebx,  [elf_phoff]
     movzx       edx,  word [elf_phnum]
-
-    ; Check if ._init was found, and error if it wasn't.
-
-    cmp         byte [init_found], byte 0x1
-    je          ph_loop
-
-    push        dword init_elen
-    push        dword init_err
-    push        __bios_error
-    call        rmode_trampoline_no_sret
 
 ph_loop:
     cmp         dword [ebx], dword PT_LOAD_TYPE ; Only PT_LOAD
