@@ -37,5 +37,6 @@ union rmode_ret_t {
 int32_t  bios_mmap(struct e820_info *);
 void     bios_print(char *, size_t);
 uint32_t bios_disk_geometry(struct disk_info *, uint32_t);
+uint32_t bios_disk_reset(uint32_t);
 
 #endif

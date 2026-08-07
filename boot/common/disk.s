@@ -22,6 +22,7 @@ global reset
 global read
 
 global __chs_geometry
+global __disk_reset
 
 global drive
 
@@ -146,9 +147,9 @@ __chs_geometry:
     pop   bp
     push  edi
     mov   si, int13_hook
-    mov   bx, geometry_hook
-    sub   bx, int13_ret
-    mov   [si + 1], bx
+    mov   ax, geometry_hook
+    sub   ax, int13_ret
+    mov   [si + 1], ax
     call  disk_geometry
 geometry_hook:
     pop   esi
@@ -163,6 +164,21 @@ geometry_save:
     mov   [edi + ABI_DISK_DRIVES],    dl
     xor   ah, ah
 geometry_return:
+    movzx eax, ah
+    ret
+
+__disk_reset:
+    push  bp
+    mov   bp, sp
+    mov   edx, [ss:bp + 4]
+    mov   si, int13_hook
+    mov   ax, reset_hook
+    sub   ax, int13_ret
+    mov   [si + 1], ax
+    call  reset
+reset_hook:
+    mov   sp, bp
+    pop   bp
     movzx eax, ah
     ret
 

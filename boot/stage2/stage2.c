@@ -160,6 +160,7 @@ int main(void)
     irq_unmask(IRQ_NUM_KBD);
     bios_disk_geometry(&disk, 0xFF);
     bios_disk_geometry(&disk, 0x80);
+    bios_disk_reset(0x80);
 
     halt();
     hcf();

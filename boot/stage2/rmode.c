@@ -31,9 +31,10 @@
 #include <libk/mmap.h>
 #include <libk/util.h>
 
-extern int32_t __bios_mmap(struct e820_info *);
-extern void    __bios_print(uint16_t, uint16_t);
-extern int32_t __chs_geometry(struct disk_info *, uint32_t);
+extern int32_t  __bios_mmap(struct e820_info *);
+extern void     __bios_print(uint16_t, uint16_t);
+extern uint32_t __chs_geometry(struct disk_info *, uint32_t);
+extern uint32_t __disk_reset(uint32_t);
 
 extern union rmode_ret_t rmode_trampoline(void (*)(void), ...);
 
@@ -76,7 +77,16 @@ uint32_t bios_disk_geometry(struct disk_info *disk, uint32_t id)
 {
     union rmode_ret_t rv;
     rv = rmode_trampoline((void (*)(void))__chs_geometry, disk, id);
-    puthex(&rv.i32, sizeof(rv.i32), 1);
+    puthex(&rv.u32, sizeof(rv.u32), 1);
+    putchar('\n');
+    return rv.u32;
+}
+
+uint32_t bios_disk_reset(uint32_t id)
+{
+    union rmode_ret_t rv;
+    rv = rmode_trampoline((void (*)(void))__disk_reset, id);
+    puthex(&rv.u32, sizeof(rv.u32), 1);
     putchar('\n');
     return rv.u32;
 }
