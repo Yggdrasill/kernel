@@ -24,11 +24,9 @@ bios_print:
 __bios_print:
     push  bp
     mov   bp, sp
-    push  ax
-    push  bx
-    push  cx
-    push  dx
+    pusha
     push  es
+    push  ds
     mov   ax, 0x0300
     xor   bx, bx
     mov   es, bx
@@ -36,16 +34,12 @@ __bios_print:
     mov   ecx, dword [ss:bp + 8]
     mov   eax, dword [ss:bp + 4]
     mov   bx, 0x0007
-    push  bp
     mov   bp, ax
     mov   ax, 0x1301
     int   0x10
-    pop   bp
+    pop   ds
     pop   es
-    pop   dx
-    pop   cx
-    pop   bx
-    pop   ax
+    popa
     pop   bp 
     ret
 
@@ -54,4 +48,6 @@ __bios_error:
     add      sp, 2
     call  bios_print
     cli
+err:
     hlt
+    jmp short err

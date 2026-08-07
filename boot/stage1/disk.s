@@ -26,11 +26,20 @@ global drive
 bits    16
 section .boot.util alloc exec progbits nowrite
 
-disk_geometry:
-    mov   ah, 0x08
+int13:
+    push  es
     push  ds
     int   0x13
     pop   ds
+    pop   es
+int13_hook:
+    jmp   strict near int13_ret
+int13_ret:
+    ret
+
+disk_geometry:
+    mov   ah, 0x08
+    call  int13
     jnc   geometry_done
 geometry_e:
     push  dword de3_len
@@ -50,14 +59,10 @@ reset:
     pusha
     mov   cx, 0x05
 resetlp:
-    xor   ax, ax
-    push  es
-    push  ds
     pusha
-    int   0x13
+    xor   ax, ax
+    call  int13
     popa
-    pop   ds
-    pop   es
     jnc   reset_done
     loop  resetlp
 reset_e:
@@ -74,14 +79,10 @@ read:
 read_sector:
     xor   di, di
 read_try:
-    push  es
-    push  ds
     pusha
     mov   ax, 0x0201
-    int   0x13
+    call  int13
     popa
-    pop   ds
-    pop   es
     jc    read_recover
 read_success:
     add   bx, 0x200
