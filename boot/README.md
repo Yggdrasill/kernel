@@ -216,13 +216,14 @@ Filenames should be searchable with a case-insensitive search.
     its ability. This does not save you from a broken machine state before
     entry. All callee-saved registers are handled within the trampoline.
 
-    These functions take care of actually putting the processor into 32-bit
-    protected mode. A requirement for this is to provide the processor with
-    a global descriptor table and an interrupt descriptor table. We provide
-    the processor with a GDT that describes a flat memory structure, 4GB long.
-    The GDT contains an eight byte long null descriptor, a code descriptor and
-    a data descriptor. The base address is 0, and the limit is 0xFFFFF. The
-    "granularity" bit is set, and so the limit is multiplied by 4096.
+    The other functions take care of actually putting the processor into 32-bit
+    protected mode, or save and restore machine state inbetween transitions.
+    A requirement for this is to provide the processor with a global descriptor
+    table and an interrupt descriptor table. We provide the processor with a GDT
+    that describes a flat memory structure, 4GB long. The GDT contains an eight
+    byte long null descriptor, a code descriptor and a data descriptor. The base
+    address is 0, and the limit is 0xFFFFF. The "granularity" bit is set, and so
+    the limit is multiplied by 4096.
 
     0xFFFFF * 4096 = 4GiB
 

@@ -86,7 +86,7 @@ Unfortunately Assembly languages are not very portable between different
 assemblers, as any assembler can have their own dialect. This uses the Netwide
 Assembler, or nasm, and will likely use this assembler forever.
 
-While the project intends to be reasonably compiler/toolchain-portable is is
+While the project intends to be reasonably compiler/toolchain-portable it is
 currently not fully. It requires a linker that understands GNU ld's
 linkerscripts, and the build system also depends on GNU Make. However, it should
 be compiler-portable otherwise, as the project does not use
@@ -148,11 +148,6 @@ $ dd if=/dev/zero bs=512 count=2880 of=image.img
 $ dd if=bin/boot.bin bs=512 count=4 conv=notrunc of=image.img
 $ dd if=bin/stage2.elf bs=512 seek=4 conv=notrunc of=image.img
 ```
-
-Note that this is not the final form of the project. Eventually stage2.elf will
-live on an ext2 partition on this image alongside the kernel executable, and
-boot.bin will load it from a hardcoded disk location. This hardcoding will be
-done by the install script.
 
 Running
 -------
