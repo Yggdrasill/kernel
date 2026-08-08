@@ -165,13 +165,13 @@ geometry_hook:
     pop   esi
     pop   di
     jc    hook_exit
-    push  geometry_save
-    jmp   geometry_done
+    call  geometry_done
 geometry_save:
     mov   [es:di + ABI_DISK_CYLINDERS], ax
     mov   [es:di + ABI_DISK_HEADS],     dh
     mov   [es:di + ABI_DISK_SECTORS],   cl
     mov   [es:di + ABI_DISK_DRIVES],    dl
+    xor   ax, ax
     jmp   hook_exit
 
 __disk_reset:
