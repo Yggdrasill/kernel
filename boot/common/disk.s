@@ -144,6 +144,10 @@ __chs_geometry:
     mov   bp, sp
     mov   edx, [ss:bp + 8]
     mov   edi, [ss:bp + 4]
+    mov   eax, edi
+    shr   eax, 4
+    mov   es, ax
+    and   edi, 0x0F
     pop   bp
     push  edi
     mov   si, int13_hook
@@ -158,10 +162,10 @@ geometry_hook:
     push  geometry_save
     jmp   geometry_done
 geometry_save:
-    mov   [edi + ABI_DISK_CYLINDERS], ax
-    mov   [edi + ABI_DISK_HEADS],     dh
-    mov   [edi + ABI_DISK_SECTORS],   cl
-    mov   [edi + ABI_DISK_DRIVES],    dl
+    mov   [es:di + ABI_DISK_CYLINDERS], ax
+    mov   [es:di + ABI_DISK_HEADS],     dh
+    mov   [es:di + ABI_DISK_SECTORS],   cl
+    mov   [es:di + ABI_DISK_DRIVES],    dl
     xor   ah, ah
 geometry_return:
     movzx eax, ah
@@ -177,8 +181,11 @@ __disk_reset:
     mov   [si + 1], ax
     call  reset
 reset_hook:
-    mov   sp, bp
     pop   bp
+    mov   bp, sp
+    mov   [ss:bp + 14], ax
+    popa
+    leave
     movzx eax, ah
     ret
 
