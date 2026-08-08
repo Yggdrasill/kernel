@@ -50,13 +50,15 @@ a20_check:
 
     je    a20_end
 
-    mov   [has_a20], byte 0x01
+    mov   bl, byte 0x01
 a20_end:
     ret
 
 bios_a20:
+    push  bx
     mov   ax, 0x2401
     int   0x15
+    pop   bx
     ret
 
 kbd8042_wait_cmd:
@@ -72,8 +74,6 @@ kbd8042_wait_data:
     ret
 
 kbd8042_a20:
-    pushfd
-    cli
     call  kbd8042_wait_cmd
     mov   al, 0xAD
     out   0x64, al
@@ -100,7 +100,6 @@ kbd8042_a20:
     out   0x64, al
 
     call  kbd8042_wait_cmd
-    popfd
     ret
 
 a20_ee:
@@ -114,31 +113,29 @@ a20_fast:
     ret
 
 a20_init:
+    xor   bx, bx
     call  a20_check
-    cmp   byte [has_a20], byte 0x01
+    cmp   bl, 0x01
     je    done_a20
 
     call  bios_a20
     call  a20_check
-    cmp   byte [has_a20], byte 0x01
+    cmp   bl, 0x01
     je    done_a20
 
     call  kbd8042_a20
     call  a20_check
-    cmp   byte [has_a20], byte 0x01
+    cmp   bl, 0x01
     je    done_a20
 
     call  a20_ee
     call  a20_check
-    cmp   byte [has_a20], byte 0x01
+    cmp   bl, 0x01
     je    done_a20
 
     call  a20_fast
     call  a20_check
-    cmp   byte [has_a20], byte 0x01
-    je    done_a20
-
-    cmp   byte [has_a20], byte 0x01
+    cmp   bl, 0x01
     jne   a20_error
 done_a20:
     ret

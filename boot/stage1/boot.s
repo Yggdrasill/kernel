@@ -138,8 +138,8 @@ stage15:
     ; then mask all ints for transition
     ; to protected mode
 
-    call  a20_init
     cli
+    call  a20_init
     call  store_bios_imr
     call  mask_ints
     call  init_nmi_disable
@@ -151,7 +151,7 @@ bits 32
     ; compilers happy. 
 
     mov   esp, 0x7FFF0
-    mov   ebp, 0x7FFF0
+    mov   ebp, esp
     
     call  read_elf
     mov   dword edx, dword [elf_entry]
@@ -191,12 +191,7 @@ init_nmi_disable:
 read_elf:
     push        ebp
     mov         ebp, esp
-    push        eax
-    push        ebx
-    push        ecx
-    push        edx
-    push        esi
-    push        edi
+    pusha
 
     ; Verify that the ELF bootloader is present
     ; by testing against magic header of the
@@ -212,7 +207,6 @@ read_elf:
     call  rmode_trampoline_no_sret
 
 header_ok:
-    sub         esp,  0x10
     mov         esi,  [e_phoff]
     mov         edi,  [e_shoff]
     lea         eax,  [esi + ei_mag]
@@ -220,10 +214,10 @@ header_ok:
     lea         ecx,  [edi + ei_mag]
     lea         edx,  [edi + _elf_header]
 
-    mov         [ebp - 0x1C], eax
-    mov         [ebp - 0x20], ebx
-    mov         [ebp - 0x24], ecx
-    mov         [ebp - 0x28], edx
+    push        edx
+    push        ecx
+    push        ebx
+    push        eax
 
     ; Before relocating PT_LOAD segments, we
     ; must ensure that the ELF headers are all
@@ -234,24 +228,25 @@ header_ok:
     movzx       ecx,  word [e_ehsize]
     rep         movsb
 
-    mov         esi,  [ebp - 0x1C]
-    mov         edi,  [ebp - 0x20]
+    pop         esi
+    pop         edi
     movzx       eax,  word [e_phnum]
     movzx       ecx,  word [e_phentsize]
     imul        ecx,  eax
     rep         movsb
 
-    mov         esi,  [ebp - 0x24]
-    mov         edi,  [ebp - 0x28]
+    pop         esi
+    pop         edi
+    push        esi
     movzx       eax,  word [e_shnum]
     movzx       ecx,  word [e_shentsize]
     imul        ecx,  eax
     rep         movsb
 
-    mov         eax,  [ebp - 0x24]
+    pop         eax
     movzx       edx,  word [e_shnum]
 sh_reloc:
-    cmp   word  [eax + SH_TYPE_OFFSET], SH_NOBITS_TYPE ; Skip SHT_NOBITS
+    cmp    word [eax + SH_TYPE_OFFSET], SH_NOBITS_TYPE ; Skip SHT_NOBITS
     je          shr_cont
     mov         ecx,  [eax + SH_FILE_SIZE]
     mov         esi,  [eax + SH_FILE_OFFSET]
@@ -298,32 +293,13 @@ phlp_next:
     dec         edx
     jnz         ph_loop
 phlp_exit:
-    add         esp, 0x10
-    pop         edi
-    pop         esi
-    pop         edx
-    pop         ecx
-    pop         ebx
-    pop         eax
-    pop         ebp
+    popa
+    leave
     ret
 
 section     .stage15.rodata
-init_str    db "._init",0x00
-init_slen   equ $ - init_str
-
-elf_err     db "E: ELF not found!",0x0D,0x0A
+elf_err     db "E: Stage 2 not found!",0x0D,0x0A
 elf_len     equ $ - elf_err
-;sht_err     db "No SHT_PROGBITS section header!",0x0D,0x0A
-;sht_len     equ $ - sht_err
-init_err    db "E: ._init missing!",0x0D,0x0A
-init_elen   equ $ - init_err
-
-section     .stage15.data
-mmap_seg    dw 0
-mmap_off    dw 0
-
-init_found  db 0
 
 section .elf_init alloc noexec nobits write
 ei_mag:       resd 1
