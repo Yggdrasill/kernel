@@ -90,6 +90,7 @@ read_try:
     popa
     jc    read_recover
 read_success:
+    xor   eax, eax
     add   bx, 0x200
     dec   si
     jz    read_done
@@ -118,8 +119,12 @@ read_next_cylinder:
     shl   cl, 6
     inc   cl
     cmp   ax, [disk_cylinders]
-    ja    read_e
-    jmp   read_sector
+    jbe   read_sector
+read_error:
+    jmp   strict near read_e
+read_done:
+    ret
+
 read_recover:
     call  reset
     inc   di
@@ -129,8 +134,6 @@ read_e:
     push  dword de2_len
     push  dword disk_err2
     call  __bios_error
-read_done:
-    ret
 
 disk_cylinders dw 0
 disk_heads     db 0
@@ -198,17 +201,26 @@ hook_exit:
 ;            uint8_t drive,
 ;            struct disk_info *disk);
 ; 
+addr_calc:
+    push  ax
+    mov   eax, edi
+    shr   eax, 4
+    mov   es, ax
+    and   di, 0x0F
+    pop   ax
+    ret
 
 __chs_read:
     push  bp
     mov   bp, sp
     mov   ax, read_hook
     call  hook_install
+    mov   ax, read_error_hook
+    mov   si, read_error
+    sub   ax, read_done
+    mov   [si + 1], ax
     mov   edi, [ss:bp + 0x14]
-    mov   eax, edi
-    shr   eax, 4
-    mov   es, ax
-    and   edi, 0x0F
+    call  addr_calc
     mov   ax, [es:di + ABI_DISK_CYLINDERS]
     mov   dh, [es:di + ABI_DISK_HEADS]
     mov   cl, [es:di + ABI_DISK_SECTORS]
@@ -232,26 +244,25 @@ __chs_read:
     mov   dh, dl
     mov   dl, [ss:bp + 0x10]
     mov   si, [ss:bp + 0x0C]
-    mov   ebx, [ss:bp + 0x04]
-    mov   edi, ebx
-    shr   edi, 4
-    mov   es, di
-    and   ebx, 0x0F
-    xor   ax, ax
+    mov   edi, [ss:bp + 0x04]
+    call  addr_calc
+    mov   bx, di
     call  read
-chs_read_return:
+    mov   ax, bx
     pop   bp
     ret
 
+read_error_hook:
+    mov   ah, 4
+    jmp   short read_hook_exit
 read_hook:
     lea   sp, [esp + 2]
-    shl   eax, 8
-    mov   ax, bx
-    lea   ax, [eax + 0x200]
     mov   bp, sp
     mov   bp, [ss:bp + 6]
     mov   sp, bp
     jnc   read_success
+read_hook_exit:
+    shl   eax, 8
     ret
 
 section .boot.rodata alloc noexec progbits nowrite

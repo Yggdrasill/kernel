@@ -105,6 +105,7 @@ jmp   0x0000:boot
 boot:
     mov   [drive], dl
     push  dx
+    push  dx
     call  disk_geometry
     pop   dx
     call  reset
@@ -113,7 +114,7 @@ boot:
     pop   es
     mov   bx, __STAGE15_LOAD_OFF
     mov   cx, 0x02
-    movzx dx, byte [drive]
+    pop   dx
     mov   si, 0x3F
     call  read
 
@@ -154,7 +155,6 @@ bits 32
     mov   ebp, esp
     
     call  read_elf
-    mov   dword edx, dword [elf_entry]
 
     ; Clean up all registers
 
@@ -164,7 +164,7 @@ bits 32
 
     ; push __start
 
-    push  edx
+    push  [elf_entry]
     ret
 
 init_nmi_disable:
@@ -246,7 +246,7 @@ header_ok:
     pop         eax
     movzx       edx,  word [e_shnum]
 sh_reloc:
-    cmp    word [eax + SH_TYPE_OFFSET], SH_NOBITS_TYPE ; Skip SHT_NOBITS
+    cmp         [eax + SH_TYPE_OFFSET], SH_NOBITS_TYPE ; Skip SHT_NOBITS
     je          shr_cont
     mov         ecx,  [eax + SH_FILE_SIZE]
     mov         esi,  [eax + SH_FILE_OFFSET]
@@ -274,7 +274,7 @@ shr_cont:
 ph_loop:
     cmp         dword [ebx], dword PT_LOAD_TYPE ; Only PT_LOAD
     jne         phlp_next
-    mov   dword ecx,  [ebx + PH_FILE_SIZE]
+    mov         ecx,  [ebx + PH_FILE_SIZE]
     mov         esi,  _elf_header
     add         esi,  [ebx + PH_FILE_OFFSET]
     mov         edi,  [ebx + PH_VIRT_ADDR]
