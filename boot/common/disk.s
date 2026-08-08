@@ -23,6 +23,7 @@ global read
 
 global __chs_geometry
 global __disk_reset
+global __chs_read
 
 global drive
 
@@ -53,6 +54,7 @@ geometry_done:
     mov   ah, cl
     shr   ah, 6
     and   cx, 0x3F
+geometry_write:
     mov   [disk_cylinders], ax
     mov   [disk_heads],     dh
     mov   [disk_sectors],   cl
@@ -139,26 +141,30 @@ section .stage15 alloc exec progbits nowrite
 
 %include "s1_generated.s"
 
+hook_install:
+    mov   si, int13_hook
+    sub   ax, int13_ret
+    mov   [ds:si + 1], ax
+    ret
+
 __chs_geometry:
     push  bp
     mov   bp, sp
-    mov   edx, [ss:bp + 8]
+    mov   ax, geometry_hook
+    call  hook_install
+    mov   dl, [ss:bp + 8]
     mov   edi, [ss:bp + 4]
     mov   eax, edi
     shr   eax, 4
     mov   es, ax
-    and   edi, 0x0F
+    and   di, 0x0F
     pop   bp
-    push  edi
-    mov   si, int13_hook
-    mov   ax, geometry_hook
-    sub   ax, int13_ret
-    mov   [si + 1], ax
+    push  di
     call  disk_geometry
 geometry_hook:
     pop   esi
-    pop   edi
-    jc    geometry_return
+    pop   di
+    jc    hook_exit
     push  geometry_save
     jmp   geometry_done
 geometry_save:
@@ -166,19 +172,14 @@ geometry_save:
     mov   [es:di + ABI_DISK_HEADS],     dh
     mov   [es:di + ABI_DISK_SECTORS],   cl
     mov   [es:di + ABI_DISK_DRIVES],    dl
-    xor   ah, ah
-geometry_return:
-    movzx eax, ah
-    ret
+    jmp   hook_exit
 
 __disk_reset:
     push  bp
     mov   bp, sp
-    mov   edx, [ss:bp + 4]
-    mov   si, int13_hook
     mov   ax, reset_hook
-    sub   ax, int13_ret
-    mov   [si + 1], ax
+    call  hook_install
+    mov   dl, [ss:bp + 4]
     call  reset
 reset_hook:
     pop   bp
@@ -186,7 +187,71 @@ reset_hook:
     mov   [ss:bp + 14], ax
     popa
     leave
+hook_exit:
     movzx eax, ah
+    ret
+
+; int __chs_read(
+;            char *buffer,
+;            uint32_t lba,
+;            size_t bytes,
+;            uint8_t drive,
+;            struct disk_info *disk);
+; 
+
+__chs_read:
+    push  bp
+    mov   bp, sp
+    mov   ax, read_hook
+    call  hook_install
+    mov   edi, [ss:bp + 0x14]
+    mov   eax, edi
+    shr   eax, 4
+    mov   es, ax
+    and   edi, 0x0F
+    mov   ax, [es:di + ABI_DISK_CYLINDERS]
+    mov   dh, [es:di + ABI_DISK_HEADS]
+    mov   cl, [es:di + ABI_DISK_SECTORS]
+    call  geometry_write
+    inc   dh
+    mov   ax, [ss:bp + 0x08]
+    push  dx
+    movzx di, cl
+    xor   dx, dx
+    div   di
+    mov   cl, dl
+    inc   cl
+    pop   dx
+    movzx di, dh
+    xor   dx, dx
+    div   di
+    mov   ch, al
+    and   ah, 0x3
+    shl   ah, 6
+    or    cl, ah
+    mov   dh, dl
+    mov   dl, [ss:bp + 0x10]
+    mov   si, [ss:bp + 0x0C]
+    mov   ebx, [ss:bp + 0x04]
+    mov   edi, ebx
+    shr   edi, 4
+    mov   es, di
+    and   ebx, 0x0F
+    xor   ax, ax
+    call  read
+chs_read_return:
+    pop   bp
+    ret
+
+read_hook:
+    lea   sp, [esp + 2]
+    shl   eax, 8
+    mov   ax, bx
+    lea   ax, [eax + 0x200]
+    mov   bp, sp
+    mov   bp, [ss:bp + 6]
+    mov   sp, bp
+    jnc   read_success
     ret
 
 section .boot.rodata alloc noexec progbits nowrite
