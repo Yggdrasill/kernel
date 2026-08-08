@@ -146,4 +146,3 @@ has_a20   db 0
 section .stage15.rodata
 a20_err   db "E: A20 disabled",0x0D,0x0A
 a20e_len  equ $ - a20_err
-

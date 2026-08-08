@@ -410,13 +410,7 @@ skip_sret:
     push   dword [resume]
     iretd
 
-section .stage15.data
-shadow_p70   db 0x00
-
-gdt_info:
-gdt_size    dw  gdt_len - 1
-gdt_ptr     dd  gdt
-
+section .stage15.ms
 gdt:
 null_gdt    times 8 db 0
 code_32     db 0xFF,0xFF,0x00,0x00,0x00,0x9B,0xCF,0x00
@@ -432,9 +426,15 @@ idt_rmode:
 idt_rsize    dw 0x03FF
 idt_rptr     dd 0x0000
 
+gdt_info:
+gdt_size    dw  gdt_len - 1
+gdt_ptr     dd  gdt
+
 idt_info:
 idt_size     dw 0
 idt_ptr      dd 0
+
+shadow_p70   db 0x00
 
 section .stage15.bss bss alloc noexec nobits write
 imr0_shadow:  resb 1
