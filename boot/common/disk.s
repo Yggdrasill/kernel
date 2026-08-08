@@ -258,8 +258,8 @@ read_error_hook:
 read_hook:
     lea   sp, [esp + 2]
     mov   bp, sp
-    mov   bp, [ss:bp + 6]
-    mov   sp, bp
+    mov   [ss:bp + 14], ax
+    popa
     jnc   read_success
 read_hook_exit:
     shl   eax, 8
