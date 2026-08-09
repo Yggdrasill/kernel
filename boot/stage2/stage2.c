@@ -161,7 +161,7 @@ int main(void)
     bios_disk_geometry(&disk, 0xFF);
     bios_disk_geometry(&disk, 0x80);
     bios_disk_reset(0x80);
-    bios_chs_read(info.buffer, 1000, 2, 0x80, &disk);
+    bios_chs_read(&disk, info.buffer, 2, 8191, 0x80);
 
     halt();
     hcf();

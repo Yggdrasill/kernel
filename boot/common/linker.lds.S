@@ -143,6 +143,7 @@ SECTIONS {
         __STAGE15_LOAD_SEG = ABSOLUTE((__STAGE15_LOAD_ADDR >> 4) & 0xF000);
         __STAGE15_LOAD_OFF = ABSOLUTE(__STAGE15_LOAD_ADDR & 0xFFFF);
         KEEP(*(.stage15))
+        . = ALIGN(8);
         KEEP(*(.stage15.ms))
         KEEP(*(.stage15.data))
         KEEP(*(.stage15.rodata))

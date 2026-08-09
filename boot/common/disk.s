@@ -144,12 +144,27 @@ section .stage15 alloc exec progbits nowrite
 
 %include "s1_generated.s"
 
+; We want to hook int 0x13 so we
+; can manage state manually. The
+; __bios_error call hangs the
+; machine, so we don't want to
+; end up there.
 hook_install:
     mov   si, int13_hook
     sub   ax, int13_ret
     mov   [ds:si + 1], ax
     ret
 
+addr_calc:
+    push  ax
+    mov   eax, edi
+    shr   eax, 4
+    mov   es, ax
+    and   di, 0x0F
+    pop   ax
+    ret
+
+; uint32_t __chs_geometry(struct disk_info *disk, uint8_t drive);
 __chs_geometry:
     push  bp
     mov   bp, sp
@@ -157,14 +172,13 @@ __chs_geometry:
     call  hook_install
     mov   dl, [ss:bp + 8]
     mov   edi, [ss:bp + 4]
-    mov   eax, edi
-    shr   eax, 4
-    mov   es, ax
-    and   di, 0x0F
+    call  addr_calc
     pop   bp
     push  di
     call  disk_geometry
 geometry_hook:
+    ; Get rid of two return pointers
+    ; without touching flags.
     pop   esi
     pop   di
     jc    hook_exit
@@ -177,6 +191,7 @@ geometry_save:
     xor   ax, ax
     jmp   hook_exit
 
+; uint32_t __disk_reset(uint8_t drive);
 __disk_reset:
     push  bp
     mov   bp, sp
@@ -185,6 +200,12 @@ __disk_reset:
     mov   dl, [ss:bp + 4]
     call  reset
 reset_hook:
+    ; Get rid of a return pointer,
+    ; once again without touching
+    ; flags. Discard one pusha
+    ; frame, then store ah code
+    ; to ax in the second pusha
+    ; frame, then popa.
     pop   bp
     mov   bp, sp
     mov   [ss:bp + 14], ax
@@ -194,75 +215,84 @@ hook_exit:
     movzx eax, ah
     ret
 
-; int __chs_read(
-;            char *buffer,
-;            uint32_t lba,
-;            size_t bytes,
-;            uint8_t drive,
-;            struct disk_info *disk);
-; 
-addr_calc:
-    push  ax
-    mov   eax, edi
-    shr   eax, 4
-    mov   es, ax
-    and   di, 0x0F
-    pop   ax
-    ret
-
+; int32_t __chs_read(
+;    struct disk_info *disk,
+;    char *buffer,
+;    size_t blocks,
+;    uint32_t lba,
+;    uint8_t drive);
 __chs_read:
     push  bp
     mov   bp, sp
     mov   ax, read_hook
     call  hook_install
+    ; Hook the second __bios_error
+    ; branch in the read function.
     mov   ax, read_error_hook
     mov   si, read_error
     sub   ax, read_done
     mov   [si + 1], ax
-    mov   edi, [ss:bp + 0x14]
+    ; Load disk geometry and write it.
+    mov   edi, [ss:bp + 0x04]
     call  addr_calc
     mov   ax, [es:di + ABI_DISK_CYLINDERS]
     mov   dh, [es:di + ABI_DISK_HEADS]
     mov   cl, [es:di + ABI_DISK_SECTORS]
     call  geometry_write
+    ; Now calculate CHS from LBA.
     inc   dh
-    mov   ax, [ss:bp + 0x08]
+    mov   eax, [ss:bp + 0x10]
     push  dx
-    movzx di, cl
-    xor   dx, dx
-    div   di
+    movzx edi, cl
+    xor   edx, edx
+    div   edi
     mov   cl, dl
     inc   cl
     pop   dx
-    movzx di, dh
-    xor   dx, dx
-    div   di
+    movzx edi, dh
+    xor   edx, edx
+    div   edi
     mov   ch, al
     and   ah, 0x3
     shl   ah, 6
     or    cl, ah
     mov   dh, dl
-    mov   dl, [ss:bp + 0x10]
+    ; Finally load buffer pointer,
+    ; blocks to read, and the drive
+    ; number.
+    mov   dl, [ss:bp + 0x14]
     mov   si, [ss:bp + 0x0C]
-    mov   edi, [ss:bp + 0x04]
+    mov   edi, [ss:bp + 0x08]
     call  addr_calc
     mov   bx, di
     call  read
+    ; Return format:
+    ; ah = 0 on success
+    ; ah in bits 16-24
+    ; bytes read in ax
     mov   ax, bx
     pop   bp
     ret
 
 read_error_hook:
+    ; Reference RBIL int 0x13 ah=0x01
+    ; 0x04: sector not found/read error
     mov   ah, 4
     jmp   short read_hook_exit
 read_hook:
+    ; More stack shenanigans.
+    ; lea can do arithmetic without
+    ; messing up flags, then same
+    ; trick as earlier: retain ax,
+    ; but pop the pusha frame.
     lea   sp, [esp + 2]
     mov   bp, sp
     mov   [ss:bp + 14], ax
     popa
     jnc   read_success
 read_hook_exit:
-    shl   eax, 8
+    movzx eax, ah
+    shl   eax, 16
     ret
 
 section .boot.rodata alloc noexec progbits nowrite

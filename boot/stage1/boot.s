@@ -134,43 +134,37 @@ stage15:
     push  dword 0x02
     popfd
 
-    ; Set known PIC 8259A configuration,
-    ; store the BIOS interrupt mask, and
-    ; then mask all ints for transition
-    ; to protected mode
-
+    ; Enable A20 line, store the BIOS
+    ; interrupt mask, and then mask all
+    ; ints for transition to protected
+    ; mode.
     cli
     call  a20_init
     call  store_bios_imr
     call  mask_ints
-    call  init_nmi_disable
+
+    ; Disable NMI and store shadow state
+    mov   al, 0x80
+    out   0x70, al
+    mov   [shadow_p70], al
+
     call  pmode_init
 bits 32
     ; Start a fresh stack frame for 32-bit
     ; protected mode. Stack is aligned on
     ; 16-byte boundary to make various 
     ; compilers happy. 
-
     mov   esp, 0x7FFF0
     mov   ebp, esp
     
     call  read_elf
-
-    ; Clean up all registers
 
     xor   eax, eax
     xor   ebx, ebx
     xor   ecx, ecx
 
     ; push __start
-
     push  [elf_entry]
-    ret
-
-init_nmi_disable:
-    mov   al, 0x80
-    out   0x70, al
-    mov   [shadow_p70], al
     ret
 
 %define         PT_LOAD_TYPE      0x01
@@ -189,10 +183,6 @@ init_nmi_disable:
 %define         SH_FILE_SIZE      0x14
 
 read_elf:
-    push        ebp
-    mov         ebp, esp
-    pusha
-
     ; Verify that the ELF bootloader is present
     ; by testing against magic header of the
     ; ELF format.
@@ -293,8 +283,6 @@ phlp_next:
     dec         edx
     jnz         ph_loop
 phlp_exit:
-    popa
-    leave
     ret
 
 section     .stage15.rodata
