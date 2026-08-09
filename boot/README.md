@@ -61,87 +61,14 @@ other memory is more accurately described by the BIOS-provided memory map.
 |--------------|-------------|------------------------------|
 ```
 
-Trampoline
-----------
-
-This is specifically documentation with regards to the trampoline itself.
-Further documentation of the trampoline can be found below, which I highly
-recommend reading to understand its significant set of preconditions.
-
-The real-mode trampoline is found within `./common/mode_switch.s`, and
-implements a transition layer so that BIOS services can be called from stage 2,
-which generally operates in 32-bit protected mode. This trampoline passes
-arguments to the target function on the stack using an adapted version of the
-SystemV 32-bit ABI. Its use of a union as a return type invokes Sret behaviour.
-
-In implementing this adapted SystemV 32-bit ABI it saves callee-saved registers,
-all relevant 32-bit protected mode machine state, and configures it according
-to the real-mode machine state expected by the BIOS. When returning to 32-bit
-protected mode it restores the protected-mode state and all callee-saved
-registers. In order to make this work the trampoline performs some pretty
-specific stack surgery.
-
-The trampoline takes the callee function pointer as an argument, along with
-whatever arguments the callee-function takes. Its C declaration is:
-
-```C
-extern union rmode_ret_t rmode_trampoline(void (*)(void), ...);
-```
-
-The trampoline is non-reentrant and supports data anywhere within the first 1MiB
-of memory, but code is limited to the first 64KiB of memory. To understand its
-stack behaviour the following diagrams may be helpful:
-
-```
-| Stack     | Description              |
-|-----------|--------------------------|
-| esp + 0   | Return pointer           |
-| esp + 4   | Structure return pointer |
-| esp + 8   | Callee function pointer  |
-| esp + 12  | Callee argument n        |
-| esp + 16  | Callee argument ...      |
-|-----------|--------------------------|
-```
-
-The core of the trampoline is the following sequence of instructions:
-
-```as
-1  bits 16
-2      pop  dword [resume]
-3      pop  dword [sret_ptr]
-4      pop  dword [callee]
-5      push rmode_return
-6      push word  [callee]
-7      sti
-8      ret
-9  rmode_return:
-10     cli
-```
-
-The lines 2-4 rewrite the stack, then lines 5-6 pushes 16-bit data:
-
-```
-| Stack   | Description         | => | Stack    | Description             |
-|-------------------------------| => |-------------------------------------
-| esp + 0 | Callee argument n   | => | esp + 0  | Callee function pointer |
-| esp + 4 | Callee argument ... | => | esp + 2  | rmode_return pointer    |
-|         |                     | => | esp + 4  | Callee argument n       |
-|         |                     | => | esp + 8  | Callee argument ...     |
-|---------|---------------------| => |----------|-------------------------|
-```
-
-There is more stack surgery performed within `rmode_trampoline`, but also
-`pmode_exit` and `pmode_init`. This only documents the core sequence for the
-trampoline itself.
-
 MBR disk usage
 --------------
 
-There are certain limits that the size of our MBR bootloader can be. Stage 1
-should consume as little space as possible, certainly no more than 31.5KiB, and
-I can explain this number. It comes from what's called the DOS compatibility
-region, which while originally for MS-DOS compatibility, is actually otherwise a
-useful construct.
+There are certain limits that the size of our MBR bootloader can be. The
+bootloader should consume as little space as possible, certainly no more than
+31.5KiB, and I can explain this number. It comes from what's called the DOS
+compatibility region, which while originally for MS-DOS compatibility, is
+actually otherwise a useful construct.
 
 The disk addressing system on MBR systems is CHS, which means
 cylinder-head-sector. The addressing mode here is related to disk geometry, and
@@ -180,83 +107,27 @@ here, for instance rootkits may use this space.
 Specific documentation
 ----------------------
 
-Filenames should be searchable with a case-insensitive search.
+See `./boot/common/README.md` for details. Filenames should be searchable with a
+case-insensitive search.
 
--- common/print.s
+-- `common/print.s`
 
     This file implements BIOS print interrupt calls, which is used for
     displaying messages on the screen during real mode execution. This is a
     practical consideration as it consumes far less space than writing to the
     VGA framebuffer.
 
--- common/mode\_switch.s
+-- `common/mode_switch.s`
 
-    This file implements CPU mode switching and all its prerequisites. That is,
-    it installs a basic GDT and a null IDT, masking all interrupts in the
-    process. What it does NOT do is enable the A20 gate, see stage1/a20.s for
-    that.
+    This file implements CPU mode switching and all its prerequisites. It also
+    implements a trampoline that allows real mode BIOS calls from 32-bit
+    protected mode.
 
-    This file also implements a real mode trampoline, which enables me to pass
-    arguments from 32-bit protected mode code to 16-bit real mode BIOS calls on
-    the stack. Most bootloaders do this by passing arguments in the registers,
-    but I think passing arguments on the stack is nicer. This does mean that
-    there are some very real limitations however.
+-- `common/disk.s`
 
-    IMPORTANT: READ ALL OF THIS. The stack ***MUST*** be located in low memory
-    below 1MiB, as this is the only memory that real mode code can use. The
-    stack base pointer CANNOT be on a 64K boundary. This is a very real design
-    limitation that cannot be avoided while passing arguments on the stack. The
-    trampoline is NOT RE-ENTRANT. The trampoline is NOT designed for nested
-    calls (e.g. from interrupts). The trampoline does NOT reprogram the PICs,
-    instead the IVT is aliased over the DOS-reserved region. There are a few
-    additional limitations, documented under stage2/rmode.c in this README.
-
-    So long as the preconditions for the trampoline to be used hold true, it
-    will save all other machine state and restore it upon exit to the best of
-    its ability. This does not save you from a broken machine state before
-    entry. All callee-saved registers are handled within the trampoline.
-
-    The other functions take care of actually putting the processor into 32-bit
-    protected mode, or save and restore machine state inbetween transitions.
-    A requirement for this is to provide the processor with a global descriptor
-    table and an interrupt descriptor table. We provide the processor with a GDT
-    that describes a flat memory structure, 4GB long. The GDT contains an eight
-    byte long null descriptor, a code descriptor and a data descriptor. The base
-    address is 0, and the limit is 0xFFFFF. The "granularity" bit is set, and so
-    the limit is multiplied by 4096.
-
-    0xFFFFF * 4096 = 4GiB
-
-    A 16-bit real mode GDT entry is also provided for the purposes of
-    re-entering real mode. This is used in the aforementioned trampoline to
-    transition back to real mode, in order to execute BIOS calls from protected
-    mode in C.
-
-    We also provide the processor with a completely bogus IDT, and so interrupts
-    ***MUST*** be disabled before we set the interrupt descriptor table, otherwise
-    we risk triple-faulting the processor by sending it to a completely invalid
-    interrupt handler. Interrupts should not be enabled from this point onwards,
-    until we set up a proper IDT.
-
-    The pmode_init function set's the protected mode bit in the CR0 register.
-    After this point, we are officially in protected mode.
-
--- stage1/disk.s
-
-    These implement wrapper functions for BIOS disk I/O. The reset function uses
-    BIOS interrupt call int 0x13 ah=0x00 dl=drive to reset the disk drive, whether
-    it be a floppy or a hard drive, which forces the drive to place its head at the
-    first track, and makes the drive execute the next command as if it was in its
-    initial state. This is done before a read operation just to be sure.
-
-    The read function uses a relatively complex BIOS function call in which quite
-    a few registers have to be set. It uses the int 0x13 ah=0x02 dl=drive BIOS
-    interrupt call. For whatever reason, instead of the typical es:di combination
-    for a memory pointer, this particular call requires es:bx to be the buffer
-    pointer. The dh register tells the BIOS what head to read with, the al
-    register is the number of sectors to read into memory. The cx register
-    specifies where to read from, where ch is the track number and cl is the
-    sector number (where for whatever reason, sectors count from 1).
+    These implement wrapper functions for BIOS disk I/O. These also form the
+    fallback functions for disk I/O should BIOS EDD be unavailable, which
+    requires hooking the control flow.
 
 -- stage1/a20.s
 

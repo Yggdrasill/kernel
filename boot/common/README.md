@@ -1,0 +1,517 @@
+Description
+-----------
+
+This directory implements functionality shared between stage 1, 1.5 and stage 2.
+These files are loaded in stage 1 and 1.5, but simultaneously linked with NOLOAD
+to stage 2, with a NONE program header. The functionality present here is:
+
+- All mode switching.
+- All CHS disk reading code.
+- The BIOS string output functions.
+
+The latter is not used really by stage 2, as stage 2 can write directly to the
+framebuffer. However, it is used by both stage 1 and 1.5, and so also resides in
+here.
+
+Warning
+-------
+
+There be dragons. The code found herein is very aggressively space optimised, at
+times very obscure, and at times written with exact instruction encoding in
+mind. This all comes from the fact that stage 1 is limited to 512 bytes, and
+stage 1.5 to 1536 bytes. **DO NOT** modify this code carelessly. Treat it with
+the thought, love, and care that it demands. 
+
+I have done my very best to write explanatory comments within these files to
+explain what's going on. However, you should expect to find all the dirty tricks
+within these files. This includes:
+
+- Mode-independent instruction decoding.
+- Mode-dependent instruction decoding.
+- Instruction overlapping.
+- Self-modifying code.
+- Manually reinterpreting stack pointers.
+- Rewriting the stack.
+- Stack surgery of various kinds.
+- Manipulating stack frames directly.
+- Legitimate use of light return-oriented programming.
+
+With all that said, I will now proceed to document it.
+
+ABI
+---
+
+The ABI is derived from the SystemV 32-bit ABI, which acts like a bit of a
+restricted subset of it. The preconditions are documented in the next section,
+but I will cover the important overall ABI here. The purpose is to call a 16-bit
+real mode function from 32-bit protected mode, as if it was a regular function.
+This is done by passing a function pointer and variadic arguments on the stack.
+As per the SystemV ABI all passed arguments are 32-bit arguments, i.e. 4 bytes
+in size.
+
+The valid callee functions in this ABI are prefixed by two underscores, for
+example `__bios_mmap`. Any other assembly function will not adhere to this ABI,
+and are not valid callees. Valid targets must reside in the first 64KiB of
+memory, and any data passed naturally must be within the first 1MiB of memory
+due to 16-bit real mode addressing limitations.
+
+Valid callees with the double-underscore prefix are 16-bit real mode functions
+that accept 4-byte arguments using the operand override prefix. The argument
+order is very simple, and a call might look like:
+
+```C
+/* ./boot/stage2/rmode.c */
+int32_t bios_mmap(struct e820_info *mmap)
+{
+    union rmode_ret_t rv;
+    rv = rmode_trampoline((void (*)(void))__bios_mmap, mmap);
+    /* snip */
+    return rv.i32;
+}
+```
+
+It is generally recommended that typed wrappers surround the `rmode_trampoline`
+calls, and for that reason the declaration of this `extern` function is found
+only in `./boot/common/rmode.c`.
+
+Trampoline
+----------
+
+The real mode trampoline is found within `./common/mode_switch.s`, and
+implements a transition layer so that BIOS services can be called from stage 2,
+which generally operates in 32-bit protected mode. This trampoline passes
+arguments to the target function on the stack using an adapted version of the
+SystemV 32-bit ABI. Its use of a union as a return type invokes Sret behaviour.
+
+In implementing this adapted SystemV 32-bit ABI it saves callee-saved registers,
+all relevant 32-bit protected mode machine state, and configures it according
+to the real mode machine state expected by the BIOS. When returning to 32-bit
+protected mode it restores the protected-mode state and all callee-saved
+registers. In order to make this work the trampoline performs some pretty
+specific stack surgery.
+
+The trampoline takes the callee function pointer as an argument, along with
+whatever arguments the callee-function takes. Its C declaration is:
+
+```C
+extern union rmode_ret_t rmode_trampoline(void (*)(void), ...);
+```
+
+The trampoline is non-reentrant and supports data anywhere within the first 1MiB
+of memory, but code is limited to the first 64KiB of memory. As implied by its C
+declaration above it accepts a variadic number of arguments, limited only by the
+size of the stack. To understand its stack behaviour the following diagrams may
+be helpful:
+
+```
+| Stack     | Description              |
+|-----------|--------------------------|
+| esp + 0   | Return pointer           |
+| esp + 4   | Structure return pointer |
+| esp + 8   | Callee function pointer  |
+| esp + 12  | Callee argument n        |
+| esp + 16  | Callee argument ...      |
+|-----------|--------------------------|
+```
+
+The core of the trampoline is the following sequence of instructions:
+
+```as
+1  bits 16
+2      pop  dword [resume]
+3      pop  dword [sret_ptr]
+4      pop  dword [callee]
+5      push rmode_return
+6      push word  [callee]
+7      sti
+8      ret
+9  rmode_return:
+10     cli
+```
+
+The lines 2-4 rewrite the stack, then lines 5-6 pushes 16-bit data:
+
+```
+| Stack   | Description         | => | Stack    | Description             |
+|-------------------------------| => |-------------------------------------
+| esp + 0 | Callee argument n   | => | esp + 0  | Callee function pointer |
+| esp + 4 | Callee argument ... | => | esp + 2  | rmode_return pointer    |
+|         |                     | => | esp + 4  | Callee argument n       |
+|         |                     | => | esp + 8  | Callee argument ...     |
+|---------|---------------------| => |----------|-------------------------|
+```
+
+There is more stack surgery performed within `rmode_trampoline`, but also
+`pmode_exit` and `pmode_init`. This only documents the core sequence for the
+trampoline itself.
+
+However, the trampoline does have some very strict preconditions for use. I will
+outline them first, and then answer with a rationale for why they are
+acceptable:
+
+1. Any real mode code called must reside in the first 64KiB of memory.
+2. The stack and any pointers passed must be an address below 1MiB, as it is the
+   limit of the 16-bit real mode segment:offset type addresses.
+3. The stack base pointer is not aligned on a 64K boundary, as it breaks the
+   stack reinterpretation into 16-bit segment:offset addresses.
+4. The IVT has been aliased with the real mode vectors for IRQs 0-15 copied into
+   vectors 0x20-0x2F. IBM-compatible machines must leave these reserved for
+   MS-DOS, so this is fine.
+5. It is not reentrant and cannot be nested, and should never be called from
+   exception or interrupt handlers.
+6. Paging is not enabled, at least not with the current implementation.
+
+You might ask, why use such a trampoline? These preconditions seem quite brutal.
+Well, the answer is that a significant portion of the mode-switching code is
+required simply to get into 32-bit protected mode, and this solution ends up
+being very space efficient, and also very flexible provided its preconditions
+hold true. Additionally, the arguments for why I accept all these preconditions
+are as follows:
+
+1. The bootloader is limited to the 31.5KiB DOS compatibility region anyway.
+   This will never become a problem, and if it does, it is trivial to link
+   real mode code into the first 64KiB of memory.
+2. This is a natural limitation for any real mode code, and to get around it one
+   would have to do extensive copying of arguments and data. It is simpler to
+   just allocate space for this data and the stack below 1MiB to begin with.
+3. This is easy to solve by simply putting the stack at any address below it. As
+   an example, the linker script in this directory puts it at 0x7FFF0, and gives
+   it 64K - 16 bytes of space.
+4. This is more debatable, but see libk/irq.c for details. Any IBM-compatible
+   machine must leave this range reserved for MS-DOS, which since this is not,
+   we should be able to use. What I will say is that the alternative is to
+   reinitialise the ICWs every time `rmode_trampoline` is called, which is
+   equally nasty. Doing that loses PIC 8259A state, and can end up with missed
+   interrupts, which my chosen solution ends up avoiding entirely. As a bit of
+   evidence, it works fine on the two physical machines I have tested it on so
+   far.
+5. The bootloader is single-threaded and non-concurrent anyway. I can see no
+   legitimate reason why a 32-bit exception/interrupt handler should drop down
+   to 16-bit real mode. The BIOS should be irrelevant for any real kernel
+   anyway, so this is honestly totally fine.
+6. Paging is not used in the bootloader, an intentional decision on my part, and
+   one which I made long before I wrote the trampoline. Theoretically it could
+   be adapted to support paging, but that I have no interest in. Paging will be
+   enabled just before loading the kernel, or when the kernel initialises
+   itself, and at that point the BIOS will cease to matter. Paging enabled while
+   actively making BIOS calls is just a flimsy illusion anyway.
+
+Mode switching
+--------------
+
+Due to the space constraints and the nature of the problem solved, the code
+found in these files can be quite confusing. As an example, consider this
+call to `mode_switch:pmode_init`:
+
+```as
+bits 16
+    call  0x0000:pmode_init
+
+pmode_init:
+1     and   ebp, 0xFFFF
+2     and   esp, 0xFFFF
+3     push  eax
+
+[...]
+
+bits 32
+24    pop   eax
+25    ret
+```
+
+The function was called as a far call from 16-bit mode, meaning that a pair of
+16-bit values was pushed on the stack. This totals to 4 bytes, which then gets
+reinterpreted by the 32-bit ret instruction as a regular return pointer. This
+function also rewrites the stack pointers from 16-bit segment:offset pointers to
+32-bit stack pointers. The reverse behaviour in all respects takes place in
+`pmode_exit`, where a 16-bit retf instruction interprets the 32-bit return
+pointer as a segment:offset pair, with code segment zero.
+
+There's a much more confusing piece of code found within `mode_switch.s`, but it
+will require some context. During mode transition it is quite important to do
+the following things:
+
+1. Clear the interrupt flag.
+2. Mask all interrupts.
+3. Disable non-maskable interrupts by a write to port 0x70.
+
+These are all state that needs to be appropriately restored after mode
+transition, but unfortunately one cannot necessarily read port 0x70 to know NMI
+state. The solution to this is to track a shadow value, which in this case is
+stored in a byte variable named `shadow_p70`. Due to the amount of functionality
+packed into stage 1/1.5, and resulting space constraints, I have had to devise a
+way to read this variable in both 16-bit and 32-bit modes, without duplicating
+the code. The problem is that `mov` operand sizes are different between 16-bit
+and 32-bit modes, and the operand override prefix changes the size in both
+modes. The solution is:
+
+```as
+bits 16
+1  get_shadow_p70:
+2      xor   cx, cx
+3      push  strict word shadow_p70
+4      dec   cl
+5      pop   cx
+6      jns   short fix_shadow_p70+1
+7  fix_shadow_p70:
+8      movzx ecx, cx
+9      jns   short load_shadow_p70+1
+10 load_shadow_p70:
+11     mov   al, [ecx]
+12     sahf
+13     jnc   short ms_nmi_disable_ret
+14     jmp   short restore_p70_ret
+15
+16 ms_nmi_disable:
+17     push  ax
+18     clc
+19     lahf
+20     jmp   short get_shadow_p70
+21 ms_nmi_disable_ret:
+22     or    al, 0x80
+23     out   0x70, al
+24     pop   ax
+25     ret
+26
+27 restore_p70:
+28     push  ax
+29     stc
+30     lahf
+31     jmp   short get_shadow_p70
+32 restore_p70_ret:
+33     out   0x70, al
+34     pop   ax
+35     ret
+```
+
+First the entry points are `ms_nmi_disable` and `restore_p70`. The former clears
+the carry flag, and the latter sets it, then both of them store it into `ah`
+with the `lahf` instruction. This is important, because the return point needs
+to be tracked, but since the call instruction operand size also varies between
+16-bit and 32-bit modes it cannot be used. You might see the pattern now, where
+both `ms_nmi_disable` and `restore_p70` use only instructions with the same
+operand sizes in both modes. In any case, both of them jump to `get_shadow_p70`.
+
+There are four different ways to enter `get_shadow_p70`. Both `ms_nmi_disable`
+and `restore_p70` are called in both 16-bit and 32-bit modes from
+`rmode_trampoline`, which means that `get_shadow_p70` needs to decode the
+address and load al with the same result between both modes. The `push`
+instruction on line 2 uses the `strict word` keywords to force nasm to never
+emit an operand override prefix. The `movzx` on line 8 and `mov` on line 11 emit
+the operand override and address override prefix byte respectively.
+
+Now, the code executes as you would expect under 16-bit mode, because the `dec`
+instruction on line 4 executes and sets the sign bit none of the `jns` branches
+are taken. That is **not** the case under 32-bit mode, however. and the trick
+lies in line 3. The `push strict word shadow_p70`, as I explained earlier, does
+not emit the operand override prefix, hence the two bytes of `dec cl` are
+consumed. Appropriately, since the sign flag was cleared by `xor` and the `dec`
+instruction was never executed, the sign flag is **not** set. The `jns` branches
+are now taken, at a 1-byte offset into `movzx`, which strips them of the
+operand/address override prefixes, and the CPU interprets them as it should.
+
+In 16-bit mode the instructions of lines 2-5 are decoded as:
+
+```
+0x31C9 ; xor cx, cx
+0x68iw ; push shadow_p70, .e.g. iw is 2 bytes = &shadow_p70
+0xFEC9 ; dec cl
+0x59   ; pop cx
+```
+
+In 32-bit mode the same instructions are decoded as:
+
+```
+0x31C9     ; xor ecx, ecx
+0x68iwFEC9 ; push ((0xFEC9 << 16) | &shadow_p70)
+0x59       ; pop ecx
+```
+
+This setup now allows the rest of the code to use the sign flag as a mode
+discriminant. Since the operand/address override of `movzx` and `mov` on lines 8
+and 11 respectively would cause 32-bit execution to interpret the operand size
+as 16-bit it must be stripped, which `jns` does by jumping into the instruction
+by a byte. Since `ah` was not touched during the entire operation, the carry
+flag is then restored by `sahf`, and the function returns to the appropriate
+place.
+
+Important to note is that the `movzx` instruction actually serves a purpose in
+both modes, as it cleans up the consumed `dec cl` instruction in 32-bit mode,
+and otherwise cleans up the high bits of `ecx` in 16-bit mode since the `xor`
+never did.
+
+Hooks
+-----
+
+This is mostly related to `disk.s`. The intention is that the CHS `int 0x13`
+disk code which stage 1 already makes use of should be reused as a fallback, in
+the case that BIOS EDD isn't available. This involves hooking the code and
+disrupting its normal control flow. The original code does very little in terms
+of error reporting, and so it clobbers the ah status code. Moreover, under error
+conditions it makes a fatal call to `__bios_error` which hangs the machine.
+Since we are now in protected mode with vastly more space available, we'd like
+to handle these things a bit more gracefully. We want to keep the ah status code
+intact and deal with errors properly.
+
+This leads to the initial hook setup, placed in the common `int 0x13` interface
+of all `disk.s` functions:
+
+```as
+bits 16
+1  int13:
+2      push  es
+3      push  ds
+4      int   0x13
+5      pop   ds
+6      pop   es
+7  int13_hook:
+8      jmp   strict near int13_ret
+9  int13_ret:
+10     ret
+```
+
+The `jmp` instruction is forced to be encoded as the `0xE9 cw` instruction.
+Initially it jumps +0 bytes, but has now opened a window to hook the exit point
+of this function. This is done by the following code, shared in common with all
+the valid trampoline targets:
+
+```as
+bits 16
+1     mov   ax, hook_return
+2     call  hook_install
+[...]
+3 hook_install:
+4     mov   si, int13_hook
+5     sub   ax, int13_ret
+6     mov   [ds:si + 1], ax
+7     ret
+```
+
+This poses a bit of a problem, however. Functions such as `__chs_geometry` call
+the target function normally, which in turn calls `int13`. When the hook is is
+jumped to the two return pointers are still on the stack, but this is not
+desired. The target of `__chs_geometry` is `disk_geometry`, which does not
+iterate in a loop. These return pointers must be removed without altering the
+carry flag, so arithmetic is generally not suitable.
+
+```as
+; __chs_geometry
+1     push  di
+2     call  disk_geometry
+3 geometry_hook:
+4     ; Get rid of two return pointers
+5     ; without touching flags.
+6     pop   esi
+7     pop   di
+8     jc    hook_exit
+9     call  geometry_done
+```
+
+The `pop esi` instruction on line 6 is responsible for removing them, as it pops
+4 bytes off the stack, i.e. 2x 2-byte return pointers. On error the carry flag
+is set, and the function returns with the `ah` status code in eax. Otherwise, in
+order to save space the code then returns control briefly to `disk_geometry` at
+a different entry point. This extracts the CHS values from the registers and
+then returns, at which point `__chs_geometry` writes the information into a
+`struct disk_info` data structure.
+
+This all gets a little bit more complicated with the `read` function found
+within `disk.s`, since it iterates one sector at a time. It also has a second
+place where it can call `__bios_error`, which means a second hook must be
+installed. The installed hooks for this function are:
+
+```as
+;  __chs_read
+1      mov   ax, read_hook
+2      call  hook_install
+3      mov   ax, read_error_hook
+4      mov   si, read_error
+5      sub   ax, read_done
+6      mov   [si + 1], ax
+[...]
+; hooks
+51 read_error_hook:
+52     mov   ah, 4
+53     jmp   short read_hook_exit
+54 read_hook:
+55     lea   sp, [esp + 2]
+56     mov   bp, sp
+57     mov   [ss:bp + 14], ax
+58     popa
+59     jnc   read_success
+60 read_hook_exit:
+61     movzx eax, ah
+62     shl   eax, 16
+63     ret
+```
+
+The intention here is to return to the appropriate function. Under error
+conditions control is returned to `__chs_read`, whereas if the read was
+successful then control is returned to `read`. First focus your attention on
+`read_hook`, as it is the hook which is jumped to by `int13`.
+
+The `lea` instruction is useful here because it can leave registers intact,
+perform arithmetic, and not set any flags at the same time. In this way the
+return pointer of `int13` is removed from the stack. The `read` function uses a
+pusha instruction before the call to `int13`, which leaves a large stack frame
+that needs to be dealt with, but not before we save the status code of `ah`.
+This is done by the direct write at offset `ss:bp + 14` on line 57, which
+smuggles `ax` through the following popa on line 58. The carry flag has not been
+altered, so if it is not set, the read was successful and control is returned to
+`read`.
+
+Now it is time to discuss the second hook, which is `read_error_hook`. The hook
+is installed towards the end of the `read` function:
+
+```as
+; read
+1 read_next_cylinder:
+2     ; unpack, calculate, repack CHS addresses
+3     cmp   ax, [disk_cylinders]
+4     jbe   read_sector
+5 read_error:
+6     jmp   strict near read_e
+7 read_done:
+8     ret
+```
+
+If for whatever reason we have exceeded the maximum cylinders on the disk, this
+would normally call `__bios_error`. This is unacceptable, as it hangs the
+machine as if it was a panic call. For that reason it is necessary to also hook
+this `jmp`, which ends up in `read_error_hook` as shown above. Since this is
+within the `read` function itself and with no `pusha` stack frame, the return
+pointer on the stack is pointing back to `__chs_read` which we entered from. In
+this case, set the error code to 4 (refer to RBIL int 0x13 ah=0x01), then return
+and exit.
+
+Explained with a poorly drawn diagram that was an absolute pain to do:
+
+```
+            rmode_trampoline
+                    |
+               __chs_read
+                    |
+                  read
+                    |
+                  int13
+                    |
+                 read_hook
+                   /  \
+                  /    \
+                 /      \
+                /        \
+               /          \
+              /            \
+             /              \
+       read_success      __chs_read
+         /      \             |
+        /        \            |
+  read_sector read_error_hook |
+       |           \          |
+       |            \         |
+ loop until done     __chs_read
+       |             /
+  __chs_read        /
+       |           /
+     rmode_trampoline
+```

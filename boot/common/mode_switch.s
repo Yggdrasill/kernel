@@ -106,48 +106,7 @@ restore_p70_ret:
     pop   ax
     ret
 
-; Explanation of the above:
-; ms_nmi_disable and restore_p70 use flag CF
-; to select the return point, then jump to
-; get_shadow_p70:
-; full (e)cx clear, mode dependent
-; xor cx, cx
-;
-; Now, the next instructions:
-; push strict word shadow_p70
-; dec  cl
-; Magic aside, they encode 16-bit code:
-; 0x68iw - 3 bytes long, iw = 16-bit address
-; 0xFEC9 - 2 bytes long
-;
-; In 32-bit mode the decoder interprets:
-; 0x68iwFEC9 - 5 bytes long, iw = 16-bit address
-;
-; In 16-bit mode the decoder interprets:
-; 0x68iw - 3 bytes long, iw = 16-bit address
-; 0xFEC9 - 2 bytes long, dec cl
-;
-; The sign flag now depends on execution mode.
-; In other words, the sign flag is not set in
-; 32-bit mode because the earlier xor cleared
-; it. In 16-bit mode the sign flag IS set, as
-; zero was decremented by one.
-;
-; This whole setup now allows us to use the
-; jns instruction to discriminate mode, which
-; is useful. The following movzx instruction
-; fulfills two purposes: clean up ecx in 32-bit
-; mode, as it contains garbage from dec cl, and
-; clean it up in 16-bit mode in case the high
-; half of ecx contained data not cleared by xor.
-;
-; However, the operand override prefix changes
-; the meaning of movzx ecx, cx in 32-bit mode,
-; meaning the processor will decode as mov cx, cx.
-; The prefix byte is skipped with the jns. The
-; same trick is used in the following mov, as the
-; instruction decodes to different dereferenced
-; registers between modes.
+; See ./boot/common/README.md for an explanation.
 ;
 ; End mixed-mode functions
 
