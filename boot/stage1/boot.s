@@ -148,7 +148,7 @@ stage15:
     out   0x70, al
     mov   [shadow_p70], al
 
-    call  pmode_init
+    call  0x0000:pmode_init
 bits 32
     ; Start a fresh stack frame for 32-bit
     ; protected mode. Stack is aligned on

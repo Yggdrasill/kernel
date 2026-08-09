@@ -152,14 +152,9 @@ restore_p70_ret:
 ; End mixed-mode functions
 
 pmode_init:
-    ; Fix stack high bytes and reserve
-    ; space for return pointer.
+    ; Fix stack high bytes.
     and   ebp, 0xFFFF
     and   esp, 0xFFFF
-    sub   esp, 2
-
-    push  ebp
-    mov   bp, sp
     push  eax
 
     lgdt  [gdt_info]
@@ -167,29 +162,18 @@ pmode_init:
 
     ; Fix the stack pointers by converting a
     ; linear address.
-
     xor   eax, eax
     mov   eax, ss
     mov   cx, ax
     shl   eax, 4
-    add   eax, esp
-    mov   esp, eax
-
-    ; Set the protected mode bit.
+    add   esp, eax
 
     mov   eax, cr0
     or    eax, 1
     mov   cr0, eax
-
-    ; Initialise code segment to use the GDT.
-    ; After this jmp we are in 32-bit pmode.
-
     jmp   0x0008:pmode32
 bits 32
 pmode32:
-
-    ; Initialize segment registers to use the GDT.
-
     mov   ax, 0x0010
     mov   ss, ax
     mov   es, ax
@@ -197,48 +181,22 @@ pmode32:
     mov   gs, ax
     mov   fs, ax
 
-    pop   eax
-    pop   ebp
-
     ; ebp needs to be fixed the same way that
     ; esp was earlier.
-
-    push  eax
-    movzx eax, word cx
+    movzx eax, cx
     shl   eax, 4
-    add   eax, ebp
-    mov   ebp, eax
+    add   ebp, eax
 
-    ; The return pointer was pushed as a 2-byte
-    ; value, since we were called from 16-bit
-    ; code. We have preallocated space for the
-    ; return pointer at the beginning of this
-    ; function, and now need to push it as 4 bytes.
-
-    ; Read from esp + 6 to account for extra 2 bytes
-    ; reserved, and the eax push.
-    
-    movzx eax, word [esp + 6]
-    mov   ecx, eax
     pop   eax
-    ; Overwrite old value
-    add   esp, 4
-    push  dword ecx
-
     ret
 
 pmode_exit:
-    push  ebp
-    mov   ebp, esp
     push  eax
-    push  edi
 
     lgdt  [gdt_info]
-
     jmp   0x0018:pmode16
 bits 16
 pmode16:
-
     mov   ax, 0x20
     mov   ss, ax
     mov   es, ax
@@ -249,11 +207,8 @@ pmode16:
     mov   eax, cr0 
     and   eax, ~1
     mov   cr0, eax
-
     jmp   0x0000:rmode
 rmode:
-
-    ; Initialize segment registers for real mode.
     xor   ax, ax
     mov   es, ax
     mov   ds, ax
@@ -272,31 +227,16 @@ rmode:
     and   eax, 0xF000
     mov   ss, ax
 
-    lidt  [idt_rmode]
-
-    ; Clean up higher bits in esp, as they can mess up
-    ; the stack. This is because i386 has 32-bit
-    ; register extensions.
+    ; Clean up higher bits in esp and ebp.
     and   esp, 0xFFFF
-
-    pop   edi
-    pop   eax
-
-    ;Clean up ebp in the same way, and for the same reason.
-    pop   ebp
     and   ebp, 0xFFFF
 
-    ; Now fix the return pointer on the stack and realign,
-    ; since this function was entered with a 4-byte return
-    ; pointer and will exit with a 2-byte one.
-    push  eax
-    mov   eax, dword [esp + 4]
-    mov   ecx, eax
+    ; The 4-byte return address on the stack will look
+    ; like 0x0000xxxx, so we can deliberately interpret
+    ; the zeroed bits as a far return pointer.
     pop   eax
-    add   esp, 4
-    push  word cx
-
-    ret
+    lidt  [idt_rmode]
+    retf
 
 segment_fix:
     ; BIOS anti-clobber
@@ -391,7 +331,7 @@ rmode_return:
     call   segment_fix
     call   ms_nmi_disable
     call   mask_ints
-    call   pmode_init
+    call   0x0000:pmode_init
 bits 32
     ; Allocate space for popped callee pointer.
     sub    esp, 4
