@@ -77,11 +77,11 @@ only in `./boot/common/rmode.c`.
 Trampoline
 ----------
 
-The real mode trampoline is found within `./common/mode_switch.s`, and
-implements a transition layer so that BIOS services can be called from stage 2,
-which generally operates in 32-bit protected mode. This trampoline passes
-arguments to the target function on the stack using an adapted version of the
-SystemV 32-bit ABI. Its use of a union as a return type invokes Sret behaviour.
+The real mode trampoline is found within `mode_switch.s`, and implements a
+transition layer so that BIOS services can be called from stage 2, which
+generally operates in 32-bit protected mode. This trampoline passes arguments on
+the stack with the ABI that I described above. Its use of a union as a return
+type invokes Sret behaviour.
 
 In implementing this adapted SystemV 32-bit ABI it saves callee-saved registers,
 all relevant 32-bit protected mode machine state, and configures it according
@@ -129,7 +129,7 @@ The core of the trampoline is the following sequence of instructions:
 10     cli
 ```
 
-The lines 2-4 rewrite the stack, then lines 5-6 pushes 16-bit data:
+The lines 2-4 rewrite the stack, then lines 5-6 push 16-bit return pointers:
 
 ```
 | Stack   | Description         | => | Stack    | Description             |
@@ -141,13 +141,12 @@ The lines 2-4 rewrite the stack, then lines 5-6 pushes 16-bit data:
 |---------|---------------------| => |----------|-------------------------|
 ```
 
-There is more stack surgery performed within `rmode_trampoline`, but also
-`pmode_exit` and `pmode_init`. This only documents the core sequence for the
-trampoline itself.
-
-However, the trampoline does have some very strict preconditions for use. I will
-outline them first, and then answer with a rationale for why they are
-acceptable:
+There is more stack surgery performed within `rmode_trampoline`, but there's
+also specific return pointer behaviour to `pmode_init` and `pmode_exit`. The
+purpose of this is to document the core instruction sequence itself, and also
+usage of the trampoline more generally. The trampoline does have some very
+strict preconditions for use. I will outline them first, and then answer with a
+rationale for why they are acceptable:
 
 1. Any real mode code called must reside in the first 64KiB of memory.
 2. The stack and any pointers passed must be an address below 1MiB, as it is the
@@ -161,7 +160,7 @@ acceptable:
    exception or interrupt handlers.
 6. Paging is not enabled, at least not with the current implementation.
 
-You might ask, why use such a trampoline? These preconditions seem quite brutal.
+You might ask: Why use such a trampoline? These preconditions seem quite brutal.
 Well, the answer is that a significant portion of the mode-switching code is
 required simply to get into 32-bit protected mode, and this solution ends up
 being very space efficient, and also very flexible provided its preconditions
@@ -201,7 +200,7 @@ Mode switching
 
 Due to the space constraints and the nature of the problem solved, the code
 found in these files can be quite confusing. As an example, consider this
-call to `mode_switch:pmode_init`:
+call to `mode_switch.s:pmode_init`:
 
 ```as
 bits 16
