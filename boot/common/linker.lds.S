@@ -58,16 +58,6 @@ ELF_SIZE   = 30K;
 #ifdef LD_BOOT_STAGE2
 PRE_ADDR   = 0x17800;
 PRE_SIZE   = (0x18000 - PRE_ADDR) + ABI_LINK_TIME_TOTAL;
-/*
-GDTR_ADDR  = 0x17800;
-GDTR_SIZE  = 0x6;
-GDT_ADDR   = 0x18000;
-GDT_SIZE   = 64K;
-MMAP_ADDR  = 0x28000;
-MMAP_SIZE  = 64K;
-IDT_ADDR   = 0x38000;
-IDT_SIZE   = 4K;
-*/
 MEM2_ADDR  = PRE_ADDR + PRE_SIZE;
 #endif
 STACK_ADDR = 0x70000;
@@ -92,11 +82,6 @@ MEMORY {
     elf(rw)      :   org = ELF_ADDR,   len = ELF_SIZE
 #ifdef LD_BOOT_STAGE2
     prealloc(rw) :   org = PRE_ADDR,   len = PRE_SIZE
-/*
-    gdt(rw)      :   org = GDT_ADDR,   len = GDT_SIZE
-    idt(rw)      :   org = IDT_ADDR,   len = IDT_SIZE
-    mmap(rw)     :   org = MMAP_ADDR,  len = MMAP_SIZE
- */
     mem2(rx)     :   org = MEM2_ADDR,  len = STACK_ADDR - (PRE_ADDR + PRE_SIZE)
 #endif
     stack(rw)    :   org = STACK_ADDR, len = STACK_SIZE

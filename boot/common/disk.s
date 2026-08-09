@@ -140,6 +140,14 @@ disk_heads     db 0
 disk_sectors   db 0
 drive          db 0
 
+section .boot.rodata alloc noexec progbits nowrite
+disk_err1    db "E: Disk reset",0x0D,0x0A
+de1_len      equ $ - disk_err1
+disk_err2    db "E: Disk read",0x0D,0x0A
+de2_len      equ $ - disk_err2
+disk_err3    db "E: Disk geometry",0x0D,0x0A
+de3_len      equ $ - disk_err3
+
 section .stage15 alloc exec progbits nowrite
 
 %include "s1_generated.s"
@@ -294,11 +302,3 @@ read_hook_exit:
     movzx eax, ah
     shl   eax, 16
     ret
-
-section .boot.rodata alloc noexec progbits nowrite
-disk_err1    db "E: Disk reset",0x0D,0x0A
-de1_len      equ $ - disk_err1
-disk_err2    db "E: Disk read",0x0D,0x0A
-de2_len      equ $ - disk_err2
-disk_err3    db "E: Disk geometry",0x0D,0x0A
-de3_len      equ $ - disk_err3
