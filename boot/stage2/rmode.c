@@ -103,5 +103,7 @@ int32_t bios_chs_read(
     union rmode_ret_t rv;
     rv = rmode_trampoline(
         (void (*)(void))__chs_read, disk, buffer, blocks, lba, drive);
-    return 0;
+    puthex(&rv.i32, sizeof(rv.i32), 0);
+    putchar('\n');
+    return rv.i32;
 }

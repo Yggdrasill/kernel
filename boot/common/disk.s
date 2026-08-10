@@ -150,7 +150,6 @@ disk_err3    db "E: Disk geometry",0x0D,0x0A
 de3_len      equ $ - disk_err3
 
 section .stage15 alloc exec progbits nowrite
-
 %include "s1_generated.s"
 
 ; We want to hook int 0x13 so we
@@ -190,6 +189,7 @@ geometry_hook:
     ; without touching flags.
     pop   esi
     pop   di
+    mov   [status], ah
     jc    hook_exit
     call  geometry_done
 geometry_save:
@@ -197,7 +197,6 @@ geometry_save:
     mov   [es:di + ABI_DISK_HEADS],     dh
     mov   [es:di + ABI_DISK_SECTORS],   cl
     mov   [es:di + ABI_DISK_DRIVES],    dl
-    xor   ax, ax
     jmp   hook_exit
 
 ; uint32_t __disk_reset(uint8_t drive);
@@ -212,16 +211,15 @@ reset_hook:
     ; Get rid of a return pointer,
     ; once again without touching
     ; flags. Discard one pusha
-    ; frame, then store ah code
-    ; to ax in the second pusha
-    ; frame, then popa.
+    ; frame, store ah, then popa
+    ; and leave the stack frame.
     pop   bp
     mov   bp, sp
-    mov   [ss:bp + 14], ax
+    mov   [status], ah
     popa
     leave
 hook_exit:
-    movzx eax, ah
+    movzx eax, byte [status]
     ret
 
 ; int32_t __chs_read(
@@ -277,29 +275,33 @@ __chs_read:
     call  read
     ; Return format:
     ; ah = 0 on success
-    ; ah in bits 16-24
-    ; bytes read in ax
-    mov   ax, bx
+    ; ah in bits 20-28
+    ; bytes read in bits 0-19
+    xor   eax, eax
+    mov   ax, es
+    shl   eax, 4
+    add   ax, bx
+    sub   eax, [ss:bp + 0x08]
+    movzx ebx, byte [status]
+    shl   ebx, 20
+    or    eax, ebx
     pop   bp
     ret
 
+read_hook:
+    ; More stack shenanigans.
+    pop   bp
+    mov   bp, sp
+    mov   [status], ah
+    popa
+    jnc   read_success
+    jmp   short read_hook_exit
 read_error_hook:
     ; Reference RBIL int 0x13 ah=0x01
     ; 0x04: sector not found/read error
-    mov   ah, 4
-    jmp   short read_hook_exit
-read_hook:
-    ; More stack shenanigans.
-    ; lea can do arithmetic without
-    ; messing up flags, then same
-    ; trick as earlier: retain ax,
-    ; but pop the pusha frame.
-    lea   sp, [esp + 2]
-    mov   bp, sp
-    mov   [ss:bp + 14], ax
-    popa
-    jnc   read_success
+    mov   [status], byte 4
 read_hook_exit:
-    movzx eax, ah
-    shl   eax, 16
     ret
+
+section .stage15.data
+status         db 0
