@@ -25,8 +25,6 @@ global __chs_geometry
 global __disk_reset
 global __chs_read
 
-global drive
-
 bits    16
 section .boot.util alloc exec progbits nowrite
 
@@ -61,7 +59,6 @@ geometry_write:
     ret
 
 reset:
-    pusha
     mov   cx, 0x05
 resetlp:
     pusha
@@ -75,7 +72,6 @@ reset_e:
     push  dword disk_err1
     call  __bios_error
 reset_done:
-    popa
     ret
 
 read:
@@ -90,8 +86,12 @@ read_try:
     popa
     jc    read_recover
 read_success:
-    xor   eax, eax
     add   bx, 0x200
+    jnc   read_continue
+    mov   ax, es
+    add   ax, 0x1000
+    mov   es, ax
+read_continue:
     dec   si
     jz    read_done
     mov   al, cl
@@ -126,7 +126,9 @@ read_done:
     ret
 
 read_recover:
+    pusha
     call  reset
+    popa
     inc   di
     cmp   di, 0x05
     jl    read_try
@@ -138,7 +140,6 @@ read_e:
 disk_cylinders dw 0
 disk_heads     db 0
 disk_sectors   db 0
-drive          db 0
 
 section .boot.rodata alloc noexec progbits nowrite
 disk_err1    db "E: Disk reset",0x0D,0x0A

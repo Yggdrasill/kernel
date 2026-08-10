@@ -63,47 +63,43 @@ label                 db    "FAKEBPB    "
 filesystem            db    "FAT12   "
 
 __entry:
-cli
-mov   ax, 0x7000
-mov   ss, ax
-mov   sp, 0xFFF0
-mov   bp, sp
-sti
-pusha
+    cli
+    mov   ax, 0x7000
+    mov   ss, ax
+    mov   sp, 0xFFF0
+    mov   bp, sp
+    sti
+    pusha
 
-; VGA init
-mov   ax, 0x03
-int   0x10
-mov   ah, 0x01
-mov   cx, 0x3F00
-int   0x10
+    ; VGA init
+    mov   ax, 0x03
+    int   0x10
+    mov   ah, 0x01
+    mov   cx, 0x3F00
+    int   0x10
 
-; VGA page reset
-mov   ax, 0x0500
-int   0x10
+    ; VGA page reset
+    mov   ax, 0x0500
+    int   0x10
 
-; VGA cursor reset
-mov   ah, 0x02
-xor   bx, bx
-xor   dx, dx
-int   0x10
+    ; VGA cursor reset
+    mov   ah, 0x02
+    xor   bx, bx
+    xor   dx, dx
+    int   0x10
 
-popa
-cld
+    popa
+    cld
 
-push  dword 0x00
-pop   es
-pop   ds
-mov   si, __BOOT_ENTRY
-mov   di, __BOOT_ADDR
+    push  dword 0x00
+    pop   es
+    pop   ds
+    mov   si, __BOOT_ENTRY
+    mov   di, __BOOT_ADDR
 
-mov   cx, __BOOT_SIZE
-rep   movsb
+    mov   cx, __BOOT_SIZE
+    rep   movsb
 
-jmp   0x0000:boot
-
-boot:
-    mov   [drive], dl
     push  dx
     push  dx
     call  disk_geometry
@@ -118,7 +114,7 @@ boot:
     mov   si, 0x3F
     call  read
 
-    jmp   stage15
+    jmp   0x0000:stage15
 
 section .mbr alloc noexec progbits write
 part0     times 16 db 0
