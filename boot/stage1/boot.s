@@ -141,7 +141,6 @@ stage15:
     ; interrupt mask, and then mask all
     ; ints for transition to protected
     ; mode.
-    cli
     call  a20_init
     call  store_bios_imr
     call  mask_ints
@@ -154,8 +153,8 @@ stage15:
     call  0x0000:pmode_init
 bits 32
     ; Get boot drive number
-    pop   word dx
-    movzx edx, dx
+    pop   ax
+    movzx eax, ax
 
     ; Start a fresh stack frame for 32-bit
     ; protected mode. Stack is aligned on
@@ -166,13 +165,8 @@ bits 32
 
     call  read_elf
 
-    xor   eax, eax
-    xor   ebx, ebx
-    xor   ecx, ecx
-
     ; push __start
-    push  [e_entry]
-    ret
+    jmp   [e_entry]
 
 %define         PT_LOAD_TYPE      0x01
 
@@ -225,27 +219,29 @@ read_elf:
     ; push r32
     ; mov  r/m32, r32
     ; sub  r/m32, imm8
-    enter ABI_DISK_SIZEOF + 4, 0
-    ; save edx drive number
-    mov   [ebp - ABI_DISK_SIZEOF - 4], edx
-    push  edx
+    enter ABI_DISK_SIZEOF, 0
+    ; save eax drive number
+    push  eax
     lea   eax, [ebp - ABI_DISK_SIZEOF]
     push  eax
     push  __chs_geometry
     call  rmode_trampoline_no_sret
-    add   esp, 0x0C
+    add   esp, 0x08
 
     or    eax, eax
     jnz   elf_read_error
 
+    ; Read first ELF LBA.
+    ; DO NOT TOUCH esi and edi.
+    ; Both used again later.
     mov   esi, ABI_STAGE2_LBA
-    ; read 1 sector
-    mov   edi, 1
+    ; Read 1 sector.
+    xor   edi, edi
+    inc   edi
     mov   ebx, ei_mag
     call  read_wrapper
 
-    mov   eax, [ei_mag]
-    cmp   eax, 0x464C457F
+    cmp   [ebx], 0x464C457F
     jne   elf_read_error
 
     ; Probably unnecessary, but if there
@@ -253,32 +249,39 @@ read_elf:
     ; headers, we must read them all.
     ; The alternative is to assume that
     ; all program headers reside in the
-    ; ELF header LBA.
-    movzx eax, word [e_phentsize]
-    movzx ecx, word [e_phnum]
-    or    ecx, ecx
-    jz    elf_read_error
+    ; ELF header LBA. Also, this ugly
+    ; calculation ends up a few bytes
+    ; smaller.
+    movzx eax, word [ebx + e_phentsize - ei_mag]
+    movzx ecx, word [ebx + e_phnum - ei_mag]
+    jecxz elf_read_error
+    ; Save e_phentsize on stack
+    push  eax
+
+    ; Maximum value of multiplication is
+    ; far below 2^32, so imul clears edx.
+    ; No need to xor. e_phentsize would
+    ; need to be a ridiculous value to
+    ; break this.
     imul  ecx
-    add   eax, [e_phoff]
-    lea   edx, [eax + ei_mag]
-    xor   eax, eax
+    add   eax, [ebx + e_phoff - ei_mag]
+    xchg  eax, edx
+    lea   edx, [edx + ei_mag]
     mov   ah, 2
-    mov   esi, 5
-    mov   edi, 1
+    inc   esi
 elf_ph_read:
     ; Now read all headers one sector
     ; at a time... because this saves
     ; space even if it's slow.
-    lea   ebx, [eax + ei_mag]
+    add   ebx, eax
     cmp   edx, ebx
     jbe   elf_ph_done
     call  read_wrapper
     inc   esi
-    add   eax, 0x200
     jmp   elf_ph_read
 elf_ph_done:
     mov   edi, [e_phoff]
-    add   edi, ei_mag
+    lea   edi, [edi + ei_mag]
 elf_pseglp:
     push  ecx
     cmp   [edi + PH_TYPE_OFFSET], PT_LOAD_TYPE
@@ -288,62 +291,47 @@ elf_pseglp:
     ; This is setup to read the entire
     ; program header into the buffer
     ; which is pointed to by ebx.
-    mov   eax, 0x200 * ABI_STAGE2_LBA
-    add   eax, [edi + PH_FILE_OFFSET]
-    mov   ecx, 0x200
-    xor   edx, edx
-    div   ecx
-    ; Store LBA + byte offset.
-    mov   esi, eax
-    push  edx
-    mov   eax, 0x200 * ABI_STAGE2_LBA
-    add   eax, [edi + PH_FILE_OFFSET]
-    add   eax, [edi + PH_FILE_SIZE]
-    xor   edx, edx
-    div   ecx
-    or    edx, edx
-    jz    elf_ptload_read
-    inc   eax
+    mov   esi, 0x200 * ABI_STAGE2_LBA
+    add   esi, [edi + PH_FILE_OFFSET]
+    mov   edx, 0x1FF
+    and   edx, esi
+    shr   esi, 9
+
+    push  edi
+    xchg  eax, edi
+    mov   ecx, [eax + PH_FILE_SIZE]
+    lea   edi, [ecx + edx + 0x1FF]
+    shr   edi, 9
 elf_ptload_read:
     ; edx = byte offset
     ; esi = LBA
     ; edi = blocks to read
-    pop   edx
-    sub   eax, esi
-    push  edi
-    mov   edi, eax
     call  read_wrapper
-    pop   edi
 
     ; Finally it's time to actually
     ; relocate the program segment
     ; from the buffer to its p_vaddr.
     mov   esi, ebx
     add   esi, edx
-    push  edi
-    mov   ecx, [edi + PH_FILE_SIZE]
-    mov   eax, [edi + PH_MEM_SIZE]
-    push  ecx
-    mov   edi, [edi + PH_VIRT_ADDR]
+    mov   edi, [eax + PH_VIRT_ADDR]
+    mov   edx, ecx
+    mov   eax, [eax + PH_MEM_SIZE]
+    sub   eax, edx
+    js    elf_read_error
     rep   movsb
     ; Zero BSS
-    pop   ecx
-    sub   eax, ecx
-    js    elf_read_error
-    mov   ecx, eax
-    xor   eax, eax
+    xchg  eax, ecx
     rep   stosb
-elf_pseg_next:
     pop   edi
+elf_pseg_next:
     pop   ecx
-    movzx eax, word [e_phentsize]
-    add   edi, eax
+    add   edi, [ebp - ABI_DISK_SIZEOF - 8]
     loop  elf_pseglp
     leave
     ret
 
 section .stage15.rodata
-elf_err db "E: Stage 2 not found!",0x0D,0x0A
+elf_err db "E: ELF / read error",0x0D,0x0A
 elf_len equ $ - elf_err
 
 section .elf alloc noexec nobits write
