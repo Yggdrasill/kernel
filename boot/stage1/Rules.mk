@@ -10,6 +10,10 @@ $(OBJDIR_STAGE1)/%.o: $(SRCDIR_STAGE1)/%.s | $(OBJDIR_STAGE1)
 $(OBJDIR_STAGE1)/%.o: $(SRCDIR_BOOT_COMMON)/%.s | $(OBJDIR_STAGE1)
 	$(AS) $(AF_BOOT) -o $@ $<
 
+$(OBJDIR_STAGE1)/boot.o: $(SRCDIR_STAGE1)/boot.s \
+						 $(OBJDIR_GEN)/s1_generated.s | $(OBJDIR_STAGE1)
+	$(AS) $(AF_BOOT) -i $(OBJDIR_GEN) -o $@ $<
+
 $(OBJDIR_STAGE1)/disk.o: $(SRCDIR_BOOT_COMMON)/disk.s \
 						 $(OBJDIR_GEN)/s1_generated.s | $(OBJDIR_STAGE1)
 	$(AS) $(AF_BOOT) -i $(OBJDIR_GEN) -o $@ $<
@@ -22,7 +26,7 @@ $(OBJDIR_GEN)/s1_symbol_gen: $(SRCDIR_BOOT_COMMON)/symbol_gen.c | $(OBJDIR_GEN)
 		-I ./ -o $@ $< -Wl,--no-gc-sections,-Ttext-segment=0
 
 $(OBJDIR_GEN)/s1_generated.s: $(OBJDIR_GEN)/s1_symbol_gen
-	for sym in $$(readelf -Ws $< | grep "ABI_DISK" \
+	for sym in $$(readelf -Ws $< | grep "ABI_\(DISK\|STAGE2\)" \
 		| awk -v OFS=',' '{ print $$8,$$3,$$2 };'); \
 	do \
 		name=$${sym%%,*}; \

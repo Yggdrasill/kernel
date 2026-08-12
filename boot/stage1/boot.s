@@ -35,6 +35,10 @@ extern drive
 extern shadow_p70
 
 extern __bios_error
+extern __chs_geometry
+; Currently not used, but ideally...
+extern __disk_reset
+extern __chs_read
 
 bits   16
 
@@ -102,6 +106,9 @@ __entry:
 
     push  dx
     push  dx
+    ; push dx for stage 1.5
+    ; disk reads
+    push  dx
     call  disk_geometry
     pop   dx
     call  reset
@@ -111,7 +118,7 @@ __entry:
     mov   bx, __STAGE15_LOAD_OFF
     mov   cx, 0x02
     pop   dx
-    mov   si, 0x3F
+    mov   si, 0x03
     call  read
 
     jmp   0x0000:stage15
@@ -146,13 +153,17 @@ stage15:
 
     call  0x0000:pmode_init
 bits 32
+    ; Get boot drive number
+    pop   word dx
+    movzx edx, dx
+
     ; Start a fresh stack frame for 32-bit
     ; protected mode. Stack is aligned on
     ; 16-byte boundary to make various 
     ; compilers happy. 
     mov   esp, 0x7FFF0
     mov   ebp, esp
-    
+
     call  read_elf
 
     xor   eax, eax
@@ -160,7 +171,7 @@ bits 32
     xor   ecx, ecx
 
     ; push __start
-    push  [elf_entry]
+    push  [e_entry]
     ret
 
 %define         PT_LOAD_TYPE      0x01
@@ -178,114 +189,164 @@ bits 32
 %define         SH_FILE_OFFSET    0x10
 %define         SH_FILE_SIZE      0x14
 
-read_elf:
-    ; Verify that the ELF bootloader is present
-    ; by testing against magic header of the
-    ; ELF format.
+%include "s1_generated.s"
 
-    mov   eax, [ei_mag]
-    cmp   eax, 0x464C457F
-    je    header_ok
+read_wrapper:
+    ; easy space saving, even if all
+    ; that needs saving is eax/ecx/edx
+    pusha
 
+    push  [ebp - ABI_DISK_SIZEOF - 4]
+    push  esi
+    push  edi
+    push  ebx
+    lea   eax, [ebp - ABI_DISK_SIZEOF]
+    push  eax
+    push  __chs_read
+    call  rmode_trampoline_no_sret
+    add   esp, 0x18
+    shr   eax, 20
+    jz    wrapper_ret
+    ; ECC corrected
+    cmp   eax, 0x11
+    je    wrapper_ret
+elf_read_error:
     push  dword elf_len
     push  dword elf_err
     push  __bios_error
     call  rmode_trampoline_no_sret
-
-header_ok:
-    mov         esi,  [e_phoff]
-    mov         edi,  [e_shoff]
-    lea         eax,  [esi + ei_mag]
-    lea         ebx,  [esi + _elf_header]
-    lea         ecx,  [edi + ei_mag]
-    lea         edx,  [edi + _elf_header]
-
-    push        edx
-    push        ecx
-    push        ebx
-    push        eax
-
-    ; Before relocating PT_LOAD segments, we
-    ; must ensure that the ELF headers are all
-    ; relocated to a preserved region.
-
-    mov         esi,  ei_mag
-    mov         edi,  _elf_header 
-    movzx       ecx,  word [e_ehsize]
-    rep         movsb
-
-    pop         esi
-    pop         edi
-    movzx       eax,  word [e_phnum]
-    movzx       ecx,  word [e_phentsize]
-    imul        ecx,  eax
-    rep         movsb
-
-    pop         esi
-    pop         edi
-    push        esi
-    movzx       eax,  word [e_shnum]
-    movzx       ecx,  word [e_shentsize]
-    imul        ecx,  eax
-    rep         movsb
-
-    pop         eax
-    movzx       edx,  word [e_shnum]
-sh_reloc:
-    cmp         [eax + SH_TYPE_OFFSET], SH_NOBITS_TYPE ; Skip SHT_NOBITS
-    je          shr_cont
-    mov         ecx,  [eax + SH_FILE_SIZE]
-    mov         esi,  [eax + SH_FILE_OFFSET]
-    add         esi,  ei_mag
-    mov         edi,  [eax + SH_FILE_OFFSET]
-    add         edi,  _elf_header
-    rep         movsb
-    
-shr_cont:
-    movzx       ecx,  word [e_shentsize]
-    add         eax,  ecx
-    dec         edx
-    jnz         sh_reloc
-
-    ; Now read the program headers and relocate
-    ; to the address specified by p_vaddr. Since
-    ; this most definitely clobbers the ELF structure
-    ; we have to do this after moving the ELF to a
-    ; safe location.
-
-    mov         ebx,  _elf_header
-    add         ebx,  [elf_phoff]
-    movzx       edx,  word [elf_phnum]
-
-ph_loop:
-    cmp         dword [ebx], dword PT_LOAD_TYPE ; Only PT_LOAD
-    jne         phlp_next
-    mov         ecx,  [ebx + PH_FILE_SIZE]
-    mov         esi,  _elf_header
-    add         esi,  [ebx + PH_FILE_OFFSET]
-    mov         edi,  [ebx + PH_VIRT_ADDR]
-    rep         movsb
-
-    ; Zero BSS etc.
-
-    xor         eax,  eax
-    mov         ecx,  [ebx + PH_MEM_SIZE]
-    sub         ecx,  [ebx + PH_FILE_SIZE]
-    jc          phlp_next
-    rep         stosb
-phlp_next:
-    movzx       eax, word [elf_phentsize]
-    add         ebx, eax
-    dec         edx
-    jnz         ph_loop
-phlp_exit:
+wrapper_ret:
+    popa
     ret
 
-section     .stage15.rodata
-elf_err     db "E: Stage 2 not found!",0x0D,0x0A
-elf_len     equ $ - elf_err
+read_elf:
+    ; enter consumes 4 bytes, whereas
+    ; the following consumes 6 bytes:
+    ; push r32
+    ; mov  r/m32, r32
+    ; sub  r/m32, imm8
+    enter ABI_DISK_SIZEOF + 4, 0
+    ; save edx drive number
+    mov   [ebp - ABI_DISK_SIZEOF - 4], edx
+    push  edx
+    lea   eax, [ebp - ABI_DISK_SIZEOF]
+    push  eax
+    push  __chs_geometry
+    call  rmode_trampoline_no_sret
+    add   esp, 0x0C
 
-section .elf_init alloc noexec nobits write
+    or    eax, eax
+    jnz   elf_read_error
+
+    mov   esi, ABI_STAGE2_LBA
+    ; read 1 sector
+    mov   edi, 1
+    mov   ebx, ei_mag
+    call  read_wrapper
+
+    mov   eax, [ei_mag]
+    cmp   eax, 0x464C457F
+    jne   elf_read_error
+
+    ; Probably unnecessary, but if there
+    ; are a ridiculous number of program
+    ; headers, we must read them all.
+    ; The alternative is to assume that
+    ; all program headers reside in the
+    ; ELF header LBA.
+    movzx eax, word [e_phentsize]
+    movzx ecx, word [e_phnum]
+    or    ecx, ecx
+    jz    elf_read_error
+    imul  ecx
+    add   eax, [e_phoff]
+    lea   edx, [eax + ei_mag]
+    xor   eax, eax
+    mov   ah, 2
+    mov   esi, 5
+    mov   edi, 1
+elf_ph_read:
+    ; Now read all headers one sector
+    ; at a time... because this saves
+    ; space even if it's slow.
+    lea   ebx, [eax + ei_mag]
+    cmp   edx, ebx
+    jbe   elf_ph_done
+    call  read_wrapper
+    inc   esi
+    add   eax, 0x200
+    jmp   elf_ph_read
+elf_ph_done:
+    mov   edi, [e_phoff]
+    add   edi, ei_mag
+elf_pseglp:
+    push  ecx
+    cmp   [edi + PH_TYPE_OFFSET], PT_LOAD_TYPE
+    jne   elf_pseg_next
+
+    ; Calculate file offset from ELF LBA.
+    ; This is setup to read the entire
+    ; program header into the buffer
+    ; which is pointed to by ebx.
+    mov   eax, 0x200 * ABI_STAGE2_LBA
+    add   eax, [edi + PH_FILE_OFFSET]
+    mov   ecx, 0x200
+    xor   edx, edx
+    div   ecx
+    ; Store LBA + byte offset.
+    mov   esi, eax
+    push  edx
+    mov   eax, 0x200 * ABI_STAGE2_LBA
+    add   eax, [edi + PH_FILE_OFFSET]
+    add   eax, [edi + PH_FILE_SIZE]
+    xor   edx, edx
+    div   ecx
+    or    edx, edx
+    jz    elf_ptload_read
+    inc   eax
+elf_ptload_read:
+    ; edx = byte offset
+    ; esi = LBA
+    ; edi = blocks to read
+    pop   edx
+    sub   eax, esi
+    push  edi
+    mov   edi, eax
+    call  read_wrapper
+    pop   edi
+
+    ; Finally it's time to actually
+    ; relocate the program segment
+    ; from the buffer to its p_vaddr.
+    mov   esi, ebx
+    add   esi, edx
+    push  edi
+    mov   ecx, [edi + PH_FILE_SIZE]
+    mov   eax, [edi + PH_MEM_SIZE]
+    push  ecx
+    mov   edi, [edi + PH_VIRT_ADDR]
+    rep   movsb
+    ; Zero BSS
+    pop   ecx
+    sub   eax, ecx
+    js    elf_read_error
+    mov   ecx, eax
+    xor   eax, eax
+    rep   stosb
+elf_pseg_next:
+    pop   edi
+    pop   ecx
+    movzx eax, word [e_phentsize]
+    add   edi, eax
+    loop  elf_pseglp
+    leave
+    ret
+
+section .stage15.rodata
+elf_err db "E: Stage 2 not found!",0x0D,0x0A
+elf_len equ $ - elf_err
+
+section .elf alloc noexec nobits write
 ei_mag:       resd 1
 e_ident:      resb 12
 e_type:       resw 1
@@ -302,21 +363,21 @@ e_shentsize:  resw 1
 e_shnum:      resw 1
 e_shstrndx:   resw 1
 
-section .elf alloc noexec nobits write
-_elf_header:
-elf_mag:        resd 1
-elf_ident:      resb 12
-elf_type:       resw 1
-elf_machine:    resw 1
-elf_version:    resd 1
-elf_entry:      resd 1
-elf_phoff:      resd 1
-elf_shoff:      resd 1
-elf_flags:      resd 1
-elf_ehsize:     resw 1
-elf_phentsize:  resw 1
-elf_phnum:      resw 1
-elf_shentsize:  resw 1
-elf_shnum:      resw 1
-elf_shstrndx:   resw 1
+;section .elf alloc noexec nobits write
+;_elf_header:
+;elf_mag:        resd 1
+;elf_ident:      resb 12
+;elf_type:       resw 1
+;elf_machine:    resw 1
+;elf_version:    resd 1
+;elf_entry:      resd 1
+;elf_phoff:      resd 1
+;elf_shoff:      resd 1
+;elf_flags:      resd 1
+;elf_ehsize:     resw 1
+;elf_phentsize:  resw 1
+;elf_phnum:      resw 1
+;elf_shentsize:  resw 1
+;elf_shnum:      resw 1
+;elf_shstrndx:   resw 1
 
