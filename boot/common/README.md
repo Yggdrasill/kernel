@@ -72,7 +72,7 @@ int32_t bios_mmap(struct e820_info *mmap)
 
 It is generally recommended that typed wrappers surround the `rmode_trampoline`
 calls, and for that reason the declaration of this `extern` function is found
-only in `./boot/common/rmode.c`.
+only in `./boot/stage2/rmode.c`.
 
 Trampoline
 ----------
@@ -151,8 +151,8 @@ rationale for why they are acceptable:
 1. Any real mode code called must reside in the first 64KiB of memory.
 2. The stack and any pointers passed must be an address below 1MiB, as it is the
    limit of the 16-bit real mode segment:offset type addresses.
-3. The stack base pointer is not aligned on a 64K boundary, as it breaks the
-   stack reinterpretation into 16-bit segment:offset addresses.
+3. The stack pointer is not aligned on a 64K boundary, as it breaks the stack
+   reinterpretation into 16-bit segment:offset addresses.
 4. The IVT has been aliased with the real mode vectors for IRQs 0-15 copied into
    vectors 0x20-0x2F. IBM-compatible machines must leave these reserved for
    MS-DOS, so this is fine.

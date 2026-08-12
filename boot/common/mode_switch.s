@@ -112,7 +112,6 @@ restore_p70_ret:
 
 pmode_init:
     ; Fix stack high bytes.
-    and   ebp, 0xFFFF
     and   esp, 0xFFFF
     push  eax
 
@@ -123,7 +122,6 @@ pmode_init:
     ; linear address.
     xor   eax, eax
     mov   eax, ss
-    mov   cx, ax
     shl   eax, 4
     add   esp, eax
 
@@ -139,12 +137,6 @@ pmode32:
     mov   ds, ax
     mov   gs, ax
     mov   fs, ax
-
-    ; ebp needs to be fixed the same way that
-    ; esp was earlier.
-    movzx eax, cx
-    shl   eax, 4
-    add   ebp, eax
 
     pop   eax
     ret
@@ -175,20 +167,19 @@ rmode:
     mov   fs, ax
 
     ; This calculates a valid stack segment below
-    ; 1MiB, but ebp stack base CANNOT BE 64K ALIGNED.
+    ; 1MiB, but esp stack pointer CANNOT BE 64K ALIGNED.
     ; With this precondition in mind, the stack can
     ; otherwise live within any part of low memory.
     ; That is the memory that real mode is limited
     ; to anyway, so it is of course otherwise
     ; impossible to use the same stack.
-    mov   eax, ebp
+    mov   eax, esp
     shr   eax, 4
     and   eax, 0xF000
     mov   ss, ax
 
-    ; Clean up higher bits in esp and ebp.
+    ; Clean up higher bits in esp.
     and   esp, 0xFFFF
-    and   ebp, 0xFFFF
 
     ; The 4-byte return address on the stack will look
     ; like 0x0000xxxx, so we can deliberately interpret
