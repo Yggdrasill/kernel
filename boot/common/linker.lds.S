@@ -110,7 +110,9 @@ SECTIONS {
 
     . = BOOT_ADDR;
     __BOOT_ADDR = .;
+#ifdef LD_BOOT_STAGE2
     __BOOTLOADER_START = .;
+#endif
     .boot STAGE1_NOLOAD : {
         KEEP(*(.boot))
         KEEP(*(.boot.util))
@@ -135,17 +137,9 @@ SECTIONS {
         KEEP(*(.stage15.bss))
     } > mem1 : STAGE1_PHDR
 
-    . = ST2_ADDR;
 #ifdef LD_BOOT_STAGE2
-    stage2.o = .;
-    /DISCARD/ : {
-        *(.elf_init)
-    }
-#endif
+    . = ST2_ADDR;
     ._init STAGE2_NOLOAD : {
-#ifdef LD_BOOT_STAGE1
-        *(.elf_init)
-#endif
         *(._init)
     } > stage2 : STAGE2_PHDR
     .text STAGE2_NOLOAD : {
@@ -164,12 +158,13 @@ SECTIONS {
         *(.bss)
         *(.bss.*)
     } > stage2 : STAGE2_PHDR
+#endif
     . = ELF_ADDR;
     .elf (NOLOAD) : {
         *(.elf)
     } > elf : NONE
-    __BOOTLOADER_END = .;
 #ifdef LD_BOOT_STAGE2
+    __BOOTLOADER_END = .;
     . = PRE_ADDR;
     __PREALLOC_START = .;
     .regs (NOLOAD) : {

@@ -362,22 +362,3 @@ e_phnum:      resw 1
 e_shentsize:  resw 1
 e_shnum:      resw 1
 e_shstrndx:   resw 1
-
-;section .elf alloc noexec nobits write
-;_elf_header:
-;elf_mag:        resd 1
-;elf_ident:      resb 12
-;elf_type:       resw 1
-;elf_machine:    resw 1
-;elf_version:    resd 1
-;elf_entry:      resd 1
-;elf_phoff:      resd 1
-;elf_shoff:      resd 1
-;elf_flags:      resd 1
-;elf_ehsize:     resw 1
-;elf_phentsize:  resw 1
-;elf_phnum:      resw 1
-;elf_shentsize:  resw 1
-;elf_shnum:      resw 1
-;elf_shstrndx:   resw 1
-
