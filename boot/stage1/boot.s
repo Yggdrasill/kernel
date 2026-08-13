@@ -36,7 +36,6 @@ extern shadow_p70
 
 extern __bios_error
 extern __chs_geometry
-; Currently not used, but ideally...
 extern __disk_reset
 extern __chs_read
 
@@ -206,8 +205,9 @@ read_wrapper:
     ; easy space saving, even if all
     ; that needs saving is eax/ecx/edx
     pusha
-
+    push  5
     push  [ebp - ABI_DISK_SIZEOF - 4]
+wrapperlp:
     push  esi
     push  edi
     push  ebx
@@ -215,18 +215,25 @@ read_wrapper:
     push  eax
     push  __chs_read
     call  rmode_trampoline_no_sret
-    add   esp, 0x18
+    ; leave drive on stack
+    add   esp, 0x14
     shr   eax, 20
     jz    wrapper_ret
     ; ECC corrected
     cmp   eax, 0x11
     je    wrapper_ret
+    push  __disk_reset
+    call  rmode_trampoline_no_sret
+    add   esp, 0x04
+    dec   dword [esp + 4]
+    jnz   wrapperlp
 elf_read_error:
     push  dword elf_len
     push  dword elf_err
     push  __bios_error
     call  rmode_trampoline_no_sret
 wrapper_ret:
+    add   esp, 0x08
     popa
     ret
 
