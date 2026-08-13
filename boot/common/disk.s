@@ -25,6 +25,19 @@ global __chs_geometry
 global __disk_reset
 global __chs_read
 
+global CHS_FLOPPY_CYLINDERS
+global CHS_FLOPPY_HEADS
+global CHS_FLOPPY_SECTORS
+
+; Some compile target thing should
+; reconfigure these for other floppy
+; types. Floppy geometry is awkward,
+; and the BPB can't be trusted because
+; BIOSes will just clobber it.
+CHS_FLOPPY_CYLINDERS equ 0x4F
+CHS_FLOPPY_HEADS     equ 0x01
+CHS_FLOPPY_SECTORS   equ 0x12
+
 bits    16
 section .boot.util alloc exec progbits nowrite
 
@@ -51,7 +64,7 @@ geometry_done:
     mov   al, ch
     mov   ah, cl
     shr   ah, 6
-    and   cx, 0x3F
+    and   cl, 0x3F
 geometry_write:
     mov   [disk_cylinders], ax
     mov   [disk_heads],     dh
@@ -75,7 +88,6 @@ reset_done:
     ret
 
 read:
-    or    si, si
     jz    read_done
 read_sector:
     xor   di, di
@@ -86,23 +98,22 @@ read_try:
     popa
     jc    read_recover
 read_success:
-    add   bx, 0x200
+    add   bh, 2
     jnc   read_continue
     mov   ax, es
     add   ax, 0x1000
     mov   es, ax
 read_continue:
-    dec   si
+    dec   esi
     jz    read_done
     mov   al, cl
     and   al, 0x3F
-    and   cl, 0xC0
-    inc   al
     cmp   al, [disk_sectors]
-    ja    read_next_head
-    or    cl, al
+    jae   read_next_head
+    inc   cl
     jmp   read_sector
 read_next_head:
+    and   cl, 0xC0
     inc   cl
     cmp   dh, [disk_heads]
     je    read_next_cylinder
@@ -137,9 +148,9 @@ read_e:
     push  dword disk_err2
     call  __bios_error
 
-disk_cylinders dw 0
-disk_heads     db 0
-disk_sectors   db 0
+disk_cylinders dw CHS_FLOPPY_CYLINDERS
+disk_heads     db CHS_FLOPPY_HEADS
+disk_sectors   db CHS_FLOPPY_SECTORS
 
 section .boot.rodata alloc noexec progbits nowrite
 disk_err1    db "E: Disk reset",0x0D,0x0A
@@ -268,10 +279,14 @@ __chs_read:
     ; blocks to read, and the drive
     ; number.
     mov   dl, [ss:bp + 0x14]
-    mov   si, [ss:bp + 0x0C]
     mov   edi, [ss:bp + 0x08]
     call  addr_calc
     mov   bx, di
+    ; read detects zero-size read
+    ; with zero flag, due to space
+    ; limitations in the boot sector
+    xor   esi, esi
+    add   esi, [ss:bp + 0x0C]
     call  read
     ; Return format:
     ; ah = 0 on success

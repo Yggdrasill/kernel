@@ -40,6 +40,10 @@ extern __chs_geometry
 extern __disk_reset
 extern __chs_read
 
+extern CHS_FLOPPY_CYLINDERS
+extern CHS_FLOPPY_HEADS
+extern CHS_FLOPPY_SECTORS
+
 bits   16
 
 section .boot alloc exec progbits nowrite
@@ -100,25 +104,31 @@ __entry:
     pop   ds
     mov   si, __BOOT_ENTRY
     mov   di, __BOOT_ADDR
-
     mov   cx, __BOOT_SIZE
     rep   movsb
 
-    push  dx
-    push  dx
+    ; Don't trust the BIOS.
+    xor   dh, dh
     ; push dx for stage 1.5
     ; disk reads
     push  dx
+    test  dl, dl
+    jns   skip_floppy
+    push  dx
     call  disk_geometry
     pop   dx
+skip_floppy:
     call  reset
 
     push  word __STAGE15_LOAD_SEG
     pop   es
     mov   bx, __STAGE15_LOAD_OFF
     mov   cx, 0x02
-    pop   dx
-    mov   si, 0x03
+    ; Space optimisation, allows
+    ; read function to detect zero
+    ; blocks to read with just ZF.
+    movzx esi, cx
+    inc   si
     call  read
 
     jmp   0x0000:stage15
@@ -185,6 +195,13 @@ bits 32
 
 %include "s1_generated.s"
 
+floppy_geometry:
+    lea   ebx, [ebp - ABI_DISK_SIZEOF]
+    mov   word [ebx + ABI_DISK_CYLINDERS], CHS_FLOPPY_CYLINDERS
+    mov   byte [ebx + ABI_DISK_HEADS], CHS_FLOPPY_HEADS
+    mov   byte [ebx + ABI_DISK_SECTORS], CHS_FLOPPY_SECTORS
+    jmp   elf_continue
+
 read_wrapper:
     ; easy space saving, even if all
     ; that needs saving is eax/ecx/edx
@@ -222,6 +239,9 @@ read_elf:
     enter ABI_DISK_SIZEOF, 0
     ; save eax drive number
     push  eax
+    ; hardcoded floppy geometry
+    test  al, al
+    jns   floppy_geometry
     lea   eax, [ebp - ABI_DISK_SIZEOF]
     push  eax
     push  __chs_geometry
@@ -231,6 +251,7 @@ read_elf:
     or    eax, eax
     jnz   elf_read_error
 
+elf_continue:
     ; Read first ELF LBA.
     ; DO NOT TOUCH esi and edi.
     ; Both used again later.
