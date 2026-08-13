@@ -25,13 +25,11 @@ extern disk_geometry
 extern reset
 extern read
 extern a20_init
-extern mmap
 extern store_bios_imr
 extern mask_ints
 extern pmode_init
 extern rmode_trampoline_no_sret
 
-extern drive
 extern shadow_p70
 
 extern __bios_error
@@ -217,14 +215,26 @@ wrapperlp:
     call  rmode_trampoline_no_sret
     ; leave drive on stack
     add   esp, 0x14
+    mov   edx, 0xFFFFF
+    and   edx, eax
     shr   eax, 20
     jz    wrapper_ret
-    ; ECC corrected
-    cmp   eax, 0x11
-    je    wrapper_ret
+    add   ebx, edx
+    shr   edx, 9
+    jz    lbas_update
+    ; pop increments esp before
+    ; writing to relative address.
+    ; This is 2 bytes shorter than:
+    ; mov dword [esp + 4], 5
+    push  5
+    pop   dword [esp + 4]
+lbas_update:
+    add   esi, edx
+    sub   edi, edx
+wrapper_reset:
     push  __disk_reset
     call  rmode_trampoline_no_sret
-    add   esp, 0x04
+    pop   edx
     dec   dword [esp + 4]
     jnz   wrapperlp
 elf_read_error:
@@ -233,7 +243,8 @@ elf_read_error:
     push  __bios_error
     call  rmode_trampoline_no_sret
 wrapper_ret:
-    add   esp, 0x08
+    pop   eax
+    pop   ebx
     popa
     ret
 
@@ -253,9 +264,11 @@ read_elf:
     push  eax
     push  __chs_geometry
     call  rmode_trampoline_no_sret
-    add   esp, 0x08
+    ; Smaller than add esp, 0x08
+    pop   ebx
+    pop   ecx
 
-    or    eax, eax
+    test  eax, eax
     jnz   elf_read_error
 
 elf_continue:

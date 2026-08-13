@@ -27,10 +27,10 @@ a20_error:
     call  __bios_error
 
 a20_check:
-    xor   ax, ax
-    mov   ds, ax
-    not   ax
-    mov   es, ax
+    push  byte 0
+    pop   ds
+    push  byte -1
+    pop   es
     mov   si, 0x0500
     mov   di, 0x0510
 
@@ -42,16 +42,13 @@ a20_check:
     mov   word [es:di], 0xAA55
     mov   word [ds:si], 0x55AA
     cmp   word [es:di], 0x55AA
+    setnz bl
 
-    pop   ax
-    mov   word [ds:si], ax
-    pop   ax
-    mov   word [es:di], ax
+    pop   cx
+    mov   word [ds:si], cx
+    pop   cx
+    mov   word [es:di], cx
 
-    je    a20_end
-
-    mov   bl, byte 0x01
-a20_end:
     ret
 
 bios_a20:
@@ -116,27 +113,27 @@ a20_init:
     xor   bx, bx
     call  a20_check
     cmp   bl, 0x01
-    je    done_a20
+    jae   done_a20
 
     call  bios_a20
     call  a20_check
     cmp   bl, 0x01
-    je    done_a20
+    jae   done_a20
 
     call  kbd8042_a20
     call  a20_check
     cmp   bl, 0x01
-    je    done_a20
+    jae   done_a20
 
     call  a20_ee
     call  a20_check
     cmp   bl, 0x01
-    je    done_a20
+    jae   done_a20
 
     call  a20_fast
     call  a20_check
     cmp   bl, 0x01
-    jne   a20_error
+    jb    a20_error
 done_a20:
     ret
 

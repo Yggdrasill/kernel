@@ -225,7 +225,6 @@ reset_hook:
     ; frame, store ah, then popa
     ; and leave the stack frame.
     pop   bp
-    mov   bp, sp
     mov   [status], ah
     popa
     leave
@@ -306,16 +305,26 @@ __chs_read:
 read_hook:
     ; More stack shenanigans.
     pop   bp
-    mov   bp, sp
+    ; ECC corrected, compare
+    ; without touching flags.
+    movzx ecx, ah
+    lea   ecx, [ecx - 0x11]
+    jcxz  hook_ecc
+    jmp   hook_save
+hook_ecc:
+    ; Now clear ah and CF.
+    xor   ah, ah
+hook_save:
     mov   [status], ah
     popa
+jmp_success:
     jnc   read_success
-    jmp   short read_hook_exit
+    jmp   read_hook_ret
 read_error_hook:
     ; Reference RBIL int 0x13 ah=0x01
     ; 0x04: sector not found/read error
     mov   [status], byte 4
-read_hook_exit:
+read_hook_ret:
     ret
 
 section .stage15.data
