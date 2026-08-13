@@ -7,25 +7,29 @@ The overall architecture of the bootloader is as follows:
     - Relocate boot code from 0x7C00 to 0x7E00.
     - Initialise segment registers.
     - Initialise 80x25 VGA text mode.
-    - Read the disk and load stage 1.5 and 2 into memory.
+    - Read the disk and load stage 1.5 into memory.
 - **Stage 1.5**
     - Set up all prerequisites for 32-bit protected mode.
     - Store relevant machine state required for later usage.
     - Implement mode switching, including a 32-bit/16-bit trampoline.
+    - Adapt stage 1 CHS disk reader, used both in stage 1.5 and as stage 2 fallback.
     - Enter 32-bit protected mode.
-    - Read the stage 2 ELF from memory and jump to its entry point.
+    - Read the stage 2 ELF from disk and jump to its entry point.
 - **Stage 2**
     - Everything else e.g. memory management, I/O, filesystems, kernel loading.
 
 Stage 1 and 1.5 are limited to the first 2048 bytes of disk space, where stage 2
 will consume the remainder of the DOS compatibility (29.5KiB). The rationale is
-that I would like to limit real-mode x86 assembly to as little as possible, and
-write most of the bootloader in C.
+that I would like to limit real mode x86 assembly to as little as possible, and
+write most of the bootloader in C. Any space used in stage 1 and 1.5 then
+necessarily reduces the amount of space available to stage 2.
 
-Stage 2 can use stage 1.5's real-mode trampoline for performing BIOS calls, and
-for that reason is linked against the binary objects produced by stage 1. The
-way this is done is by leaving stage 1 code as a resident program in memory, but
-it is not actually loaded into the program headers of the stage 2 ELF.
+Stage 2 can use stage 1.5's real mode trampoline for performing BIOS calls, and
+for that reason is linked against the binary objects produced by stage 1. It can
+also use the CHS disk reader implemented by stage 1 as a fallback, through stage
+1.5's ABI adapter function. The way this is done is by leaving stage 1 code as a
+resident program in memory, but it is not actually loaded into the program
+headers or segments of the stage 2 ELF.
 
 There is a linker script found in `./common/linker.lds.S` which is preprocessed
 by the C preprocessors for specific stage linker configuration which should

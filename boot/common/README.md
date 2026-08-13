@@ -36,7 +36,18 @@ within these files. This includes:
 - Manipulating stack frames directly.
 - Legitimate use of light return-oriented programming.
 
-With all that said, I will now proceed to document it.
+With all that said, in return for this, the project gets several nice features.
+Within just 2KiB of space it implements the bare minimum to get the following:
+
+1. Enabling the A20 line and switching to protected mode.
+2. A reusable CHS disk reader that is callable both from 16-bit and 32-bit
+   protected mode.
+3. A reusable real mode trampoline which stage 1.5 uses to read the disk, which 
+   also gets linked into stage 2 as NOBITS.
+4. A minimal ELF loader capable of loading stage 2 as an ELF from disk, possibly
+   with multiple program headers.
+
+What follows is documentation of all this.
 
 ABI
 ---
@@ -207,15 +218,14 @@ bits 16
     call  0x0000:pmode_init
 
 pmode_init:
-1     and   ebp, 0xFFFF
-2     and   esp, 0xFFFF
-3     push  eax
+1     and   esp, 0xFFFF
+2     push  eax
 
 [...]
 
 bits 32
-24    pop   eax
-25    ret
+19    pop   eax
+20    ret
 ```
 
 The function was called as a far call from 16-bit mode, meaning that a pair of
@@ -344,9 +354,10 @@ Hooks
 
 This is mostly related to `disk.s`. The intention is that the CHS `int 0x13`
 disk code which stage 1 already makes use of should be reused as a fallback, in
-the case that BIOS EDD isn't available. This involves hooking the code and
-disrupting its normal control flow. The original code does very little in terms
-of error reporting, and so it clobbers the ah status code. Moreover, under error
+the case that BIOS EDD isn't available. It is also used for loading the ELF of
+stage 2 from stage 1.5. This involves hooking the functions and disrupting their
+normal control flow. The original code does very little in terms of error
+reporting, and so it clobbers the ah status code. Moreover, under error
 conditions it makes a fatal call to `__bios_error` which hangs the machine.
 Since we are now in protected mode with vastly more space available, we'd like
 to handle these things a bit more gracefully. We want to keep the ah status code
@@ -429,35 +440,48 @@ installed. The installed hooks for this function are:
 6      mov   [si + 1], ax
 [...]
 ; hooks
-51 read_error_hook:
-52     mov   ah, 4
-53     jmp   short read_hook_exit
-54 read_hook:
-55     lea   sp, [esp + 2]
-56     mov   bp, sp
-57     mov   [ss:bp + 14], ax
-58     popa
-59     jnc   read_success
-60 read_hook_exit:
-61     movzx eax, ah
-62     shl   eax, 16
-63     ret
+64 read_hook:
+65     pop   bp
+66     movzx ecx, ah
+67     lea   ecx, [ecx - 0x11]
+68     jcxz  hook_ecc
+69     jmp   hook_save
+70 hook_ecc:
+71     xor   ah, ah
+72 hook_save:
+73     mov   [status], ah
+74     popa
+75 jmp_success:
+76     jnc   read_success
+77     jmp   read_hook_ret
+78 read_error_hook:
+79     mov   [status], byte 4
+80 read_hook_ret:
+81     ret
 ```
 
 The intention here is to return to the appropriate function. Under error
 conditions control is returned to `__chs_read`, whereas if the read was
-successful then control is returned to `read`. First focus your attention on
-`read_hook`, as it is the hook which is jumped to by `int13`.
+successful then control is returned to `read`, which is also the case for ECC
+corrected reads. First focus your attention on `read_hook`, as it is the hook
+which is jumped to by `int13`.
 
-The `lea` instruction is useful here because it can leave registers intact,
-perform arithmetic, and not set any flags at the same time. In this way the
-return pointer of `int13` is removed from the stack. The `read` function uses a
-pusha instruction before the call to `int13`, which leaves a large stack frame
-that needs to be dealt with, but not before we save the status code of `ah`.
-This is done by the direct write at offset `ss:bp + 14` on line 57, which
-smuggles `ax` through the following popa on line 58. The carry flag has not been
-altered, so if it is not set, the read was successful and control is returned to
-`read`.
+First, the `pop` instruction removes the return pointer of `int13` from the
+stack. The `lea` instruction is useful here because it can perform arithmetic
+without messing up the carry flag. The `ah` status code is zero-extended into
+`ecx`, which performs the `lea` to subtract the ECC corrected error code from
+itself without altering the flags. The `jcxz` instruction is then used to branch
+if it evaluates to zero, so what this actually implements is comparison without
+changing the flags. If this was an ECC recovered error, `xor` then both clears
+the carry flag and the status code to 0 (success).
+
+Next, the `read` function uses a pusha instruction before the call to `int13`,
+which leaves a large stack frame that needs to be dealt with, but not before we
+save the status code of `ah`. Besides the conditionally executed `xor` earlier,
+the carry flag has not been altered, so if it is not set or ECC was corrected,
+the read is considered successful and control is returned to `read`. Besides ECC
+corrected, any other disk errors returns control to `__chs_read`, which
+ultimately returns to the caller.
 
 Now it is time to discuss the second hook, which is `read_error_hook`. The hook
 is installed towards the end of the `read` function:
