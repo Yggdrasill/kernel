@@ -144,11 +144,28 @@ stage15:
     push  dword 0x02
     popfd
 
-    ; Enable A20 line, store the BIOS
-    ; interrupt mask, and then mask all
-    ; ints for transition to protected
-    ; mode.
+    ; Configure PIT channel 2, load
+    ; LSB only, mode 2 rate gen at
+    ; approximately 4.68kHz. Why?
+    ; Because A20 init needs a timeout
+    ; for the 8042 controller. Also,
+    ; 4679Hz makes the counter an
+    ; 8 bit value, so I don't have to
+    ; latch. Saves both bytes and pain.
+    mov   al, 0x94
+    out   0x43, al
+    mov   al, 1193182 / 4679
+    out   0x42, al
+    ; Set gate to enable counting, in
+    ; case the BIOS did not.
+    in    al, 0x61
+    or    al, 1
+    out   0x61, al 
+
     call  a20_init
+    ; Store the BIOS interrupt mask for
+    ; the trampoline, mask all interrupts
+    ; to prepare for mode transition.
     call  store_bios_imr
     call  mask_ints
 
@@ -193,10 +210,9 @@ bits 32
 %include "s1_generated.s"
 
 floppy_geometry:
-    lea   ebx, [ebp - ABI_DISK_SIZEOF]
-    mov   word [ebx + ABI_DISK_CYLINDERS], CHS_FLOPPY_CYLINDERS
-    mov   byte [ebx + ABI_DISK_HEADS], CHS_FLOPPY_HEADS
-    mov   byte [ebx + ABI_DISK_SECTORS], CHS_FLOPPY_SECTORS
+    mov   word [ebp - ABI_DISK_SIZEOF + ABI_DISK_CYLINDERS], CHS_FLOPPY_CYLINDERS
+    mov   byte [ebp - ABI_DISK_SIZEOF + ABI_DISK_HEADS], CHS_FLOPPY_HEADS
+    mov   byte [ebp - ABI_DISK_SIZEOF + ABI_DISK_SECTORS], CHS_FLOPPY_SECTORS
     jmp   elf_continue
 
 read_wrapper:
