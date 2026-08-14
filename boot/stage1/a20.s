@@ -21,11 +21,6 @@ extern __bios_error
 bits    16
 section .stage15 alloc exec progbits nowrite
 
-a20_error:
-    push  dword a20e_len
-    push  dword a20_err
-    call  __bios_error
-
 a20_check:
     push  byte 0
     pop   ds
@@ -34,28 +29,26 @@ a20_check:
     mov   si, 0x0500
     mov   di, 0x0510
 
-    mov   ax, word [es:di]
+    mov   al, [es:di]
     push  ax
-    mov   ax, word [ds:si]
+    mov   al, [ds:si]
     push  ax
 
-    mov   word [es:di], 0xAA55
-    mov   word [ds:si], 0x55AA
-    cmp   word [es:di], 0x55AA
-    setnz bl
+    mov   byte [es:di], 0xAA
+    mov   byte [ds:si], 0x55
+    ; Do NOT alter flags after this!
+    cmp   byte [es:di], 0x55
 
-    pop   cx
-    mov   word [ds:si], cx
-    pop   cx
-    mov   word [es:di], cx
+    pop   ax
+    mov   [ds:si], al
+    pop   ax
+    mov   [es:di], al
 
     ret
 
 bios_a20:
-    push  bx
     mov   ax, 0x2401
     int   0x15
-    pop   bx
     ret
 
 kbd8042_wait_cmd:
@@ -110,32 +103,31 @@ a20_fast:
     ret
 
 a20_init:
-    xor   bx, bx
     call  a20_check
-    cmp   bl, 0x01
-    jae   done_a20
+    jne   done_a20
 
     call  bios_a20
     call  a20_check
-    cmp   bl, 0x01
-    jae   done_a20
+    jne   done_a20
 
     call  kbd8042_a20
     call  a20_check
-    cmp   bl, 0x01
-    jae   done_a20
+    jne   done_a20
 
     call  a20_ee
     call  a20_check
-    cmp   bl, 0x01
-    jae   done_a20
+    jne   done_a20
 
     call  a20_fast
     call  a20_check
-    cmp   bl, 0x01
-    jb    a20_error
+    je    a20_error
 done_a20:
     ret
+
+a20_error:
+    push  dword a20e_len
+    push  dword a20_err
+    call  __bios_error
 
 section .stage15.rodata
 a20_err   db "E: A20 disabled",0x0D,0x0A
