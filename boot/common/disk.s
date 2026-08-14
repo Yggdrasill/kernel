@@ -294,7 +294,8 @@ __chs_read:
     xor   eax, eax
     mov   ax, es
     shl   eax, 4
-    add   ax, bx
+    movzx ebx, bx
+    add   eax, ebx
     sub   eax, [ss:bp + 0x08]
     movzx ebx, byte [status]
     shl   ebx, 20
