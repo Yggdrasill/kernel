@@ -27,6 +27,7 @@ extern read
 extern a20_init
 extern store_bios_imr
 extern mask_ints
+extern ms_nmi_disable
 extern pmode_init
 extern rmode_trampoline_no_sret
 
@@ -141,9 +142,6 @@ dw        0xAA55
 section .stage15 alloc exec progbits nowrite
 
 stage15:
-    push  dword 0x02
-    popfd
-
     ; Configure PIT channel 2, load
     ; LSB only, mode 2 rate gen at
     ; approximately 4.68kHz. Why?
@@ -161,34 +159,32 @@ stage15:
     in    al, 0x61
     or    al, 1
     out   0x61, al 
+    push  ax
 
     call  a20_init
+    push  dword 0x02
+    popfd
+
+    ; STOP THE COUNT!
+    pop   ax
+    and   al, 0xFE
+    out   0x61, al
     ; Store the BIOS interrupt mask for
     ; the trampoline, mask all interrupts
     ; to prepare for mode transition.
     call  store_bios_imr
     call  mask_ints
 
-    ; Disable NMI and store shadow state.
-    mov   al, [shadow_p70]
-    out   0x70, al
-
+    ; Disable NMI, shadow state is
+    ; already initialised to disabled.
+    call  ms_nmi_disable
     call  0x0000:pmode_init
 bits 32
-    ; Get boot drive number
+    ; Get boot drive number.
     pop   ax
     movzx eax, ax
 
-    ; Start a fresh stack frame for 32-bit
-    ; protected mode. Stack is aligned on
-    ; 16-byte boundary to make various 
-    ; compilers happy. 
-    mov   esp, 0x7FFF0
-    mov   ebp, esp
-
     call  read_elf
-
-    ; push __start
     jmp   [e_entry]
 
 %define         PT_LOAD_TYPE      0x01
@@ -207,12 +203,6 @@ bits 32
 %define         SH_FILE_SIZE      0x14
 
 %include "s1_generated.s"
-
-floppy_geometry:
-    mov   word [ebp - ABI_DISK_SIZEOF + ABI_DISK_CYLINDERS], CHS_FLOPPY_CYLINDERS
-    mov   byte [ebp - ABI_DISK_SIZEOF + ABI_DISK_HEADS], CHS_FLOPPY_HEADS
-    mov   byte [ebp - ABI_DISK_SIZEOF + ABI_DISK_SECTORS], CHS_FLOPPY_SECTORS
-    jmp   elf_continue
 
 read_wrapper:
     ; easy space saving, even if all
@@ -237,12 +227,8 @@ wrapperlp:
     add   ebx, edx
     shr   edx, 9
     jz    lbas_update
-    ; pop increments esp before
-    ; writing to relative address.
-    ; This is 2 bytes shorter than:
-    ; mov dword [esp + 4], 5
-    push  5
-    pop   dword [esp + 4]
+    ; Reset counter.
+    mov   byte [esp + 4], 5
 lbas_update:
     add   esi, edx
     sub   edi, edx
@@ -272,9 +258,15 @@ read_elf:
     enter ABI_DISK_SIZEOF, 0
     ; save eax drive number
     push  eax
-    ; hardcoded floppy geometry
+
+    ; Hardcoded floppy geometry. Skip
+    ; __chs_geometry if floppy disk.
+    mov   word [ebp - ABI_DISK_SIZEOF + ABI_DISK_CYLINDERS], CHS_FLOPPY_CYLINDERS
+    mov   byte [ebp - ABI_DISK_SIZEOF + ABI_DISK_HEADS], CHS_FLOPPY_HEADS
+    mov   byte [ebp - ABI_DISK_SIZEOF + ABI_DISK_SECTORS], CHS_FLOPPY_SECTORS
     test  al, al
-    jns   floppy_geometry
+    jns   elf_continue
+
     lea   eax, [ebp - ABI_DISK_SIZEOF]
     push  eax
     push  __chs_geometry
@@ -297,7 +289,7 @@ elf_continue:
     mov   ebx, ei_mag
     call  read_wrapper
 
-    cmp   [ebx], 0x464C457F
+    cmp   dword [ebx], 0x464C457F
     jne   elf_read_error
 
     ; Probably unnecessary, but if there
@@ -313,16 +305,18 @@ elf_continue:
     jecxz elf_read_error
     ; Save e_phentsize on stack
     push  eax
+    push  ebx
 
     ; Maximum value of multiplication is
-    ; far below 2^32, so imul clears edx.
-    ; No need to xor. e_phentsize would
-    ; need to be a ridiculous value to
-    ; break this.
-    imul  ecx
+    ; below 2^32, so mul clears edx. No
+    ; need to xor, as both e_phentsize
+    ; and e_phnum are 2 bytes. Consider:
+    ; (2^16 - 1) * (2^16 - 1) =
+    ;       2^32 - (2^17 - 1)
+    mul   ecx
     add   eax, [ebx + e_phoff - ei_mag]
     xchg  eax, edx
-    lea   edx, [edx + ei_mag]
+    add   edx, ebx
     mov   ah, 2
     inc   esi
 elf_ph_read:
@@ -336,8 +330,8 @@ elf_ph_read:
     inc   esi
     jmp   elf_ph_read
 elf_ph_done:
-    mov   edi, [e_phoff]
-    lea   edi, [edi + ei_mag]
+    pop   edi
+    add   edi, [edi + e_phoff - ei_mag]
 elf_pseglp:
     push  ecx
     cmp   [edi + PH_TYPE_OFFSET], PT_LOAD_TYPE
@@ -346,7 +340,9 @@ elf_pseglp:
     ; Calculate file offset from ELF LBA.
     ; This is setup to read the entire
     ; program header into the buffer
-    ; which is pointed to by ebx.
+    ; which is pointed to by ebx. Do I
+    ; hate a div in a loop? Yes, but...
+    ; as always, space.
     mov   esi, 0x200 * ABI_STAGE2_LBA
     add   esi, [edi + PH_FILE_OFFSET]
     mov   edx, 0x1FF
@@ -367,13 +363,11 @@ elf_ptload_read:
     ; Finally it's time to actually
     ; relocate the program segment
     ; from the buffer to its p_vaddr.
-    mov   esi, ebx
-    add   esi, edx
+    lea   esi, [ebx + edx]
     mov   edi, [eax + PH_VIRT_ADDR]
-    mov   edx, ecx
     mov   eax, [eax + PH_MEM_SIZE]
-    sub   eax, edx
-    js    elf_read_error
+    sub   eax, ecx
+    jc    elf_read_error
     rep   movsb
     ; Zero BSS
     xchg  eax, ecx

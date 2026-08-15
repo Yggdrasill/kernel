@@ -63,10 +63,12 @@ a20_init:
     call   a20_check
 
     ; BIOS A20.
+    push   ds
     sti
     mov    ax, 0x2401
     int    0x15
     cli
+    pop    ds
     call   a20_check
 
     ; Keyboard A20. If the keyboard
@@ -127,6 +129,10 @@ kbd8042_continue:
     call   kbd8042_wait_cmd
 
     mov    al, 0xAE
+    out    dx, al
+    call   kbd8042_wait_cmd
+
+    mov    al, 0xA8
     out    dx, al
     call   kbd8042_wait_cmd
     call   a20_check

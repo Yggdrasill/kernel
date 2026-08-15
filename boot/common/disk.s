@@ -90,7 +90,7 @@ reset_done:
 read:
     jz    read_done
 read_sector:
-    xor   di, di
+    mov   di, 5
 read_try:
     pusha
     mov   ax, 0x0201
@@ -140,9 +140,8 @@ read_recover:
     pusha
     call  reset
     popa
-    inc   di
-    cmp   di, 0x05
-    jl    read_try
+    dec   di
+    jnz   read_try
 read_e:
     push  dword de2_len
     push  dword disk_err2
@@ -232,77 +231,6 @@ hook_exit:
     movzx eax, byte [status]
     ret
 
-; int32_t __chs_read(
-;    struct disk_info *disk,
-;    char *buffer,
-;    size_t blocks,
-;    uint32_t lba,
-;    uint8_t drive);
-__chs_read:
-    push  bp
-    mov   bp, sp
-    mov   ax, read_hook
-    call  hook_install
-    ; Hook the second __bios_error
-    ; branch in the read function.
-    mov   ax, read_error_hook
-    mov   si, read_error
-    sub   ax, read_done
-    mov   [si + 1], ax
-    ; Load disk geometry and write it.
-    mov   edi, [ss:bp + 0x04]
-    call  addr_calc
-    mov   ax, [es:di + ABI_DISK_CYLINDERS]
-    mov   dh, [es:di + ABI_DISK_HEADS]
-    mov   cl, [es:di + ABI_DISK_SECTORS]
-    call  geometry_write
-    ; Now calculate CHS from LBA.
-    inc   dh
-    mov   eax, [ss:bp + 0x10]
-    push  dx
-    movzx edi, cl
-    xor   edx, edx
-    div   edi
-    mov   cl, dl
-    inc   cl
-    pop   dx
-    movzx edi, dh
-    xor   edx, edx
-    div   edi
-    mov   ch, al
-    and   ah, 0x3
-    shl   ah, 6
-    or    cl, ah
-    mov   dh, dl
-    ; Finally load buffer pointer,
-    ; blocks to read, and the drive
-    ; number.
-    mov   dl, [ss:bp + 0x14]
-    mov   edi, [ss:bp + 0x08]
-    call  addr_calc
-    mov   bx, di
-    ; read detects zero-size read
-    ; with zero flag, due to space
-    ; limitations in the boot sector
-    xor   esi, esi
-    add   esi, [ss:bp + 0x0C]
-    call  read
-    ; Return format:
-    ; ah = 0 on success
-    ; ah in bits 20-28
-    ; bytes read in bits 0-19
-    xor   eax, eax
-    mov   ax, es
-    shl   eax, 4
-    movzx ebx, bx
-    add   eax, ebx
-    sub   eax, [ss:bp + 0x08]
-    movzx ebx, byte [status]
-    shl   ebx, 20
-    or    eax, ebx
-    pop   bp
-    ret
-
 read_hook:
     ; More stack shenanigans.
     pop   bp
@@ -321,6 +249,8 @@ hook_save:
 jmp_success:
     jnc   read_success
     jmp   read_hook_ret
+invalid_geometry:
+    push  chs_read_return
 read_error_hook:
     ; Reference RBIL int 0x13 ah=0x01
     ; 0x04: sector not found/read error
@@ -328,5 +258,85 @@ read_error_hook:
 read_hook_ret:
     ret
 
+; int32_t __chs_read(
+;    struct disk_info *disk,
+;    char *buffer,
+;    size_t blocks,
+;    uint32_t lba,
+;    uint8_t drive);
+__chs_read:
+    push  bp
+    mov   bp, sp
+    mov   ax, read_hook
+    call  hook_install
+    ; Hook the second __bios_error
+    ; branch in the read function.
+    mov   ax, read_error_hook
+    mov   si, read_error
+    sub   ax, read_done
+    mov   [si + 1], ax
+
+    ; Load disk geometry and write it.
+    mov   edi, [ss:bp + 0x04]
+    call  addr_calc
+    mov   ax, [es:di + ABI_DISK_CYLINDERS]
+    mov   dh, [es:di + ABI_DISK_HEADS]
+    mov   cl, [es:di + ABI_DISK_SECTORS]
+    ; Load buffer pointer.
+    mov   edi, [ss:bp + 0x08]
+    call  addr_calc
+    xchg  di, bx
+    ; Bail if the geometry is invalid.
+    ; That is, sectors = 0.
+    test  cl, cl
+    jz    invalid_geometry
+chs_read_continue:
+    call  geometry_write
+    ; Now calculate CHS from LBA.
+    mov   eax, [ss:bp + 0x10]
+    push  dx
+    movzx edi, cl
+    xor   edx, edx
+    div   edi
+    xchg  cx, dx
+    inc   cl
+    pop   dx
+    movzx edi, dh
+    inc   di
+    xor   edx, edx
+    div   edi
+    mov   ch, al
+    and   ah, 0x3
+    shl   ah, 6
+    or    cl, ah
+    mov   dh, dl
+
+    ; Finally load blocks to read
+    ; and the drive number.
+    mov   dl, [ss:bp + 0x14]
+    ; read detects zero-size read
+    ; with zero flag, due to space
+    ; limitations in the boot sector
+    mov   byte [status], 0
+    xor   esi, esi
+    add   esi, [ss:bp + 0x0C]
+    call  read
+chs_read_return:
+    ; Return format:
+    ; ah = 0 on success
+    ; ah in bits 20-28
+    ; bytes read in bits 0-19
+    xor   eax, eax
+    mov   ax, es
+    shl   eax, 4
+    movzx ebx, bx
+    add   eax, ebx
+    sub   eax, [ss:bp + 0x08]
+    movzx ebx, byte [status]
+    shl   ebx, 20
+    or    eax, ebx
+    pop   bp
+    ret
+
 section .stage15.data alloc noexec progbits write
-status         db 0
+status db 0

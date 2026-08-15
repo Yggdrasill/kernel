@@ -19,6 +19,7 @@ bits 16
 
 global store_bios_imr
 global mask_ints
+global ms_nmi_disable
 global pmode_init
 global rmode_trampoline_no_sret
 global rmode_trampoline
@@ -290,8 +291,8 @@ bits 32
     push   eax
     ; Deal with Sret pointer and return data.
     mov    ecx, [sret_ptr]
-    cmp    ecx, dword 0x00
-    je     skip_sret
+    test   ecx, ecx
+    jz     skip_sret
     mov    [ecx], eax
     xchg   eax, ecx
 skip_sret:
