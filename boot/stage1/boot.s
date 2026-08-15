@@ -169,10 +169,9 @@ stage15:
     call  store_bios_imr
     call  mask_ints
 
-    ; Disable NMI and store shadow state
-    mov   al, 0x80
+    ; Disable NMI and store shadow state.
+    mov   al, [shadow_p70]
     out   0x70, al
-    mov   [shadow_p70], al
 
     call  0x0000:pmode_init
 bits 32

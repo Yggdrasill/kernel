@@ -83,25 +83,20 @@ load_shadow_p70:
     mov   al, [ecx]
     sahf
     jnc   short ms_nmi_disable_ret
-    jmp   short restore_p70_ret
+    jmp   short ms_nmi_common_ret
 
+restore_p70:
+    stc
+    jmp   ms_nmi_common_entry
 ms_nmi_disable:
-    push  ax
     clc
+ms_nmi_common_entry:
+    push  ax
     lahf
     jmp   short get_shadow_p70
 ms_nmi_disable_ret:
     or    al, 0x80
-    out   0x70, al
-    pop   ax
-    ret
-
-restore_p70:
-    push  ax
-    stc
-    lahf
-    jmp   short get_shadow_p70
-restore_p70_ret:
+ms_nmi_common_ret:
     out   0x70, al
     pop   ax
     ret
@@ -111,60 +106,64 @@ restore_p70_ret:
 ; End mixed-mode functions
 
 pmode_init:
-    ; Fix stack high bytes.
-    and   esp, 0xFFFF
-    push  eax
-
     lgdt  [gdt_info]
-    lidt  [idt_info]
+
+    ; Fix stack high bytes.
+    movzx esp, sp
 
     ; Fix the stack pointers by converting a
     ; linear address.
-    xor   eax, eax
-    mov   eax, ss
-    shl   eax, 4
-    add   esp, eax
+    xor   ecx, ecx
+    mov   cx, ss
+    shl   ecx, 4
+    add   esp, ecx
 
-    mov   eax, cr0
-    or    eax, 1
-    mov   cr0, eax
+    mov   ecx, cr0
+    or    cx, 1
+    mov   cr0, ecx
     jmp   0x0008:pmode32
 bits 32
 pmode32:
-    mov   ax, 0x0010
-    mov   ss, ax
-    mov   es, ax
-    mov   ds, ax
-    mov   gs, ax
-    mov   fs, ax
+    mov   cx, 0x10
+    mov   ss, cx
+    mov   es, cx
+    mov   ds, cx
+    mov   gs, cx
+    mov   fs, cx
 
-    pop   eax
+    lidt  [idt_info]
     ret
 
 pmode_exit:
-    push  eax
-
     lgdt  [gdt_info]
+
+    ; Disable paging if enabled.
+    mov   ecx, cr0
+    btr   ecx, 31
+    mov   cr0, ecx
+    xor   ebx, ebx
+    mov   cr3, ebx
     jmp   0x0018:pmode16
 bits 16
 pmode16:
-    mov   ax, 0x20
-    mov   ss, ax
-    mov   es, ax
-    mov   ds, ax
-    mov   gs, ax
-    mov   fs, ax
+    mov   bx, 0x20
+    mov   ss, bx
+    mov   es, bx
+    mov   ds, bx
+    mov   gs, bx
+    mov   fs, bx
 
-    mov   eax, cr0 
-    and   eax, ~1
-    mov   cr0, eax
+    lidt  [idt_rmode]
+
+    and   cx, ~1
+    mov   cr0, ecx
     jmp   0x0000:rmode
 rmode:
-    xor   ax, ax
-    mov   es, ax
-    mov   ds, ax
-    mov   gs, ax
-    mov   fs, ax
+    xor   cx, cx
+    mov   es, cx
+    mov   ds, cx
+    mov   gs, cx
+    mov   fs, cx
 
     ; This calculates a valid stack segment below
     ; 1MiB, but esp stack pointer CANNOT BE 64K ALIGNED.
@@ -173,19 +172,14 @@ rmode:
     ; That is the memory that real mode is limited
     ; to anyway, so it is of course otherwise
     ; impossible to use the same stack.
-    mov   eax, esp
-    shr   eax, 4
-    and   eax, 0xF000
-    mov   ss, ax
-
-    ; Clean up higher bits in esp.
-    and   esp, 0xFFFF
+    rol   esp, 16
+    shl   sp, 12
+    mov   ss, sp
+    shr   esp, 16
 
     ; The 4-byte return address on the stack will look
     ; like 0x0000xxxx, so we can deliberately interpret
     ; the zeroed bits as a far return pointer.
-    pop   eax
-    lidt  [idt_rmode]
     retf
 
 segment_fix:
@@ -215,11 +209,19 @@ save_state:
     mov   [saved_gs], gs
     sgdt  [shadow_gdtr]
     sidt  [idt_info]
+    mov   eax, cr0
+    mov   [saved_cr0], eax
+    mov   eax, cr3
+    mov   [saved_cr3], eax
     pop   eax
     ret
 
 restore_state:
     push  eax
+    mov   eax, [saved_cr3]
+    mov   cr3, eax
+    mov   eax, [saved_cr0]
+    mov   cr0, eax
     lgdt  [shadow_gdtr]
     lidt  [idt_info]
     mov   gs, [saved_gs]
@@ -239,15 +241,14 @@ restore_state:
     ret
 
 rmode_trampoline_no_sret:
-    pop    dword [resume]
-    push   dword 0x00
-    push   dword [resume]
+    pop    eax
+    push   byte 0x00
+    push   eax
 rmode_trampoline:
-    ; Save flags, cs, and clear DF/IF
+    ; Save flags, cs, and clear IF
     pushfd
     push   cs
     cli
-    cld
     pop    dword [saved_cs]
     pop    dword [saved_eflags]
     ; Save machine state, mask all interrupts,
@@ -283,16 +284,17 @@ rmode_return:
     call   mask_ints
     call   0x0000:pmode_init
 bits 32
-    ; Allocate space for popped callee pointer.
-    sub    esp, 4
-    mov    ebx, [sret_ptr]
-    cmp    ebx, dword 0x00
-    je     skip_sret
-    mov    [ebx], eax
-    mov    eax, ebx
-skip_sret:
     ; Now restore regs and machine state.
     call   restore_state
+    ; Adjust stack for popped callee pointer.
+    push   eax
+    ; Deal with Sret pointer and return data.
+    mov    ecx, [sret_ptr]
+    cmp    ecx, dword 0x00
+    je     skip_sret
+    mov    [ecx], eax
+    xchg   eax, ecx
+skip_sret:
     call   restore_p70
     ; Push return path
     push   dword [saved_eflags]
@@ -300,13 +302,13 @@ skip_sret:
     push   dword [resume]
     iretd
 
-section .stage15.ms
+section .stage15.ms alloc noexec progbits write
 gdt:
 null_gdt    times 8 db 0
 code_32     db 0xFF,0xFF,0x00,0x00,0x00,0x9B,0xCF,0x00
 data_32     db 0xFF,0xFF,0x00,0x00,0x00,0x93,0xCF,0x00
-code_16     db 0xFF,0xFF,0x00,0x00,0x00,0x9B,0x0F,0x00
-data_16     db 0xFF,0xFF,0x00,0x00,0x00,0x93,0x0F,0x00
+code_16     db 0xFF,0xFF,0x00,0x00,0x00,0x9B,0x00,0x00
+data_16     db 0xFF,0xFF,0x00,0x00,0x00,0x93,0x00,0x00
 gdt_len     equ $ - gdt
 
 idt_rmode:
@@ -324,7 +326,7 @@ idt_info:
 idt_size     dw 0
 idt_ptr      dd 0
 
-shadow_p70   db 0x00
+shadow_p70   db 0x80
 
 section .stage15.bss bss alloc noexec nobits write
 imr0_shadow:  resb 1
@@ -338,11 +340,13 @@ sgdt_ptr      resd 1
 
 pmode_context:
 saved_eflags: resd 1
+saved_cs:     resd 1
+saved_cr0:    resd 1
+saved_cr3:    resd 1
 saved_ebx:    resd 1
 saved_esi:    resd 1
 saved_edi:    resd 1
 saved_ebp:    resd 1
-saved_cs:     resd 1
 resume:       resd 1
 callee:       resd 1
 sret_ptr:     resd 1

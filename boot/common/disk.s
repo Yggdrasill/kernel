@@ -328,5 +328,5 @@ read_error_hook:
 read_hook_ret:
     ret
 
-section .stage15.data
+section .stage15.data alloc noexec progbits write
 status         db 0
