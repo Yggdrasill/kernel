@@ -142,15 +142,23 @@ dw        0xAA55
 section .stage15 alloc exec progbits nowrite
 
 stage15:
+    ; NOTE: This used to be mode 2 rate gen.
+    ; Unfortunately that exposes a Bochs bug
+    ; which triggers even if the speaker data
+    ; enable bit is unset. Basically it causes
+    ; repeated buffer underruns and is very
+    ; annoying to listen to.
+
     ; Configure PIT channel 2, load
-    ; LSB only, mode 2 rate gen at
+    ; LSB only, mode 3 square wave at
     ; approximately 4.68kHz. Why?
     ; Because A20 init needs a timeout
     ; for the 8042 controller. Also,
     ; 4679Hz makes the counter an
     ; 8 bit value, so I don't have to
     ; latch. Saves both bytes and pain.
-    mov   al, 0x94
+    mov   al, 0x96
+;   mov   al, 0x94
     out   0x43, al
     mov   al, 1193182 / 4679
     out   0x42, al
@@ -158,17 +166,13 @@ stage15:
     ; case the BIOS did not.
     in    al, 0x61
     or    al, 1
+    and   al, ~2
     out   0x61, al 
-    push  ax
 
     call  a20_init
     push  dword 0x02
     popfd
 
-    ; STOP THE COUNT!
-    pop   ax
-    and   al, 0xFE
-    out   0x61, al
     ; Store the BIOS interrupt mask for
     ; the trampoline, mask all interrupts
     ; to prepare for mode transition.
