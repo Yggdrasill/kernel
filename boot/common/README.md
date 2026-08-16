@@ -109,10 +109,11 @@ extern union rmode_ret_t rmode_trampoline(void (*)(void), ...);
 ```
 
 The trampoline is non-reentrant and supports data anywhere within the first 1MiB
-of memory, but code is limited to the first 64KiB of memory. As implied by its C
-declaration above it accepts a variadic number of arguments, limited only by the
-size of the stack. To understand its stack behaviour the following diagrams may
-be helpful:
+of memory, but code is limited to the first 64KiB of memory. It also supports
+paging, though strongly preferred with identity mapping of the entire low memory
+region <=1MiB. As implied by its C declaration above it accepts a variadic
+number of arguments, limited only by the size of the stack. To understand its
+stack behaviour the following diagrams may be helpful:
 
 ```
 | Stack     | Description              |
@@ -160,16 +161,22 @@ strict preconditions for use. I will outline them first, and then answer with a
 rationale for why they are acceptable:
 
 1. Any real mode code called must reside in the first 64KiB of memory.
-2. The stack and any pointers passed must be an address below 1MiB, as it is the
+2. If paging is enabled, then any executable code  in real mode must be identity
+   mapped. Particularly the mode switching itself must be identity mapped, as
+   documented by the Intel programmer's manual (12-14 Vol. 3A).
+3. The stack and any pointers passed must be an address below 1MiB, as it is the
    limit of the 16-bit real mode segment:offset type addresses.
-3. The stack pointer is not aligned on a 64K boundary, as it breaks the stack
+4. The stack must be identity mapped, any buffers, pointers etc. passed to
+   real-mode code are identity mapped.
+5. The address space as a whole is flat and all segments selectors have base
+   zero.
+6. The stack pointer is not aligned on a 64K boundary, as it breaks the stack
    reinterpretation into 16-bit segment:offset addresses.
-4. The IVT has been aliased with the real mode vectors for IRQs 0-15 copied into
+7. The IVT has been aliased with the real mode vectors for IRQs 0-15 copied into
    vectors 0x20-0x2F. IBM-compatible machines must leave these reserved for
    MS-DOS, so this is fine.
-5. It is not reentrant and cannot be nested, and should never be called from
+8. It is not reentrant and cannot be nested, and should never be called from
    exception or interrupt handlers.
-6. Paging is not enabled, at least not with the current implementation.
 
 You might ask: Why use such a trampoline? These preconditions seem quite brutal.
 Well, the answer is that a significant portion of the mode-switching code is
@@ -181,13 +188,22 @@ are as follows:
 1. The bootloader is limited to the 31.5KiB DOS compatibility region anyway.
    This will never become a problem, and if it does, it is trivial to link
    real mode code into the first 64KiB of memory.
-2. This is a natural limitation for any real mode code, and to get around it one
+2. Not only does Intel document this themselves, but not requiring this to be
+   the case would end up with a whole lot of extra code. The bootloader itself
+   is likely to be completely identity mapped anyway, so it doesn't matter.
+3. This is a natural limitation for any real mode code, and to get around it one
    would have to do extensive copying of arguments and data. It is simpler to
    just allocate space for this data and the stack below 1MiB to begin with.
-3. This is easy to solve by simply putting the stack at any address below it. As
-   an example, the linker script in this directory puts it at 0x7FFF0, and gives
-   it 64K - 16 bytes of space.
-4. This is more debatable, but see libk/irq.c for details. Any IBM-compatible
+4. This is more or less just an extension of point #2. It is a natural
+   consequence of the operation itself, not actually a problem.
+5. Not only does the SystemV i386 ABI kind of require a flat memory space, but
+   so does any modern and reasonable compiler. Even the modern compilers that do
+   not require this are happy to compile code for such an environment.
+6. This is easy to solve by simply putting the stack at an address just below a
+   64K boundary. As an example, the linker script in this directory puts it
+   at 0x7FFF0, and gives it 64K - 16 bytes of space. This leaves plenty of space
+   for the stack to not wrap on the lower end of the 64K window as well.
+7. This is more debatable, but see libk/irq.c for details. Any IBM-compatible
    machine must leave this range reserved for MS-DOS, which since this is not,
    we should be able to use. What I will say is that the alternative is to
    reinitialise the ICWs every time `rmode_trampoline` is called, which is
@@ -195,16 +211,10 @@ are as follows:
    interrupts, which my chosen solution ends up avoiding entirely. As a bit of
    evidence, it works fine on the two physical machines I have tested it on so
    far.
-5. The bootloader is single-threaded and non-concurrent anyway. I can see no
+8. The bootloader is single-threaded and non-concurrent anyway. I can see no
    legitimate reason why a 32-bit exception/interrupt handler should drop down
    to 16-bit real mode. The BIOS should be irrelevant for any real kernel
    anyway, so this is honestly totally fine.
-6. Paging is not used in the bootloader, an intentional decision on my part, and
-   one which I made long before I wrote the trampoline. Theoretically it could
-   be adapted to support paging, but that I have no interest in. Paging will be
-   enabled just before loading the kernel, or when the kernel initialises
-   itself, and at that point the BIOS will cease to matter. Paging enabled while
-   actively making BIOS calls is just a flimsy illusion anyway.
 
 Mode switching
 --------------
