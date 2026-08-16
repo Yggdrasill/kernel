@@ -53,12 +53,13 @@ MEM1_ADDR  = 0x8000;
 MEM1_SIZE  = 0x600;
 ST2_ADDR   = 0x8600;
 ST2_SIZE   = 30K;
-ELF_ADDR   = 0x10000;
-ELF_SIZE   = 30K;
 #ifdef LD_BOOT_STAGE2
 PRE_ADDR   = 0x17800;
 PRE_SIZE   = (0x18000 - PRE_ADDR) + ABI_LINK_TIME_TOTAL;
 MEM2_ADDR  = PRE_ADDR + PRE_SIZE;
+#elif defined(LD_BOOT_STAGE1)
+ELF_ADDR   = 0x50000;
+ELF_SIZE   = 128K;
 #endif
 STACK_ADDR = 0x70000;
 STACK_SIZE = 64K;
@@ -158,13 +159,8 @@ SECTIONS {
         *(.bss)
         *(.bss.*)
     } > stage2 : STAGE2_PHDR
-#endif
-    . = ELF_ADDR;
-    .elf (NOLOAD) : {
-        *(.elf)
-    } > elf : NONE
-#ifdef LD_BOOT_STAGE2
     __BOOTLOADER_END = .;
+
     . = PRE_ADDR;
     __PREALLOC_START = .;
     .regs (NOLOAD) : {
@@ -195,7 +191,13 @@ SECTIONS {
     } > mem2 : NONE
     . += ABI_PMM_BM_PREALLOC;
     __PREALLOC_END = .;
-
+#elif defined(LD_BOOT_STAGE1)
+    . = ELF_ADDR;
+    .elf (NOLOAD) : {
+        *(.elf)
+    } > elf : NONE
+#endif
+#ifdef LD_BOOT_STAGE2
     . = STACK_ADDR;
     __STACK_START = .;
     .stack (NOLOAD) : {
