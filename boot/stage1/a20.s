@@ -80,8 +80,7 @@ a20_init:
     ; ~100ms. Because the timer doesn't
     ; latch, it can be inaccurate.
     mov    dx, 0x64
-    mov    cx, 936
-;    mov    cx, 468
+    mov    cx, 468
 kbd8042_cmd_try:
     ; Initial timer state.
     in     al, 0x42

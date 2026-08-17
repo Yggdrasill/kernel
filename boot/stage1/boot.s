@@ -142,23 +142,15 @@ dw        0xAA55
 section .stage15 alloc exec progbits nowrite
 
 stage15:
-    ; NOTE: This used to be mode 2 rate gen.
-    ; Unfortunately that exposes a Bochs bug
-    ; which triggers even if the speaker data
-    ; enable bit is unset. Basically it causes
-    ; repeated buffer underruns and is very
-    ; annoying to listen to.
-
     ; Configure PIT channel 2, load
-    ; LSB only, mode 3 square wave at
+    ; LSB only, mode 2 rate gen at
     ; approximately 4.68kHz. Why?
     ; Because A20 init needs a timeout
     ; for the 8042 controller. Also,
     ; 4679Hz makes the counter an
     ; 8 bit value, so I don't have to
     ; latch. Saves both bytes and pain.
-    mov   al, 0x96
-;   mov   al, 0x94
+    mov   al, 0x94
     out   0x43, al
     mov   al, 1193182 / 4679
     out   0x42, al
@@ -185,8 +177,8 @@ stage15:
     call  0x0000:pmode_init
 bits 32
     ; Get boot drive number.
+    xor   eax, eax
     pop   ax
-    movzx eax, ax
 
     call  read_elf
     jmp   [e_entry]
@@ -307,8 +299,10 @@ elf_continue:
     movzx eax, word [ebx + e_phentsize - ei_mag]
     movzx ecx, word [ebx + e_phnum - ei_mag]
     jecxz elf_read_error
-    ; Save e_phentsize on stack
+    ; Save e_phentsize, &ei_mag and
+    ; ABI_STAGE2_LBA on stack.
     push  eax
+    push  esi
     push  ebx
 
     ; Maximum value of multiplication is
@@ -320,18 +314,16 @@ elf_continue:
     mul   ecx
     add   eax, [ebx + e_phoff - ei_mag]
     xchg  eax, edx
-    add   edx, ebx
     mov   ah, 2
-    inc   esi
 elf_ph_read:
     ; Now read all headers one sector
     ; at a time... because this saves
     ; space even if it's slow.
+    inc   esi
     add   ebx, eax
-    cmp   edx, ebx
+    sub   edx, eax
     jbe   elf_ph_done
     call  read_wrapper
-    inc   esi
     jmp   elf_ph_read
 elf_ph_done:
     pop   edi
@@ -347,11 +339,11 @@ elf_pseglp:
     ; which is pointed to by ebx. Do I
     ; hate a div in a loop? Yes, but...
     ; as always, space.
-    mov   esi, 0x200 * ABI_STAGE2_LBA
-    add   esi, [edi + PH_FILE_OFFSET]
+    mov   esi, [edi + PH_FILE_OFFSET]
     movzx edx, si
     and   dh, 1
     shr   esi, 9
+    add   esi, [ebp - ABI_DISK_SIZEOF - 12]
 
     push  edi
     xchg  eax, edi
