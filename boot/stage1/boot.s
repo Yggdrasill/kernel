@@ -215,8 +215,8 @@ read_wrapper:
     push  5
     push  [ebp - ABI_DISK_SIZEOF - 4]
 wrapperlp:
-    push  esi
     push  edi
+    push  esi
     push  ebx
     lea   eax, [ebp - ABI_DISK_SIZEOF]
     push  eax

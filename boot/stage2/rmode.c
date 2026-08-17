@@ -36,7 +36,7 @@ extern void     __bios_print(uint16_t, uint16_t);
 extern uint32_t __chs_geometry(struct disk_info *, uint8_t);
 extern uint32_t __disk_reset(uint8_t);
 extern int32_t
-__chs_read(struct disk_info *, char *, size_t, uint32_t, uint8_t);
+__chs_read(struct disk_info *, char *, uint32_t, uint16_t, uint8_t);
 
 extern union rmode_ret_t rmode_trampoline(void (*)(void), ...);
 
@@ -96,13 +96,13 @@ uint32_t bios_disk_reset(uint8_t id)
 int32_t bios_chs_read(
     struct disk_info *disk,
     char             *buffer,
-    size_t            blocks,
     uint32_t          lba,
+    uint16_t          blocks,
     uint8_t           drive)
 {
     union rmode_ret_t rv;
     rv = rmode_trampoline(
-        (void (*)(void))__chs_read, disk, buffer, blocks, lba, drive);
+        (void (*)(void))__chs_read, disk, buffer, lba, blocks, drive);
     puthex(&rv.i32, sizeof(rv.i32), 0);
     putchar('\n');
     return rv.i32;

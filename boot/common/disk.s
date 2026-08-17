@@ -104,7 +104,7 @@ read_success:
     add   ax, 0x1000
     mov   es, ax
 read_continue:
-    dec   esi
+    dec   si
     jz    read_done
     mov   al, cl
     and   al, 0x3F
@@ -261,8 +261,8 @@ read_hook_ret:
 ; int32_t __chs_read(
 ;    struct disk_info *disk,
 ;    char *buffer,
-;    size_t blocks,
 ;    uint32_t lba,
+;    uint16_t blocks,
 ;    uint8_t drive);
 __chs_read:
     push  bp
@@ -293,7 +293,7 @@ __chs_read:
 chs_read_continue:
     call  geometry_write
     ; Now calculate CHS from LBA.
-    mov   eax, [ss:bp + 0x10]
+    mov   eax, [ss:bp + 0x0C]
     push  dx
     movzx edi, cl
     xor   edx, edx
@@ -318,8 +318,8 @@ chs_read_continue:
     ; with zero flag, due to space
     ; limitations in the boot sector
     mov   byte [status], 0
-    xor   esi, esi
-    add   esi, [ss:bp + 0x0C]
+    xor   si, si
+    add   si, [ss:bp + 0x10]
     call  read
 chs_read_return:
     ; Return format:
