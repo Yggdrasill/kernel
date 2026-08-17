@@ -224,18 +224,18 @@ wrapperlp:
     call  rmode_trampoline_no_sret
     ; leave drive on stack
     add   esp, 0x14
-    mov   edx, 0xFFFFF
-    and   edx, eax
-    shr   eax, 20
+    ror   eax, 20
+    test  al, al
     jz    wrapper_ret
-    add   ebx, edx
-    shr   edx, 9
+    shr   eax, 12
+    add   ebx, eax
+    shr   eax, 9
     jz    lbas_update
     ; Reset counter.
     mov   byte [esp + 4], 5
 lbas_update:
-    add   esi, edx
-    sub   edi, edx
+    add   esi, eax
+    sub   edi, eax
 wrapper_reset:
     push  __disk_reset
     call  rmode_trampoline_no_sret
@@ -349,8 +349,8 @@ elf_pseglp:
     ; as always, space.
     mov   esi, 0x200 * ABI_STAGE2_LBA
     add   esi, [edi + PH_FILE_OFFSET]
-    mov   edx, 0x1FF
-    and   edx, esi
+    movzx edx, si
+    and   dh, 1
     shr   esi, 9
 
     push  edi
