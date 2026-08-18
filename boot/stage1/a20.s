@@ -43,6 +43,8 @@ a20_check:
 check_exit:
     ret 
 
+kbd8042_cmd:
+    out    dx, al
 kbd8042_wait_cmd:
     in     al, dx
     test   al, 2
@@ -98,11 +100,9 @@ timer_count:
 
 kbd8042_next:
     mov    al, 0xAD
-    out    dx, al
     call   kbd8042_wait_cmd
 
     mov    al, 0xA7
-    out    dx, al
     call   kbd8042_wait_cmd
 
     in     al, dx
@@ -112,7 +112,6 @@ kbd8042_next:
 
 kbd8042_continue:
     mov    al, 0xD0
-    out    dx, al
     call   kbd8042_wait_data
 
     in     al, 0x60
@@ -120,7 +119,6 @@ kbd8042_continue:
     call   kbd8042_wait_cmd
 
     mov    al, 0xD1
-    out    dx, al
     call   kbd8042_wait_cmd
 
     pop    ax
@@ -129,11 +127,9 @@ kbd8042_continue:
     call   kbd8042_wait_cmd
 
     mov    al, 0xAE
-    out    dx, al
     call   kbd8042_wait_cmd
 
     mov    al, 0xA8
-    out    dx, al
     call   kbd8042_wait_cmd
     call   a20_check
 

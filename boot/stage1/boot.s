@@ -125,7 +125,7 @@ skip_floppy:
     ; Space optimisation, allows
     ; read function to detect zero
     ; blocks to read with just ZF.
-    movzx esi, cx
+    mov   si, cx
     inc   si
     call  read
 

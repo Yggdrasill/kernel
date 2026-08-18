@@ -193,50 +193,94 @@ segment_fix:
     ret
 
 bits 32
+check_cpuid:
+    xor   eax, eax
+    pusha
+    pushfd
+    pushfd
+    pushfd
+    btr   dword [esp], 21
+    popfd
+    pushfd
+    pop   eax
+    bts   dword [esp], 21
+    popfd
+    pushfd
+    pop   ecx
+    popfd
+    xor   ecx, eax
+    popa
+    setnz al
+    ret
+
+check_cr4:
+    pusha
+    call  check_cpuid
+    jz    check_cr4_ret
+    cpuid
+    ; CPUID leaf 1 test for:
+    ; CR4.MCE, CR4.PAE, CR4.TSD,
+    ; CR4.PSE, CR4.DE, CR4.VME
+    ; Definitely got CR4 if non-zero.
+    test  dl, 0xDE
+check_cr4_ret:
+    popa
+    ret
+
 save_state:
     push  eax
     in    al, 0x21
-    mov   [imr0_shadow], al
+    mov   [ecx + imr0_shadow - ms_context], al
     in    al, 0xA1
-    mov   [imr1_shadow], al
-    mov   [saved_ebx], ebx
-    mov   [saved_esi], esi
-    mov   [saved_edi], edi
-    mov   [saved_ebp], ebp
-    mov   [saved_ss], ss
-    mov   [saved_es], es
-    mov   [saved_ds], ds
-    mov   [saved_fs], fs
-    mov   [saved_gs], gs
-    sgdt  [shadow_gdtr]
+    mov   [ecx + imr1_shadow - ms_context], al
+    mov   [ecx + saved_ebx - ms_context], ebx
+    mov   [ecx + saved_esi - ms_context], esi
+    mov   [ecx + saved_edi - ms_context], edi
+    mov   [ecx + saved_ebp - ms_context], ebp
+    mov   [ecx + saved_ss - ms_context], ss
+    mov   [ecx + saved_es - ms_context], es
+    mov   [ecx + saved_ds - ms_context], ds
+    mov   [ecx + saved_fs - ms_context], fs
+    mov   [ecx + saved_gs - ms_context], gs
+    sgdt  [ecx + shadow_gdtr - ms_context]
     sidt  [idt_info]
     mov   eax, cr0
-    mov   [saved_cr0], eax
+    mov   [ecx + saved_cr0 - ms_context], eax
     mov   eax, cr3
-    mov   [saved_cr3], eax
+    mov   [ecx + saved_cr3 - ms_context], eax
+    call  check_cr4
+    jz    save_no_cr4
+    mov   eax, cr4
+    mov   [ecx + saved_cr4 - ms_context], eax
+save_no_cr4:
     pop   eax
     ret
 
 restore_state:
     push  eax
-    mov   eax, [saved_cr3]
+    call  check_cr4
+    jz    restore_no_cr4
+    mov   eax, [ecx + saved_cr4 - ms_context]
+    mov   cr4, eax
+restore_no_cr4:
+    mov   eax, [ecx + saved_cr3 - ms_context]
     mov   cr3, eax
-    mov   eax, [saved_cr0]
+    mov   eax, [ecx + saved_cr0 - ms_context]
     mov   cr0, eax
-    lgdt  [shadow_gdtr]
+    lgdt  [ecx + shadow_gdtr - ms_context]
     lidt  [idt_info]
-    mov   gs, [saved_gs]
-    mov   fs, [saved_fs]
-    mov   ds, [saved_ds]
-    mov   es, [saved_es]
-    mov   ss, [saved_ss]
-    mov   ebp, [saved_ebp]
-    mov   edi, [saved_edi]
-    mov   esi, [saved_esi]
-    mov   ebx, [saved_ebx]
-    mov   al, [imr1_shadow]
+    mov   gs, [ecx + saved_gs - ms_context]
+    mov   fs, [ecx + saved_fs - ms_context]
+    mov   ds, [ecx + saved_ds - ms_context]
+    mov   es, [ecx + saved_es - ms_context]
+    mov   ss, [ecx + saved_ss - ms_context]
+    mov   ebp, [ecx + saved_ebp - ms_context]
+    mov   edi, [ecx + saved_edi - ms_context]
+    mov   esi, [ecx + saved_esi - ms_context]
+    mov   ebx, [ecx + saved_ebx - ms_context]
+    mov   al, [ecx + imr1_shadow - ms_context]
     out   0xA1, al
-    mov   al, [imr0_shadow]
+    mov   al, [ecx + imr0_shadow - ms_context]
     out   0x21, al
     pop   eax
     ret
@@ -250,57 +294,61 @@ rmode_trampoline:
     pushfd
     push   cs
     cli
-    pop    dword [saved_cs]
-    pop    dword [saved_eflags]
+    mov   ecx, ms_context
+    pop   dword [ecx + saved_cs - ms_context]
+    pop   dword [ecx + saved_eflags - ms_context]
     ; Save machine state, mask all interrupts,
     ; disable NMI, then exit protected mode
-    call   save_state
-    call   mask_ints
-    call   ms_nmi_disable
-    call   pmode_exit
+    call  save_state
+    call  mask_ints
+    call  ms_nmi_disable
+    call  pmode_exit
 bits 16
-    call   load_bios_imr
-    call   restore_p70
+    call  load_bios_imr
+    call  restore_p70
     ; This may look a bit unconventional, but 
     ; popping the return address from the stack
     ; allows us to pass arguments as if calling
     ; from real mode. The return address will be
     ; pushed later.
-    pop    dword [resume]
+    pop   dword [resume]
     ; Clean up the sret pointer.
-    pop    dword [sret_ptr]
+    pop   dword [sret_ptr]
     ; Pop 32-bit callee address and push as 16-bit
     ; address, then call it with a tail call.
-    pop    dword [callee]
+    pop   dword [callee]
     ; Push return pointer, ret into 16-bit callee
-    push   rmode_return
-    push   word [callee]
+    push  word rmode_return
+    push  word [callee]
     sti
     ret
 rmode_return:
     ; Enter protected mode.
     cli
-    call   segment_fix
-    call   ms_nmi_disable
-    call   mask_ints
-    call   0x0000:pmode_init
+    call  segment_fix
+    call  ms_nmi_disable
+    call  mask_ints
+    call  0x0000:pmode_init
 bits 32
+    mov   ecx, ms_context
     ; Now restore regs and machine state.
-    call   restore_state
+    call  restore_state
     ; Adjust stack for popped callee pointer.
-    push   eax
+    push  eax
+    push  ecx
     ; Deal with Sret pointer and return data.
-    mov    ecx, [sret_ptr]
-    test   ecx, ecx
-    jz     skip_sret
-    mov    [ecx], eax
-    xchg   eax, ecx
+    mov   ecx, [ecx + sret_ptr - ms_context]
+    test  ecx, ecx
+    jz    skip_sret
+    mov   [ecx], eax
+    xchg  eax, ecx
 skip_sret:
-    call   restore_p70
+    call  restore_p70
     ; Push return path
-    push   dword [saved_eflags]
-    push   dword [saved_cs]
-    push   dword [resume]
+    pop   ecx
+    push  dword [ecx + saved_eflags - ms_context]
+    push  dword [ecx + saved_cs - ms_context]
+    push  dword [ecx + resume - ms_context]
     iretd
 
 section .stage15.ms alloc noexec progbits write
@@ -330,6 +378,7 @@ idt_ptr      dd 0
 shadow_p70   db 0x80
 
 section .stage15.bss bss alloc noexec nobits write
+ms_context:
 imr0_shadow:  resb 1
 imr1_shadow:  resb 1
 bios_imr0:    resb 1
@@ -339,11 +388,11 @@ shadow_gdtr:
 sgdt_size     resw 1
 sgdt_ptr      resd 1
 
-pmode_context:
 saved_eflags: resd 1
 saved_cs:     resd 1
 saved_cr0:    resd 1
 saved_cr3:    resd 1
+saved_cr4:    resd 1
 saved_ebx:    resd 1
 saved_esi:    resd 1
 saved_edi:    resd 1
