@@ -41,7 +41,7 @@ a20_check:
     je     check_exit
     pop    ax
 check_exit:
-    ret 
+    ret
 
 kbd8042_cmd:
     out    dx, al
@@ -49,13 +49,13 @@ kbd8042_wait_cmd:
     in     al, dx
     test   al, 2
     jnz    kbd8042_wait_cmd
-    ret 
+    ret
 
 kbd8042_wait_data:
     in     al, dx
     test   al, 1
     jz     kbd8042_wait_data
-    ret 
+    ret
 
 ; Inlined everything, for space. Doesn't
 ; return, instead returns are handled by
@@ -100,10 +100,10 @@ timer_count:
 
 kbd8042_next:
     mov    al, 0xAD
-    call   kbd8042_wait_cmd
+    call   kbd8042_cmd
 
     mov    al, 0xA7
-    call   kbd8042_wait_cmd
+    call   kbd8042_cmd
 
     in     al, dx
     test   al, 1
@@ -112,14 +112,13 @@ kbd8042_next:
 
 kbd8042_continue:
     mov    al, 0xD0
+    call   kbd8042_cmd
     call   kbd8042_wait_data
 
     in     al, 0x60
     push   ax
-    call   kbd8042_wait_cmd
-
     mov    al, 0xD1
-    call   kbd8042_wait_cmd
+    call   kbd8042_cmd
 
     pop    ax
     or     al, 2
@@ -127,10 +126,10 @@ kbd8042_continue:
     call   kbd8042_wait_cmd
 
     mov    al, 0xAE
-    call   kbd8042_wait_cmd
+    call   kbd8042_cmd
 
     mov    al, 0xA8
-    call   kbd8042_wait_cmd
+    call   kbd8042_cmd
     call   a20_check
 
 a20_next:
