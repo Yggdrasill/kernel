@@ -172,9 +172,11 @@ rationale for why they are acceptable:
    zero.
 6. The stack pointer is not aligned on a 64K boundary, as it breaks the stack
    reinterpretation into 16-bit segment:offset addresses.
-7. The IVT has been aliased with the real mode vectors for IRQs 0-15 copied into
-   vectors 0x20-0x2F. IBM-compatible machines must leave these reserved for
-   MS-DOS, so this is fine.
+7. Either one of the following: The PICs have not been remapped from the
+   traditional real mode mappings of 0x08-0x0F/0x70-0x77, or the IVT has been
+   aliased with the real mode vectors for IRQs 0-15 copied into vectors the
+   appropriate configured PIC IRQ mappings. This should be within the IVT range
+   0x20-0x3F.
 8. It is not reentrant and cannot be nested, and should never be called from
    exception or interrupt handlers.
 
@@ -203,14 +205,13 @@ are as follows:
    64K boundary. As an example, the linker script in this directory puts it
    at 0x7FFF0, and gives it 64K - 16 bytes of space. This leaves plenty of space
    for the stack to not wrap on the lower end of the 64K window as well.
-7. This is more debatable, but see libk/irq.c for details. Any IBM-compatible
-   machine must leave this range reserved for MS-DOS, which since this is not,
-   we should be able to use. What I will say is that the alternative is to
-   reinitialise the ICWs every time `rmode_trampoline` is called, which is
-   equally nasty. Doing that loses PIC 8259A state, and can end up with missed
-   interrupts, which my chosen solution ends up avoiding entirely. As a bit of
-   evidence, it works fine on the two physical machines I have tested it on so
-   far.
+7. See libk/irq.c for details. Any IBM-compatible machine must leave this range
+   reserved for MS-DOS, which since this is not, we should be able to use. What
+   I will say is that the alternative is to reinitialise the PICs with ICWs
+   every time `rmode_trampoline` is called, which is equally nasty. Doing that
+   loses PIC 8259A state, and can end up with missed interrupts, which my chosen
+   solution ends up avoiding entirely. As a bit of evidence, it works fine on
+   the two physical machines I have tested it on so far.
 8. The bootloader is single-threaded and non-concurrent anyway. I can see no
    legitimate reason why a 32-bit exception/interrupt handler should drop down
    to 16-bit real mode. The BIOS should be irrelevant for any real kernel
