@@ -118,6 +118,7 @@ static struct boot_info boot_init(void)
 
     pmm_init(&new_mmap_info);
     buffer = pmm_alloc_range(BUFFER_SIZE, 0x0, 0x100000);
+    if(!buffer) panic("init: could not allocate bounce buffer!");
 
     return (struct boot_info){
         .gdt    = &gdt_info,
