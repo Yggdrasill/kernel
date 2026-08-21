@@ -158,10 +158,13 @@ int main(void)
 
     info = boot_init();
     irq_unmask(IRQ_NUM_KBD);
+    /*
     bios_disk_geometry(&disk, 0xFF);
     bios_disk_geometry(&disk, 0x80);
     bios_disk_reset(0x80);
     bios_chs_read(&disk, info.buffer, 0, 64, 0x80);
+    */
+    bios_edd_available(0x80);
 
     halt();
     hcf();

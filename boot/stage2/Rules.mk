@@ -41,6 +41,10 @@ $(OBJDIR_STAGE2)/mmap_asm.o: $(SRCDIR_STAGE2)/mmap.s $(OBJDIR_GEN)/s2_generated.
 						     | $(OBJDIR_STAGE2)
 	$(AS) -f elf32 -i $(OBJDIR_GEN) -o $@ $<
 
+$(OBJDIR_STAGE2)/disk_asm.o: $(SRCDIR_STAGE2)/disk.s $(OBJDIR_GEN)/s2_generated.s \
+							 | $(OBJDIR_STAGE2)
+	$(AS) -f elf32 -i $(OBJDIR_GEN) -o $@ $<
+
 $(OBJDIR_STAGE2)/%_asm.o: $(SRCDIR_STAGE2)/%.s | $(OBJDIR_STAGE2)
 	$(AS) -f elf32 -o $@ $<
 

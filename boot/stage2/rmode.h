@@ -39,5 +39,6 @@ void     bios_print(char *, size_t);
 uint32_t bios_disk_geometry(struct disk_info *, uint8_t);
 uint32_t bios_disk_reset(uint8_t);
 int32_t  bios_chs_read(struct disk_info *, char *, uint32_t, uint16_t, uint8_t);
+int32_t  bios_edd_available(uint8_t);
 
 #endif

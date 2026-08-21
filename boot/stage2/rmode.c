@@ -37,6 +37,7 @@ extern uint32_t __chs_geometry(struct disk_info *, uint8_t);
 extern uint32_t __disk_reset(uint8_t);
 extern int32_t
 __chs_read(struct disk_info *, char *, uint32_t, uint16_t, uint8_t);
+extern int32_t __bios_edd_available(uint8_t);
 
 extern union rmode_ret_t rmode_trampoline(void (*)(void), ...);
 
@@ -105,5 +106,13 @@ int32_t bios_chs_read(
         (void (*)(void))__chs_read, disk, buffer, lba, blocks, drive);
     puthex(&rv.i32, sizeof(rv.i32), 0);
     putchar('\n');
+    return rv.i32;
+}
+
+int32_t bios_edd_available(uint8_t drive)
+{
+    union rmode_ret_t rv;
+    rv = rmode_trampoline((void (*)(void))__bios_edd_available, drive);
+    puthex(&rv.i32, sizeof(rv.i32), 0);
     return rv.i32;
 }
