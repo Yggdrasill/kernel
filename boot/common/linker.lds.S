@@ -80,10 +80,11 @@ MEMORY {
     mbr(rw)      :   org = MBR_ADDR,   len = MBR_SIZE
     mem1(rx)     :   org = MEM1_ADDR,  len = MEM1_SIZE
     stage2(rx)   :   org = ST2_ADDR,   len = ST2_SIZE
-    elf(rw)      :   org = ELF_ADDR,   len = ELF_SIZE
 #ifdef LD_BOOT_STAGE2
     prealloc(rw) :   org = PRE_ADDR,   len = PRE_SIZE
     mem2(rx)     :   org = MEM2_ADDR,  len = STACK_ADDR - (PRE_ADDR + PRE_SIZE)
+#elif defined(LD_BOOT_STAGE1)
+    elf(rw)      :   org = ELF_ADDR,   len = ELF_SIZE
 #endif
     stack(rw)    :   org = STACK_ADDR, len = STACK_SIZE
     ebda(rx)     :   org = EBDA_ADDR,  len = EBDA_SIZE

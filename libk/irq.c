@@ -40,9 +40,14 @@
  * exactly the same thing on pages 9-10. The document is titled:
  * System BIOS for IBM PC/XT/AT Computers and Compatibles
  *
+ * And accordingly for American Megatrends, on page 82 of the document titled:
+ * AMIBIOS 98 Technical Reference
+ *
  * These documents define interrupt vectors [0x20, 0x40) as reserved for DOS. In
  * practice this means that any IBM compatible machine must adhere to this, as
- * MS-DOS made extensive use of these interrupt vectors for its own purposes.
+ * MS-DOS made extensive use of these interrupt vectors for its own purposes. It
+ * appears that the largest BIOS software houses at the time agreed on this
+ * convention.
  *
  * A later Phoenix BIOS 4.0 document does not discuss the IVT ranges in
  * question. It simply skips over the range [0x20, 0x40) in its interrupt vector
@@ -52,7 +57,6 @@
  * I have also looked into the UEFI/CSM side of things, and Intel's
  * documentation suggests that this is also going to be the case for the real
  * mode IVT in their document from 2013 titled:
- *
  * Intel® Platform Innovation Framework for UEFI - Compatibility Support Module
  * Specification Revision 0.98
  *

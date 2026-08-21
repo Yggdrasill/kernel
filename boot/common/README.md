@@ -173,9 +173,9 @@ rationale for why they are acceptable:
 6. The stack pointer is not aligned on a 64K boundary, as it breaks the stack
    reinterpretation into 16-bit segment:offset addresses.
 7. Either one of the following: The PICs have not been remapped from the
-   traditional real mode mappings of 0x08-0x0F/0x70-0x77, or the IVT has been
-   aliased with the real mode vectors for IRQs 0-15 copied into vectors the
-   appropriate configured PIC IRQ mappings. This should be within the IVT range
+   traditional real mode mappings of 0x08-0x0F/0x70-0x77. Alternatively, the IVT
+   has been aliased with the real mode vectors for IRQs 0-15 copied into the
+   appropriate configured vector offsets. This should be within the IVT range
    0x20-0x3F.
 8. It is not reentrant and cannot be nested, and should never be called from
    exception or interrupt handlers.
